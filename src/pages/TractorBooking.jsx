@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { translations } from '../translations';
 import { ALL_LOCATIONS_LIST } from '../data/telanganaLocations';
 
@@ -32,7 +32,17 @@ export default function TractorBooking({
     assignedTractorId: selectedTractor ? selectedTractor.id : (tractors[0]?.id || '')
   }));
 
-  const currentTractor = tractors.find(t => t.id === Number(formData.assignedTractorId)) || selectedTractor || tractors[0];
+  // Sync selectedTractor from FindTractor whenever it changes
+  useEffect(() => {
+    if (selectedTractor) {
+      setFormData(prev => ({
+        ...prev,
+        assignedTractorId: selectedTractor.id
+      }));
+    }
+  }, [selectedTractor]);
+
+  const currentTractor = selectedTractor || tractors.find(t => t.id === Number(formData.assignedTractorId)) || tractors[0];
   const hourlyRate = currentTractor ? currentTractor.pricing : 1200;
   // Estimated 1.5 hours per acre for ploughing/rotavator
   const estimatedHours = Math.max(1, Math.round((Number(formData.landArea) || 1) * 1.5));
@@ -130,9 +140,12 @@ export default function TractorBooking({
         <div className="selected-tractor-banner">
           <img
             src={currentTractor.photo || '/tractor1.jpeg'}
-            alt={currentTractor.model}
+            alt={`${currentTractor.brand} ${currentTractor.model}`}
             className="selected-tractor-thumb"
-            onError={(e) => { e.target.src = '/tractor1.jpeg'; }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = '/tractor1.jpeg';
+            }}
           />
           <div className="selected-tractor-details">
             <h5>{currentTractor.brand} {currentTractor.model}</h5>

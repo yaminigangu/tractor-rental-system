@@ -95,9 +95,7 @@ export default function FindTractor({
     const matchesLocal =
       !onlyLocalFleet ||
       isSpecialtyMachine ||
-      (tractor.location || '').toLowerCase().includes(activeVillage.toLowerCase()) ||
-      (tractor.location || '').toLowerCase().includes(activeDistrict.toLowerCase()) ||
-      (tractor.district || '').toLowerCase().includes(activeDistrict.toLowerCase());
+      (tractor.location || '').toLowerCase().includes(activeVillage.toLowerCase());
 
     return matchesSearch && matchesService && matchesLocal;
   });
@@ -149,16 +147,19 @@ export default function FindTractor({
             {isTe ? (selectedLocation?.villageTe || activeVillage) : activeVillage},{' '}
             {isTe ? (selectedLocation?.districtTe || activeDistrict) : activeDistrict}
           </strong>
+          <span style={{ marginLeft: '10px', fontSize: '12px', background: '#e0f2fe', color: '#0369a1', padding: '3px 9px', borderRadius: '12px', fontWeight: 600 }}>
+            {isTe ? `${sortedTractors.length} స్థానిక ట్రాక్టర్లు లభ్యత` : `${sortedTractors.length} Tractors Available Nearby`}
+          </span>
         </div>
         <div className="locality-fleet-actions">
           <button
             className={`filter-local-toggle-btn ${onlyLocalFleet ? 'active' : ''}`}
             onClick={() => setOnlyLocalFleet(prev => !prev)}
-            title={isTe ? 'ఈ గ్రామం/జిల్లాలోని ట్రాక్టర్లను మాత్రమే చూపించు' : 'Filter tractors located in this locality/district only'}
+            title={isTe ? 'ఈ గ్రామంలోని ట్రాక్టర్లను మాత్రమే చూపించు' : 'Filter tractors located in this immediate village only'}
           >
             {onlyLocalFleet
-              ? (isTe ? '✓ స్థానిక ఫ్లీట్ మాత్రమే' : '✓ Local Fleet Only')
-              : (isTe ? '🌾 స్థానిక ట్రాక్టర్లు ఫిల్టర్' : '🌾 Filter Local Only')}
+              ? (isTe ? `✓ కేవలం ${activeVillage} మాత్రమే` : `✓ ${activeVillage} Only`)
+              : (isTe ? `🌾 కేవలం ${activeVillage}` : `🌾 ${activeVillage} Village Only`)}
           </button>
           <button
             className="filter-local-toggle-btn"
@@ -266,7 +267,14 @@ export default function FindTractor({
                   </div>
 
                   <div className="locality-badge-row">
-                    <span className="tractor-location-pill">📍 {tractor.location}</span>
+                    <span className="tractor-location-pill">
+                      📍 {tractor.location}
+                      {tractor.distanceKm && (
+                        <span style={{ marginLeft: '5px', fontWeight: 600, color: '#166534' }}>
+                          ({tractor.distanceKm < 2 ? (isTe ? 'గ్రామంలోనే' : 'In Village') : `${tractor.distanceKm} km`})
+                        </span>
+                      )}
+                    </span>
                     <span className="verified-badge">✓ {t.verifiedBadge}</span>
                   </div>
 
