@@ -27,6 +27,9 @@ export default function FindTractor({
     { id: 'Rotavator', label: isTe ? 'రొటవేటర్' : 'Rotavator' },
     { id: 'Cultivator', label: isTe ? 'కల్టివేటర్' : 'Cultivator' },
     { id: 'Trailer Services', label: isTe ? 'ట్రాలీ రవాణా' : 'Trailer Services' },
+    { id: 'Corn Harvester', label: isTe ? 'మొక్కజొన్న హార్వెస్టర్' : 'Corn Harvester' },
+    { id: 'Straw Baler', label: isTe ? 'గడ్డి బెయిలర్' : 'Straw Baler' },
+    { id: 'Corn Seeder', label: isTe ? 'విత్తన యంత్రం' : 'Corn Seeder' },
   ];
 
   const activeVillage = selectedLocation?.village || 'Hasanparthy';
@@ -38,16 +41,63 @@ export default function FindTractor({
       (tractor.model || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (tractor.brand || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (tractor.location || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (tractor.owner || '').toLowerCase().includes(searchQuery.toLowerCase());
+      (tractor.district || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (tractor.owner || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (tractor.equipment || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesService =
-      !serviceFilter ||
-      serviceFilter === 'All' ||
-      (tractor.equipment && tractor.equipment.toLowerCase().includes(serviceFilter.toLowerCase()));
+    const matchesService = (() => {
+      if (!serviceFilter || serviceFilter === 'All') return true;
+      const sf = serviceFilter.toLowerCase();
+      const equip = (tractor.equipment || '').toLowerCase();
+      const model = (tractor.model || '').toLowerCase();
+      const brand = (tractor.brand || '').toLowerCase();
+      const combined = `${equip} ${model} ${brand}`;
 
-    const matchesLocal = !onlyLocalFleet ||
+      // Straw Baler filter - matches balers and baling
+      if (sf.includes('baler')) {
+        return combined.includes('baler') || combined.includes('baling');
+      }
+
+      // Corn Seeder filter - matches manual/push corn seeders and planters
+      if (sf.includes('seeder') || sf.includes('planter')) {
+        return combined.includes('seeder') || combined.includes('seeding') || combined.includes('planter');
+      }
+
+      // Corn Harvester filter - matches combine harvester and corn machinery
+      if (sf.includes('harvester') || sf === 'corn') {
+        return combined.includes('harvester') || combined.includes('combine') || combined.includes('corn');
+      }
+
+      // Standard agricultural services
+      if (sf.includes('plough')) {
+        return combined.includes('plough') || combined.includes('tillage');
+      }
+      if (sf.includes('rotavator')) {
+        return combined.includes('rotavator');
+      }
+      if (sf.includes('cultivator')) {
+        return combined.includes('cultivator');
+      }
+      if (sf.includes('trailer')) {
+        return combined.includes('trailer');
+      }
+
+      return combined.includes(sf);
+    })();
+
+    // Specialized machinery travels across mandals and districts; also match by village/district
+    const isSpecialtyMachine =
+      (tractor.equipment || '').toLowerCase().includes('harvester') ||
+      (tractor.equipment || '').toLowerCase().includes('baler') ||
+      (tractor.equipment || '').toLowerCase().includes('seeder') ||
+      ['Corn Harvester', 'Straw Baler', 'Corn Seeder', 'Corn', 'Baler', 'Seeder'].includes(serviceFilter);
+
+    const matchesLocal =
+      !onlyLocalFleet ||
+      isSpecialtyMachine ||
       (tractor.location || '').toLowerCase().includes(activeVillage.toLowerCase()) ||
-      (tractor.location || '').toLowerCase().includes(activeDistrict.toLowerCase());
+      (tractor.location || '').toLowerCase().includes(activeDistrict.toLowerCase()) ||
+      (tractor.district || '').toLowerCase().includes(activeDistrict.toLowerCase());
 
     return matchesSearch && matchesService && matchesLocal;
   });

@@ -49,6 +49,33 @@ export default function Home({
         ? 'పంట దిగుబడి మార్కెట్‌కు చేరవేయడం, పశువుల ఎరువు, ఎరువులు మరియు వ్యవసాయ సామాగ్రి రవాణా.'
         : 'Farm produce transport, organic manure delivery, harvesting logistics, and heavy haulage.',
       badge: isTe ? 'వ్యవసాయ రవాణా' : 'Farm Transport'
+    },
+    {
+      id: 'Corn Harvester',
+      icon: '🌽',
+      title: isTe ? 'మొక్కజొన్న కోత యంత్రం (Corn Harvester)' : 'Corn & Maize Harvester',
+      desc: isTe
+        ? 'మొక్కజొన్న పంట కోత, కంకుల ఒలుపు మరియు గింజలను నూర్పిడి చేసి శుభ్రం చేయడం.'
+        : 'High-efficiency maize harvesting, cob snapping, and grain threshing directly in the field.',
+      badge: isTe ? 'కోత & నూర్పిడి' : 'Crop Harvesting'
+    },
+    {
+      id: 'Straw Baler',
+      icon: '📦',
+      title: isTe ? 'రౌండ్ స్ట్రా బెయిలర్ (Straw Baler)' : 'Round Straw Baler (గడ్డి బెయిలర్)',
+      desc: isTe
+        ? 'వరి, మొక్కజొన్న ఎండుగడ్డిని సేకరించి గుండ్రటి గడ్డి కట్టలుగా చుట్టే ఆధునిక యంత్రం.'
+        : 'Tractor-driven collection, compression, and bundling of loose crop residues into dense round bales.',
+      badge: isTe ? 'గడ్డి చుట్టడం' : 'Residue Baling'
+    },
+    {
+      id: 'Corn Seeder',
+      icon: '🌱',
+      title: isTe ? 'హ్యాండ్ కార్న్ సీడర్ (Corn Seeder)' : 'Hand Push Corn Seeder',
+      desc: isTe
+        ? 'మొక్కజొన్న, వేరుశనగ, సోయా విత్తనాలను నిర్ణీత దూరంలో ఖచ్చితంగా నాటే చేతి యంత్రం.'
+        : 'Precision push planter for maize, corn, and groundnut seeds with uniform spacing.',
+      badge: isTe ? 'విత్తనాలు నాటడం' : 'Precision Sowing'
     }
   ];
 

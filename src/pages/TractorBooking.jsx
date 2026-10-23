@@ -224,7 +224,10 @@ export default function TractorBooking({
             <option value="Rotavator">2) {t.rotavator}</option>
             <option value="Cultivator">3) {t.cultivator}</option>
             <option value="Trailer Services">4) {t.trailerServices}</option>
-            <option value="Other Agricultural Work">5) {t.otherAgriculturalWork}</option>
+            <option value="Corn Harvesting">5) {isTe ? 'మొక్కజొన్న కోత & నూర్పిడి (Corn Harvester)' : 'Corn & Maize Harvesting'}</option>
+            <option value="Straw Baling">6) {isTe ? 'గడ్డి బెయిలర్ చుట్టడం (Round Straw Baler)' : 'Round Straw Baling'}</option>
+            <option value="Corn Seeding">7) {isTe ? 'మొక్కజొన్న విత్తనాలు నాటడం (Hand Push Seeder)' : 'Corn & Seed Planter'}</option>
+            <option value="Other Agricultural Work">8) {t.otherAgriculturalWork}</option>
           </select>
         </div>
 

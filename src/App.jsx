@@ -226,6 +226,51 @@ const DEFAULT_TRACTORS = [
     photo: "/tractor1.jpeg",
     rating: 4.9,
     jobsDone: 33
+  },
+  {
+    id: 15,
+    owner: "Bhadraiah Goud",
+    mobile: "9849234567",
+    location: "Narsampet",
+    district: "Warangal",
+    brand: "Kartar",
+    model: "4000 Maize Combine Harvester (Corn Machine)",
+    equipment: "Corn Harvester, Combine Harvester, Corn Harvesting, Cobs Separation, Grain Threshing, Field Cleaning",
+    pricing: 2400,
+    availability: "Available",
+    photo: "/corn_harvester.jpg",
+    rating: 4.9,
+    jobsDone: 42
+  },
+  {
+    id: 16,
+    owner: "Srinivas Reddy",
+    mobile: "9948123890",
+    location: "Narsampet",
+    district: "Warangal",
+    brand: "Redlands",
+    model: "Round Straw Baler JRB-312 (Tractor Driven)",
+    equipment: "Straw Baler, Round Baler, Straw Baling, Paddy & Maize Residue Bundling, Biomass Compacting",
+    pricing: 1100,
+    availability: "Available",
+    photo: "/straw_baler.jpg",
+    rating: 4.8,
+    jobsDone: 37
+  },
+  {
+    id: 17,
+    owner: "Laxminarayana",
+    mobile: "9848551234",
+    location: "Narsampet",
+    district: "Warangal",
+    brand: "Kisan Tools",
+    model: "Hand Push Corn Seeder & Precision Planter",
+    equipment: "Corn Seeder, Hand Push Seeder, Seed Planter, Corn Seeding, Precision Maize Planting, Fertilizer Dispensing, Seed Sowing, Corn Machine",
+    pricing: 350,
+    availability: "Available",
+    photo: "/corn_seeder.jpg",
+    rating: 4.9,
+    jobsDone: 56
   }
 ];
 
@@ -356,19 +401,17 @@ function App() {
     setSelectedLocation(newLoc);
   };
 
-  // Load Tractors from LocalStorage or Fallback (auto-upgrades fleet)
+  // Load Tractors from LocalStorage or Fallback (auto-upgrades fleet with fresh metadata)
   const [tractors, setTractors] = useState(() => {
     try {
-      const saved = localStorage.getItem('agri_tractors');
+      const saved = localStorage.getItem('agri_tractors_v4');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.length < DEFAULT_TRACTORS.length) {
-          const userCreated = parsed.filter(t => t.id > 14);
-          return [...DEFAULT_TRACTORS, ...userCreated];
-        }
-        return parsed;
+        return JSON.parse(saved);
       }
-      return DEFAULT_TRACTORS;
+      // Migrate older stored tractors if any custom user-registered exist
+      const oldSaved = localStorage.getItem('agri_tractors');
+      const userCreated = oldSaved ? JSON.parse(oldSaved).filter(t => t.id > 17) : [];
+      return [...DEFAULT_TRACTORS, ...userCreated];
     } catch {
       return DEFAULT_TRACTORS;
     }
@@ -387,6 +430,7 @@ function App() {
   // Sync Tractors to LocalStorage
   useEffect(() => {
     try {
+      localStorage.setItem('agri_tractors_v4', JSON.stringify(tractors));
       localStorage.setItem('agri_tractors', JSON.stringify(tractors));
     } catch (e) {
       console.error('Failed to save tractors to localStorage', e);
