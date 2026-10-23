@@ -309,10 +309,12 @@
 }
 
 @keyframes pulseIcon {
+
   0%,
   100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.12);
   }
@@ -449,6 +451,7 @@
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -880,177 +883,319 @@
 .tractor-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
+  gap: 22px;
 }
 
 .tractor-card {
   background: white;
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
-  transition: all 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .tractor-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-hover);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
   border-color: var(--primary-300);
 }
 
-.tractor-image-wrap {
+/* Fixed, Uniform Image Aspect Ratio Box */
+.tractor-image-box {
   position: relative;
   width: 100%;
   height: 200px;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
   background-color: #f1f5f0;
 }
 
-.tractor-card-image {
+.tractor-image-box .tractor-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  display: block;
+  transition: transform 0.35s ease;
 }
 
-.tractor-card:hover .tractor-card-image {
-  transform: scale(1.04);
+.tractor-card:hover .tractor-image-box .tractor-img {
+  transform: scale(1.05);
 }
 
-.availability-tag {
+/* Floating Badges Over Image */
+.tractor-image-box .brand-badge {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  font-size: 12px;
+  top: 10px;
+  left: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  z-index: 2;
+  letter-spacing: 0.3px;
+}
+
+.tractor-image-box .availability-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11.5px;
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 20px;
   backdrop-filter: blur(6px);
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-.brand-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background: rgba(0, 0, 0, 0.72);
-  color: white;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 20px;
+.tractor-image-box .availability-tag.status-avail {
+  background: rgba(22, 101, 52, 0.92);
+  color: #ffffff;
 }
 
-.rating-badge {
+.tractor-image-box .availability-tag.status-busy {
+  background: rgba(180, 83, 9, 0.92);
+  color: #ffffff;
+}
+
+.tractor-image-box .rating-badge {
   position: absolute;
-  bottom: 12px;
-  left: 12px;
+  bottom: 10px;
+  left: 10px;
   background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
   color: #b45309;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
   padding: 3px 8px;
-  border-radius: 12px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 2;
 }
 
+.tractor-image-box .price-tag {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(6px);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.tractor-image-box .price-tag small {
+  font-size: 10.5px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* Card Body */
 .tractor-card-body {
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   flex: 1;
 }
 
 .tractor-title-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
   margin-bottom: 6px;
 }
 
-.tractor-title-row h4 {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--primary-900);
-}
-
-.tractor-pricing {
+.tractor-brand-model {
   font-size: 17px;
   font-weight: 800;
-  color: var(--accent-600);
+  color: #0f172a;
+  line-height: 1.3;
+  margin: 0;
 }
 
-.tractor-pricing small {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.tractor-location {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 14px;
-}
-
-.tractor-equipment-list {
-  background: var(--bg-app);
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  margin-bottom: 16px;
-}
-
-.tractor-equipment-list small {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.equipment-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.equip-tag {
-  background: white;
-  border: 1px solid var(--border-light);
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  color: var(--primary-700);
-}
-
-.owner-info-strip {
+.locality-badge-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
-  margin-bottom: 16px;
-  font-size: 13px;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
 }
 
-.owner-name {
+.tractor-location-pill {
+  color: #475569;
+  font-weight: 600;
+}
+
+.verified-badge {
+  color: #166534;
   font-weight: 700;
-  color: var(--text-main);
+  font-size: 11px;
+  background: #dcfce7;
+  padding: 2px 7px;
+  border-radius: 10px;
 }
 
-.owner-phone {
-  color: var(--text-muted);
+.equipment-tags-container {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
 }
 
+.equip-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.equipment-text {
+  font-size: 12px;
+  color: #334155;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.owner-profile-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid #f1f5f9;
+  margin-bottom: 14px;
+}
+
+.owner-name-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-avatar {
+  width: 32px;
+  height: 32px;
+  background: #e2e8f0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+.owner-name-group strong {
+  font-size: 13.5px;
+  color: #1e293b;
+  display: block;
+}
+
+.owner-phone-sub {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+/* Ergonomic, Uncompressed Action Buttons */
 .tractor-card-actions {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-top: auto;
+}
+
+.btn-card-book {
+  width: 100%;
+  min-height: 44px;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+  padding: 10px 16px;
+}
+
+.btn-card-book:hover {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
+}
+
+.tractor-card-quick-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.btn-card-call {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 42px;
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.btn-card-call:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn-card-whatsapp {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 42px;
+  background: #25D366;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25);
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.btn-card-whatsapp:hover {
+  background: #20bd5a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
 }
 
 /* Forms */
@@ -1797,6 +1942,7 @@ tr:hover td {
     opacity: 0;
     transform: scale(0.95) translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -2306,4 +2452,281 @@ tr:hover td {
   .forecast-days-grid {
     grid-template-columns: 1fr;
   }
-}
+}
+
+/* ========================================================
+   MOBILE APP-STYLE RESPONSIVENESS & BOTTOM NAVIGATION BAR
+   ======================================================== */
+
+.mobile-bottom-nav {
+  display: none;
+}
+
+.header-mobile-brand {
+  display: none;
+}
+
+.pill-text-mobile {
+  display: none;
+}
+
+.lang-text-mobile {
+  display: none;
+}
+
+/* Base Body Overflow Protection */
+body,
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+.app-layout {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+@media (max-width: 768px) {
+
+  /* Top Header on Mobile */
+  .top-header {
+    padding: 10px 14px;
+    gap: 8px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .header-mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #166534;
+    white-space: nowrap;
+  }
+
+  .header-mobile-brand .brand-icon {
+    font-size: 18px;
+  }
+
+  /* Hide long desktop-only page title from crammed top row */
+  .header-title {
+    display: none !important;
+  }
+
+  .header-left {
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .header-right {
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .role-switcher {
+    display: none !important;
+    /* Kept in sidebar to avoid top squishing */
+  }
+
+  .locality-pill-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    max-width: 145px;
+    border-radius: 16px;
+  }
+
+  .pill-text-desktop {
+    display: none !important;
+  }
+
+  .pill-text-mobile {
+    display: inline !important;
+    max-width: 85px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lang-toggle-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 16px;
+  }
+
+  .lang-text-desktop {
+    display: none !important;
+  }
+
+  .lang-text-mobile {
+    display: inline !important;
+  }
+
+  /* Native Mobile Bottom Navigation Bar */
+  .mobile-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 62px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+    z-index: 1000;
+    padding: 4px 6px calc(6px + env(safe-area-inset-bottom, 0px)) 6px;
+  }
+
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    padding: 4px 2px;
+    cursor: pointer;
+    color: #64748b;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    min-height: 48px;
+  }
+
+  .bottom-nav-item:active {
+    transform: scale(0.92);
+  }
+
+  .bottom-nav-item.active {
+    color: #15803d;
+  }
+
+  .bottom-nav-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .bottom-nav-item.active .bottom-nav-icon-wrap {
+    background: #dcfce7;
+    padding: 3px 14px;
+    border-radius: 14px;
+    color: #15803d;
+  }
+
+  .bottom-nav-badge {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    background: #ea580c;
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    min-width: 17px;
+    height: 17px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    padding: 0 3px;
+  }
+
+  .bottom-nav-label {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .bottom-nav-item.active .bottom-nav-label {
+    font-weight: 800;
+    color: #15803d;
+  }
+
+  /* Safe Area for Mobile Content: so bottom bar never covers anything */
+  .page-container {
+    padding: 14px 12px 84px 12px;
+  }
+
+  /* Mobile Tractor Card Grid */
+  .tractor-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .tractor-card {
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  }
+
+  .tractor-image-box {
+    height: 195px;
+    aspect-ratio: 16 / 10;
+  }
+
+  /* Search & Filter on Mobile */
+  .search-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .search-filter-bar input {
+    width: 100%;
+    font-size: 14px;
+  }
+
+  .services-pills {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .services-pills .service-pill {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Weather Advisory on Mobile */
+  .weather-advisory-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .weather-header-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .weather-actions-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Forms on Mobile */
+  .form-card-wrapper {
+    padding: 20px 16px;
+    border-radius: 14px;
+  }
+
+  .booking-stepper {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

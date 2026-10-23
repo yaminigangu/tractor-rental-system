@@ -1,9 +1,9 @@
 import { translations } from '../translations';
 
-export default function Header({ 
-  activePage, 
-  toggleMobileMenu, 
-  activeRole, 
+export default function Header({
+  activePage,
+  toggleMobileMenu,
+  activeRole,
   setActiveRole,
   language = 'en',
   setLanguage,
@@ -44,6 +44,10 @@ export default function Header({
     ? `${isTe ? (selectedLocation.villageTe || selectedLocation.village) : selectedLocation.village}, ${isTe ? (selectedLocation.districtTe || selectedLocation.district) : selectedLocation.district}`
     : t.localityLabel;
 
+  const displayLocationShort = selectedLocation
+    ? (isTe ? (selectedLocation.villageTe || selectedLocation.village) : selectedLocation.village)
+    : 'Hasanparthy';
+
   return (
     <header className="top-header">
       <div className="header-left">
@@ -54,6 +58,10 @@ export default function Header({
         >
           ☰
         </button>
+        <div className="header-mobile-brand">
+          <span className="brand-icon">🌾</span>
+          <span className="brand-title">{t.brandName}</span>
+        </div>
         <div className="header-title">
           {getPageTitle(activePage)}
         </div>
@@ -68,7 +76,8 @@ export default function Header({
           type="button"
         >
           <span className="pill-pin">📍</span>
-          <span className="pill-text">{displayLocation}</span>
+          <span className="pill-text pill-text-desktop">{displayLocation}</span>
+          <span className="pill-text pill-text-mobile">{displayLocationShort}</span>
           <span className="pill-arrow">▾</span>
         </button>
 
@@ -79,7 +88,8 @@ export default function Header({
           title="Switch language between English and Telugu"
         >
           <span>🌐</span>
-          <span>{language === 'en' ? 'తెలుగు' : 'English'}</span>
+          <span className="lang-text-desktop">{language === 'en' ? 'తెలుగు' : 'English'}</span>
+          <span className="lang-text-mobile">{language === 'en' ? 'తెలుగు' : 'EN'}</span>
         </button>
 
         {/* Role Switcher */}
@@ -96,7 +106,7 @@ export default function Header({
           >
             {t.roleOwner}
           </button>
-          <button 
+          <button
             className={`role-btn ${activeRole === 'admin' ? 'active' : ''}`}
             onClick={() => setActiveRole('admin')}
             title={isAdminLoggedIn ? 'Admin Authenticated' : 'Admin Login Required'}
@@ -106,8 +116,8 @@ export default function Header({
         </div>
 
         {isAdminLoggedIn && onAdminLogout && (
-          <button 
-            className="btn btn-call" 
+          <button
+            className="btn btn-call"
             style={{ background: '#d32f2f', padding: '5px 10px', fontSize: '11px' }}
             onClick={onAdminLogout}
             title={t.adminLogoutBtn}

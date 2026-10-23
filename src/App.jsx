@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import ReceiptModal from './components/ReceiptModal';
 import LocationModal from './components/LocationModal';
+import MobileBottomNav from './components/MobileBottomNav';
 import Home from './pages/Home';
 import FindTractor from './pages/FindTractor';
 import TractorBooking from './pages/TractorBooking';
@@ -487,9 +488,9 @@ function App() {
         );
       case 'admin-dashboard':
         return isAdminLoggedIn ? (
-          <Dashboard 
-            bookings={bookings} 
-            setBookings={setBookings} 
+          <Dashboard
+            bookings={bookings}
+            setBookings={setBookings}
             tractors={tractors}
             setTractors={setTractors}
             onViewSlip={(b) => setReceiptModalBooking(b)}
@@ -497,7 +498,7 @@ function App() {
             language={language}
           />
         ) : (
-          <AdminLogin 
+          <AdminLogin
             onLoginSuccess={() => setIsAdminLoggedIn(true)}
             setActivePage={setActivePage}
             language={language}
@@ -533,8 +534,8 @@ function App() {
 
       {/* Main Content Area */}
       <div className="main-content">
-        <Header 
-          activePage={activePage} 
+        <Header
+          activePage={activePage}
           toggleMobileMenu={() => setIsMobileOpen(prev => !prev)}
           activeRole={activeRole}
           setActiveRole={handleRoleChange}
@@ -567,6 +568,14 @@ function App() {
           language={language}
         />
       )}
+
+      {/* Sticky Native-feel Mobile Bottom Navigation Bar */}
+      <MobileBottomNav
+        activePage={activePage}
+        setActivePage={setActivePage}
+        pendingCount={pendingCount}
+        language={language}
+      />
     </div>
   );
 }
