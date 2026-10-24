@@ -10,7 +10,11 @@ export default function Header({
   isAdminLoggedIn,
   onAdminLogout,
   selectedLocation,
-  onOpenLocationPicker
+  onOpenLocationPicker,
+  currentFarmer,
+  onFarmerLogout,
+  currentOwner,
+  onOwnerLogout
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -97,14 +101,16 @@ export default function Header({
           <button
             className={`role-btn ${activeRole === 'farmer' ? 'active' : ''}`}
             onClick={() => setActiveRole('farmer')}
+            title={currentFarmer ? `Logged in as Farmer: ${currentFarmer.name}` : 'Click to Login as Farmer'}
           >
-            {t.roleFarmer}
+            {currentFarmer ? `👨‍🌾 ${currentFarmer.name.split(' ')[0]}` : t.roleFarmer}
           </button>
           <button
             className={`role-btn ${activeRole === 'owner' ? 'active' : ''}`}
             onClick={() => setActiveRole('owner')}
+            title={currentOwner ? `Logged in as Captain: ${currentOwner.fullName}` : 'Click to Login / Register as Captain'}
           >
-            {t.roleOwner}
+            {currentOwner ? `🚜 ${currentOwner.fullName.split(' ')[0]} ★` : t.roleOwner}
           </button>
           <button
             className={`role-btn ${activeRole === 'admin' ? 'active' : ''}`}
@@ -115,14 +121,41 @@ export default function Header({
           </button>
         </div>
 
-        {isAdminLoggedIn && onAdminLogout && (
+        {/* Farmer Logout Button */}
+        {activeRole === 'farmer' && currentFarmer && onFarmerLogout && (
+          <button
+            type="button"
+            className="btn btn-call"
+            style={{ background: '#4b5563', padding: '5px 8px', fontSize: '11px', color: '#fff' }}
+            onClick={onFarmerLogout}
+            title="Logout Farmer Profile"
+          >
+            🚪 {language === 'te' ? 'లాగ్అవుట్' : 'Logout'}
+          </button>
+        )}
+
+        {/* Owner Logout Button */}
+        {activeRole === 'owner' && currentOwner && onOwnerLogout && (
+          <button
+            type="button"
+            className="btn btn-call"
+            style={{ background: '#4b5563', padding: '5px 8px', fontSize: '11px', color: '#fff' }}
+            onClick={onOwnerLogout}
+            title="Logout Captain Profile"
+          >
+            🚪 {language === 'te' ? 'లాగ్అవుట్' : 'Logout'}
+          </button>
+        )}
+
+        {/* Admin Logout Button */}
+        {activeRole === 'admin' && isAdminLoggedIn && onAdminLogout && (
           <button
             className="btn btn-call"
             style={{ background: '#d32f2f', padding: '5px 10px', fontSize: '11px' }}
             onClick={onAdminLogout}
             title={t.adminLogoutBtn}
           >
-            🚪
+            🚪 {language === 'te' ? 'లాగ్అవుట్' : 'Logout'}
           </button>
         )}
       </div>

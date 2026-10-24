@@ -2730,3 +2730,477 @@ html {
     gap: 12px;
   }
 }
+
+/* ========================================================
+   SANCHAROO / AGRIRENT CAPTAIN & FARMER AUTH DESIGN SYSTEM
+   Exact Match to User Uploaded Screenshots
+   ======================================================== */
+
+.auth-screen-wrapper {
+  min-height: calc(100vh - 72px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: radial-gradient(circle at 50% 15%, #1e293b 0%, #0b1329 100%);
+  position: relative;
+}
+
+.auth-device-frame {
+  width: 100%;
+  max-width: 440px;
+  border-radius: 40px;
+  padding: 12px;
+  background: #0b1329;
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.auth-login-card {
+  background: #ffffff;
+  border-radius: 32px;
+  padding: 36px 26px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.auth-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-brand-icon-box {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: #e8eff3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.auth-brand-name {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #334155;
+}
+
+.auth-role-badge {
+  background: #1b4958;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  margin-left: 2px;
+}
+
+.auth-title {
+  font-size: 34px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 24px;
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.auth-subtitle {
+  font-size: 14.5px;
+  color: #64748b;
+  margin-bottom: 28px;
+  font-weight: 500;
+}
+
+.auth-phone-input-box {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px 18px;
+  gap: 14px;
+  transition: all 0.2s ease;
+}
+
+.auth-phone-input-box:focus-within {
+  border-color: #507d8f;
+  box-shadow: 0 0 0 3px rgba(80, 125, 143, 0.15);
+  background: #ffffff;
+}
+
+.auth-country-code {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.auth-input-phone {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  width: 100%;
+}
+
+.auth-btn-continue {
+  width: 100%;
+  background: #507d8f;
+  color: #ffffff;
+  border: none;
+  border-radius: 16px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: all 0.2s ease;
+}
+
+.auth-btn-continue:hover {
+  background: #3f687a;
+  transform: translateY(-1px);
+}
+
+.auth-legal-text {
+  font-size: 11.5px;
+  color: #64748b;
+  text-align: center;
+  margin-top: 24px;
+  line-height: 1.5;
+}
+
+.auth-legal-text a {
+  color: #1e293b;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.auth-powered-by {
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 18px;
+  padding-bottom: 6px;
+}
+
+.auth-powered-by strong {
+  color: #ffffff;
+}
+
+/* ========================================================
+   CAPTAIN 4-STEP REGISTRATION CARD STYLES
+   ======================================================== */
+
+.captain-mobile-card-inner {
+  background: #ffffff;
+  border-radius: 32px;
+  padding: 28px 22px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.captain-card-header {
+  margin-bottom: 20px;
+}
+
+.captain-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.captain-title-row h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.captain-login-link-btn {
+  background: none;
+  border: none;
+  color: #1b4958;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.captain-step-indicator {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.captain-progress-track {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.captain-progress-bar {
+  height: 100%;
+  background: #1b4958;
+  transition: width 0.3s ease;
+}
+
+.captain-alert-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.captain-form-group {
+  margin-bottom: 16px;
+}
+
+.captain-label {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.captain-input,
+.captain-select {
+  width: 100%;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-size: 15px;
+  color: #0f172a;
+  font-family: inherit;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.captain-input:focus,
+.captain-select:focus {
+  border-color: #1b4958;
+  background: #ffffff;
+}
+
+.captain-gender-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.captain-gender-btn {
+  flex: 1;
+  padding: 12px 6px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.captain-gender-btn.active {
+  background: #1b4958;
+  border-color: #1b4958;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(27, 73, 88, 0.25);
+}
+
+.captain-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 12px 0 16px 0;
+}
+
+.captain-upload-card {
+  margin-bottom: 16px;
+}
+
+.captain-upload-dropzone {
+  display: block;
+  border: 2px dashed #94a3b8;
+  border-radius: 16px;
+  background: #f8fafc;
+  padding: 22px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.captain-upload-dropzone:hover {
+  border-color: #1b4958;
+  background: #f0f7f9;
+}
+
+.captain-upload-dropzone.has-file {
+  border-style: solid;
+  border-color: #00a86b;
+  background: #f0fdf4;
+}
+
+.captain-hidden-input {
+  display: none;
+}
+
+.captain-dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.captain-dropzone-icon {
+  font-size: 28px;
+  color: #1b4958;
+}
+
+.captain-dropzone-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.captain-preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.captain-doc-thumb {
+  max-height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.captain-preview-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #00a86b;
+}
+
+.captain-footer-actions {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  gap: 12px;
+}
+
+.captain-footer-actions.split {
+  justify-content: space-between;
+}
+
+.captain-btn-continue {
+  background: #1b4958;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.captain-btn-continue:hover {
+  background: #133540;
+}
+
+.captain-btn-back {
+  background: #ffffff;
+  color: #334155;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 14px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.captain-btn-submit {
+  background: #00a86b;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 168, 107, 0.3);
+}
+
+.captain-btn-submit:hover {
+  background: #00935d;
+}
+
+.captain-demo-helper {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.captain-demo-link {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.captain-implements-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.captain-chip-btn {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.captain-chip-btn.active {
+  background: #1b4958;
+  border-color: #1b4958;
+  color: #ffffff;
+}

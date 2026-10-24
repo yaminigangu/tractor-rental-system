@@ -7,7 +7,9 @@ export default function Sidebar({
   isMobileOpen,
   closeMobileMenu,
   language = 'en',
-  selectedLocation
+  selectedLocation,
+  currentFarmer,
+  currentOwner
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -16,7 +18,16 @@ export default function Sidebar({
     { id: 'home', label: t.navHome, icon: '🏡' },
     { id: 'find-tractor', label: t.navFindTractor, icon: '🔍' },
     { id: 'booking-form', label: t.navBookingTractor, icon: '📋' },
-    { id: 'owner-registration', label: t.navOwnerRegistration, icon: '🚜' },
+    { 
+      id: 'farmer-login', 
+      label: currentFarmer ? `👨‍🌾 ${currentFarmer.name.split(' ')[0]} (Farmer)` : (isTe ? '👨‍🌾 రైతు లాగిన్' : '👨‍🌾 Farmer Login'), 
+      icon: '🌾' 
+    },
+    { 
+      id: 'owner-registration', 
+      label: currentOwner ? `🚜 ${currentOwner.fullName.split(' ')[0]} (Captain)` : (isTe ? '🚜 కెప్టెన్ లాగిన్ / నమోదు' : '🚜 Captain Login / Register'), 
+      icon: '🚜' 
+    },
     { id: 'owner-inbox', label: t.navOwnerInbox, icon: '📥', badge: pendingCount > 0 ? pendingCount : null },
     { id: 'my-bookings', label: t.navMyBooking, icon: '📄' },
     { id: 'admin-dashboard', label: t.navAdminDashboard, icon: '🛡️' },

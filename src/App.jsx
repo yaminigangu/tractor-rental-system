@@ -9,6 +9,9 @@ import Home from './pages/Home';
 import FindTractor from './pages/FindTractor';
 import TractorBooking from './pages/TractorBooking';
 import OwnerRegistration from './pages/OwnerRegistration';
+import OwnerLogin from './pages/OwnerLogin';
+import FarmerLogin from './pages/FarmerLogin';
+import FarmerOnboarding from './pages/FarmerOnboarding';
 import OwnerInbox from './pages/OwnerInbox';
 import MyBookings from './pages/MyBookings';
 import Dashboard from './pages/Dashboard';
@@ -60,6 +63,53 @@ function App() {
   const [selectedTractor, setSelectedTractor] = useState(null);
   const [receiptModalBooking, setReceiptModalBooking] = useState(null);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
+  // Active Logged-in Farmer State with LocalStorage
+  const [currentFarmer, setCurrentFarmer] = useState(() => {
+    try {
+      const saved = localStorage.getItem('agri_current_farmer');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (currentFarmer) {
+        localStorage.setItem('agri_current_farmer', JSON.stringify(currentFarmer));
+      } else {
+        localStorage.removeItem('agri_current_farmer');
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [currentFarmer]);
+
+  // Active Logged-in Tractor Owner / Captain State with LocalStorage
+  const [currentOwner, setCurrentOwner] = useState(() => {
+    try {
+      const saved = localStorage.getItem('agri_current_owner');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (currentOwner) {
+        localStorage.setItem('agri_current_owner', JSON.stringify(currentOwner));
+      } else {
+        localStorage.removeItem('agri_current_owner');
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [currentOwner]);
+
+  // Mobile number passed when redirecting new farmer to Onboarding
+  const [onboardingMobile, setOnboardingMobile] = useState('');
 
   // Admin Login Authentication State with SessionStorage
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
@@ -197,13 +247,21 @@ function App() {
     }
   }, [bookings]);
 
-  // Switch role actions
+  // Switch role actions with smart authentication routing
   const handleRoleChange = (role) => {
     setActiveRole(role);
     if (role === 'farmer') {
-      setActivePage('find-tractor');
+      if (currentFarmer) {
+        setActivePage('find-tractor');
+      } else {
+        setActivePage('farmer-login');
+      }
     } else if (role === 'owner') {
-      setActivePage('owner-inbox');
+      if (currentOwner) {
+        setActivePage('owner-inbox');
+      } else {
+        setActivePage('owner-registration');
+      }
     } else if (role === 'admin') {
       setActivePage('admin-dashboard');
     }
@@ -251,14 +309,38 @@ function App() {
             onBookingSuccess={(newB) => setReceiptModalBooking(newB)}
             language={language}
             selectedLocation={selectedLocation}
+            currentFarmer={currentFarmer}
+          />
+        );
+      case 'farmer-login':
+        return (
+          <FarmerLogin
+            setActivePage={setActivePage}
+            setCurrentFarmer={setCurrentFarmer}
+            setOnboardingMobile={setOnboardingMobile}
+            language={language}
+          />
+        );
+      case 'farmer-onboarding':
+        return (
+          <FarmerOnboarding
+            initialMobile={onboardingMobile}
+            setActivePage={setActivePage}
+            setCurrentFarmer={setCurrentFarmer}
+            language={language}
+            selectedLocation={selectedLocation}
           />
         );
       case 'owner-registration':
+      case 'owner-login':
         return (
           <OwnerRegistration
             setTractors={setTractors}
             setActivePage={setActivePage}
             language={language}
+            currentOwner={currentOwner}
+            setCurrentOwner={setCurrentOwner}
+            selectedLocation={selectedLocation}
           />
         );
       case 'owner-inbox':
@@ -325,6 +407,8 @@ function App() {
         closeMobileMenu={() => setIsMobileOpen(false)}
         language={language}
         selectedLocation={selectedLocation}
+        currentFarmer={currentFarmer}
+        currentOwner={currentOwner}
       />
 
       {/* Main Content Area */}
@@ -340,6 +424,10 @@ function App() {
           onAdminLogout={() => setIsAdminLoggedIn(false)}
           selectedLocation={selectedLocation}
           onOpenLocationPicker={() => setIsLocationModalOpen(true)}
+          currentFarmer={currentFarmer}
+          onFarmerLogout={() => setCurrentFarmer(null)}
+          currentOwner={currentOwner}
+          onOwnerLogout={() => setCurrentOwner(null)}
         />
         <main className="page-container">
           {renderPage()}

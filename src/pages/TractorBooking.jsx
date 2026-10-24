@@ -12,25 +12,39 @@ export default function TractorBooking({
   setActivePage,
   onBookingSuccess,
   language = 'en',
-  selectedLocation
+  selectedLocation,
+  currentFarmer
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
 
-  const defaultVillage = selectedLocation
+  const defaultVillage = currentFarmer?.village || (selectedLocation
     ? `${isTe ? (selectedLocation.villageTe || selectedLocation.village) : selectedLocation.village}, ${isTe ? (selectedLocation.districtTe || selectedLocation.district) : selectedLocation.district}`
-    : '';
+    : '');
 
   const [formData, setFormData] = useState(() => ({
-    farmerName: '',
-    farmerMobile: '',
+    farmerName: currentFarmer?.name || '',
+    farmerMobile: currentFarmer?.mobile || '',
     farmerVillage: defaultVillage,
     workType: 'Ploughing',
     otherWorkDetails: '',
-    landArea: 2,
+    landArea: currentFarmer?.landArea || 2,
     bookingDate: TODAY_DATE,
     assignedTractorId: selectedTractor ? selectedTractor.id : (tractors[0]?.id || '')
   }));
+
+  // Auto-sync currentFarmer if user logs in while on or visiting the page
+  useEffect(() => {
+    if (currentFarmer) {
+      setFormData(prev => ({
+        ...prev,
+        farmerName: currentFarmer.name || prev.farmerName,
+        farmerMobile: currentFarmer.mobile || prev.farmerMobile,
+        farmerVillage: currentFarmer.village || prev.farmerVillage,
+        landArea: currentFarmer.landArea || prev.landArea
+      }));
+    }
+  }, [currentFarmer]);
 
   // Sync selectedTractor from FindTractor whenever it changes
   useEffect(() => {
