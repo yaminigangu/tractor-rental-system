@@ -25,7 +25,7 @@ export default function Sidebar({
     },
     { 
       id: 'owner-registration', 
-      label: currentOwner ? `🚜 ${currentOwner.fullName.split(' ')[0]} (Captain)` : (isTe ? '🚜 కెప్టెన్ లాగిన్ / నమోదు' : '🚜 Captain Login / Register'), 
+      label: currentOwner ? `🚜 ${currentOwner.fullName.split(' ')[0]} (Owner)` : (isTe ? '🚜 ట్రాక్టర్ యజమాని లాగిన్ / నమోదు' : '🚜 Tractor Owner Login / Register'), 
       icon: '🚜' 
     },
     { id: 'owner-inbox', label: t.navOwnerInbox, icon: '📥', badge: pendingCount > 0 ? pendingCount : null },

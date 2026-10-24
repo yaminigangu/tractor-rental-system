@@ -108,9 +108,9 @@ export default function Header({
           <button
             className={`role-btn ${activeRole === 'owner' ? 'active' : ''}`}
             onClick={() => setActiveRole('owner')}
-            title={currentOwner ? `Logged in as Captain: ${currentOwner.fullName}` : 'Click to Login / Register as Captain'}
+            title={currentOwner ? `Logged in as Tractor Owner: ${currentOwner.fullName}` : 'Click to Login / Register as Tractor Owner'}
           >
-            {currentOwner ? `🚜 ${currentOwner.fullName.split(' ')[0]} ★` : t.roleOwner}
+            {currentOwner ? `🚜 ${currentOwner.fullName.split(' ')[0]} (Owner)` : t.roleOwner}
           </button>
           <button
             className={`role-btn ${activeRole === 'admin' ? 'active' : ''}`}
@@ -141,7 +141,7 @@ export default function Header({
             className="btn btn-call"
             style={{ background: '#4b5563', padding: '5px 8px', fontSize: '11px', color: '#fff' }}
             onClick={onOwnerLogout}
-            title="Logout Captain Profile"
+            title="Logout Tractor Owner Profile"
           >
             🚪 {language === 'te' ? 'లాగ్అవుట్' : 'Logout'}
           </button>

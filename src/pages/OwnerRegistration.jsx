@@ -300,13 +300,15 @@ export default function OwnerRegistration({
             ======================================================== */}
         {currentStep === 0 && (
           <div className="auth-login-card page-anim">
-            {/* Top Brand & Captain Pill Header */}
+            {/* Top Brand & Tractor Owner Pill Header */}
             <div className="auth-brand-row">
-              <div className="auth-brand-icon-box">
+              <div className="auth-brand-icon-box" style={{ background: '#ecfdf5', color: '#166534' }}>
                 🚜
               </div>
-              <span className="auth-brand-name">SANCHAROO</span>
-              <span className="auth-role-badge">CAPTAIN</span>
+              <span className="auth-brand-name">AGRIRENT</span>
+              <span className="auth-role-badge" style={{ background: '#166534', letterSpacing: '0.5px' }}>
+                TRACTOR OWNER
+              </span>
             </div>
 
             {/* Login Title & Subtitle */}
@@ -339,6 +341,7 @@ export default function OwnerRegistration({
               <button
                 type="submit"
                 className="auth-btn-continue"
+                style={{ background: '#1b5e20' }}
               >
                 <span>Continue</span>
                 <span>→</span>
@@ -361,13 +364,13 @@ export default function OwnerRegistration({
                 <button
                   type="button"
                   className="btn btn-outline-white"
-                  style={{ fontSize: '11.5px', padding: '6px 10px', textAlign: 'left', color: '#1b4958', borderColor: '#cbd5e1' }}
+                  style={{ fontSize: '11.5px', padding: '6px 10px', textAlign: 'left', color: '#166534', borderColor: '#cbd5e1' }}
                   onClick={() => {
                     handleInputChange('mobile', '9876543210');
                     setErrorMsg('');
                   }}
                 >
-                  ⚡ Existing Captain: Ramesh Kumar (9876543210)
+                  ⚡ Existing Owner: Ramesh Kumar (9876543210)
                 </button>
                 <button
                   type="button"
@@ -379,7 +382,7 @@ export default function OwnerRegistration({
                     setCurrentStep(1); // Proceed directly to 4-step verification!
                   }}
                 >
-                  ⚡ New Captain (+91 9849001122): Start 4 Steps
+                  ⚡ New Tractor Owner (+91 9849001122): Start 4 Steps
                 </button>
               </div>
             </div>
@@ -399,7 +402,7 @@ export default function OwnerRegistration({
             {/* Step Header with Title, Step Indicator & Progress Bar */}
             <div className="captain-card-header">
               <div className="captain-title-row">
-                <h2>{isTe ? 'కెప్టెన్ రిజిస్ట్రేషన్' : 'Captain Registration'}</h2>
+                <h2>{isTe ? 'ట్రాక్టర్ యజమాని నమోదు' : 'Tractor Owner Registration'}</h2>
                 <button
                   type="button"
                   className="captain-login-link-btn"
@@ -785,7 +788,7 @@ export default function OwnerRegistration({
             }}>
               <div style={{ fontSize: '46px', marginBottom: '8px' }}>🎉</div>
               <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>
-                {isTe ? 'కెప్టెన్ నమోదు పూర్తయింది!' : 'Captain Registration Complete!'}
+                {isTe ? 'ట్రాక్టర్ యజమాని నమోదు పూర్తయింది!' : 'Tractor Owner Registration Complete!'}
               </h3>
               <p style={{ margin: '6px 0 0 0', fontSize: '13px', opacity: 0.9 }}>
                 {isTe ? 'మీ ట్రాక్టర్ ధృవీకరించబడింది మరియు సక్రియం చేయబడింది' : 'Your tractor is verified and active for bookings'}
@@ -802,7 +805,7 @@ export default function OwnerRegistration({
                 fontSize: '13.5px',
                 lineHeight: 1.6
               }}>
-                <div><strong>{isTe ? 'కెప్టెన్ పేరు:' : 'Captain Name:'}</strong> {successData.fullName}</div>
+                <div><strong>{isTe ? 'యజమాని పేరు:' : 'Owner Name:'}</strong> {successData.fullName}</div>
                 <div><strong>{isTe ? 'మొబైల్ నంబర్:' : 'Mobile Number:'}</strong> {successData.mobile}</div>
                 <div><strong>{isTe ? 'వాహనం:' : 'Vehicle:'}</strong> {successData.vehicleType} ({successData.vehicleNumber})</div>
                 <div><strong>{isTe ? 'ప్రాంతం:' : 'Locality:'}</strong> {successData.village}</div>
