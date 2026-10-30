@@ -1,0 +1,77 @@
+{
+  "id": "/?source=pwa",
+  "name": "AgriRent - Tractor Rental & Agriculture Services",
+  "short_name": "AgriRent",
+  "description": "Locality Tractor Rental & Agriculture Equipment Booking Web App for Farmers and Machinery Owners",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "background_color": "#0b1329",
+  "theme_color": "#1b5e20",
+  "orientation": "any",
+  "lang": "en",
+  "categories": ["productivity", "utilities", "business", "lifestyle"],
+  "icons": [
+    {
+      "src": "/pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Find Tractor Fleet",
+      "short_name": "Fleet",
+      "description": "Browse available tractors in your village",
+      "url": "/?page=find-tractor",
+      "icons": [{ "src": "/pwa-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tractor Owner Registration",
+      "short_name": "Owner Register",
+      "description": "Register your tractor in 4 steps",
+      "url": "/?page=owner-registration",
+      "icons": [{ "src": "/pwa-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Farmer Login",
+      "short_name": "Farmer",
+      "description": "Farmer login and booking",
+      "url": "/?page=farmer-login",
+      "icons": [{ "src": "/pwa-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Work Bookings",
+      "short_name": "My Bookings",
+      "description": "Track ongoing and completed farm bookings",
+      "url": "/?page=my-bookings",
+      "icons": [{ "src": "/pwa-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

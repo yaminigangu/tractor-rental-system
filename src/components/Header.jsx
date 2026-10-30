@@ -14,7 +14,9 @@ export default function Header({
   currentFarmer,
   onFarmerLogout,
   currentOwner,
-  onOwnerLogout
+  onOwnerLogout,
+  isInstalled = false,
+  onInstallApp
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -35,6 +37,10 @@ export default function Header({
         return t.myBookingsTitle;
       case 'admin-dashboard':
         return language === 'te' ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Website Admin Dashboard';
+      case 'farmer-login':
+        return language === 'te' ? 'రైతు లాగిన్' : 'Farmer Login';
+      case 'farmer-onboarding':
+        return language === 'te' ? 'కొత్త రైతు నమోదు' : 'Farmer Onboarding';
       default:
         return t.brandSubtitle;
     }
@@ -84,6 +90,20 @@ export default function Header({
           <span className="pill-text pill-text-mobile">{displayLocationShort}</span>
           <span className="pill-arrow">▾</span>
         </button>
+
+        {/* PWA App Install Button (Pill) */}
+        {!isInstalled && onInstallApp && (
+          <button
+            type="button"
+            className="header-pwa-btn"
+            onClick={onInstallApp}
+            title={isTe ? "ఈ వెబ్‌సైట్‌ను ఫోన్/కంప్యూటర్‌లో యాప్ లాగా ఇన్‌స్టాల్ చేసుకోండి" : "Install AgriRent as a Progressive Web App on your phone/PC"}
+          >
+            <span className="header-pwa-icon">📲</span>
+            <span className="header-pwa-text header-pwa-text-desktop">{isTe ? "యాప్ ఇన్‌స్టాల్" : "Install App"}</span>
+            <span className="header-pwa-text header-pwa-text-mobile">{isTe ? "యాప్" : "App"}</span>
+          </button>
+        )}
 
         {/* Language Switcher */}
         <button

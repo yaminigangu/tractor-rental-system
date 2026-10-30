@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e4217"/>
+      <stop offset="50%" stop-color="#1b5e20"/>
+      <stop offset="100%" stop-color="#2e7d32"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#ffeb3b" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ffeb3b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe082"/>
+      <stop offset="50%" stop-color="#ffc107"/>
+      <stop offset="100%" stop-color="#ff9800"/>
+    </linearGradient>
+    <linearGradient id="tractorBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e8f5e9"/>
+    </linearGradient>
+    <linearGradient id="greenStripe" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4caf50"/>
+      <stop offset="100%" stop-color="#2e7d32"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Glow -->
+  <circle cx="256" cy="230" r="180" fill="url(#sunGlow)"/>
+
+  <!-- Field Ground -->
+  <path d="M 0 370 Q 256 340 512 370 L 512 512 L 0 512 Z" fill="#144617"/>
+
+  <!-- Wheat Stalks (Right Side) -->
+  <g transform="translate(320, 80) rotate(15)">
+    <path d="M 0 100 Q 30 50 20 0" stroke="url(#goldGrad)" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <ellipse cx="10" cy="18" rx="8" ry="14" fill="url(#goldGrad)" transform="rotate(-30 10 18)"/>
+    <ellipse cx="26" cy="36" rx="8" ry="14" fill="url(#goldGrad)" transform="rotate(35 26 36)"/>
+    <ellipse cx="6" cy="54" rx="8" ry="14" fill="url(#goldGrad)" transform="rotate(-35 6 54)"/>
+    <ellipse cx="22" cy="72" rx="8" ry="14" fill="url(#goldGrad)" transform="rotate(35 22 72)"/>
+  </g>
+
+  <!-- Tractor Group -->
+  <g id="tractor" transform="translate(45, 120)">
+    <!-- Exhaust Pipe & Smoke Cap -->
+    <rect x="240" y="50" width="14" height="65" rx="4" fill="url(#goldGrad)"/>
+    <path d="M 235 48 Q 247 40 259 48" stroke="url(#goldGrad)" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+    <!-- Cabin Roof Canopy -->
+    <path d="M 60 40 L 195 40 Q 200 40 200 48 L 195 62 L 55 62 L 50 48 Q 50 40 60 40 Z" fill="url(#goldGrad)"/>
+
+    <!-- Cabin Frame -->
+    <path d="M 70 62 L 180 62 L 185 160 L 65 160 Z" fill="url(#tractorBody)"/>
+    <!-- Cabin Window Glass -->
+    <rect x="80" y="72" width="90" height="70" rx="8" fill="#1b5e20" opacity="0.85"/>
+    <line x1="88" y1="80" x2="135" y2="132" stroke="#ffffff" stroke-width="4" opacity="0.35" stroke-linecap="round"/>
+
+    <!-- Engine Hood (Front) -->
+    <path d="M 180 105 L 315 105 Q 330 105 330 120 L 330 195 L 180 195 Z" fill="url(#tractorBody)"/>
+    <!-- Front Green Racing Stripe -->
+    <rect x="180" y="135" width="150" height="20" fill="url(#greenStripe)"/>
+    <!-- Front Grill -->
+    <rect x="316" y="120" width="14" height="60" rx="4" fill="#374151"/>
+    <!-- Headlight -->
+    <circle cx="316" cy="116" r="10" fill="#ffeb3b"/>
+
+    <!-- Rear Fender Arc -->
+    <path d="M 35 155 Q 90 95 145 155" fill="none" stroke="url(#tractorBody)" stroke-width="18" stroke-linecap="round"/>
+
+    <!-- Rear Big Wheel (Tractor Tire) -->
+    <g transform="translate(90, 205)">
+      <circle cx="0" cy="0" r="82" fill="#1e293b"/>
+      <circle cx="0" cy="0" r="70" fill="#0f172a"/>
+      <!-- Tire Treads -->
+      <g stroke="#334155" stroke-width="6" stroke-linecap="round">
+        <line x1="0" y1="-76" x2="0" y2="-68"/>
+        <line x1="54" y1="-54" x2="48" y2="-48"/>
+        <line x1="76" y1="0" x2="68" y2="0"/>
+        <line x1="54" y1="54" x2="48" y2="48"/>
+        <line x1="0" y1="76" x2="0" y2="68"/>
+        <line x1="-54" y1="54" x2="-48" y2="48"/>
+        <line x1="-76" y1="0" x2="-68" y2="0"/>
+        <line x1="-54" y1="-54" x2="-48" y2="-48"/>
+      </g>
+      <!-- Gold Rim Hub -->
+      <circle cx="0" cy="0" r="44" fill="url(#goldGrad)"/>
+      <circle cx="0" cy="0" r="22" fill="#ffffff"/>
+      <circle cx="0" cy="0" r="8" fill="#1e293b"/>
+    </g>
+
+    <!-- Front Small Wheel -->
+    <g transform="translate(285, 230)">
+      <circle cx="0" cy="0" r="52" fill="#1e293b"/>
+      <circle cx="0" cy="0" r="44" fill="#0f172a"/>
+      <!-- Gold Rim Hub -->
+      <circle cx="0" cy="0" r="28" fill="url(#goldGrad)"/>
+      <circle cx="0" cy="0" r="14" fill="#ffffff"/>
+      <circle cx="0" cy="0" r="5" fill="#1e293b"/>
+    </g>
+  </g>
+
+  <!-- App Badge Emblem Text at Bottom -->
+  <text x="256" y="475" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="800" font-size="34" fill="#ffffff" letter-spacing="4">AGRIRENT</text>
+</svg>

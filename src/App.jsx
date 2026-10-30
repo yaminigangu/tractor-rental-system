@@ -5,6 +5,8 @@ import Sidebar from './components/Sidebar';
 import ReceiptModal from './components/ReceiptModal';
 import LocationModal from './components/LocationModal';
 import MobileBottomNav from './components/MobileBottomNav';
+import PwaInstallPrompt from './components/PwaInstallPrompt';
+import OfflineNotificationBanner from './components/OfflineNotificationBanner';
 import Home from './pages/Home';
 import FindTractor from './pages/FindTractor';
 import TractorBooking from './pages/TractorBooking';
@@ -19,6 +21,7 @@ import AdminLogin from './pages/AdminLogin';
 import { DEFAULT_LOCATION } from './data/telanganaLocations';
 import { buildFleetForLocation } from './data/fleetData';
 import { fetchRegionWeather, getFallbackWeather } from './services/weatherService';
+import { usePwaInstall } from './hooks/usePwaInstall';
 
 const DEFAULT_BOOKINGS = [
   {
@@ -56,13 +59,27 @@ const DEFAULT_BOOKINGS = [
 ];
 
 function App() {
-  const [activePage, setActivePage] = useState('home');
+  // Support PWA shortcuts and direct links via ?page=
+  const [activePage, setActivePage] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const requestedPage = params.get('page');
+      if (requestedPage) return requestedPage;
+    } catch {
+      // ignore
+    }
+    return 'home';
+  });
+
   const [activeRole, setActiveRole] = useState('farmer'); // 'farmer', 'owner', 'admin'
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [serviceFilter, setServiceFilter] = useState('All');
   const [selectedTractor, setSelectedTractor] = useState(null);
   const [receiptModalBooking, setReceiptModalBooking] = useState(null);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
+  // PWA Installation Hook
+  const pwa = usePwaInstall();
 
   // Active Logged-in Farmer State with LocalStorage
   const [currentFarmer, setCurrentFarmer] = useState(() => {
@@ -409,10 +426,15 @@ function App() {
         selectedLocation={selectedLocation}
         currentFarmer={currentFarmer}
         currentOwner={currentOwner}
+        isInstalled={pwa.isInstalled}
+        onInstallApp={pwa.promptInstall}
       />
 
       {/* Main Content Area */}
       <div className="main-content">
+        {/* Offline / Online Network Detection Status Bar */}
+        <OfflineNotificationBanner language={language} />
+
         <Header
           activePage={activePage}
           toggleMobileMenu={() => setIsMobileOpen(prev => !prev)}
@@ -428,6 +450,8 @@ function App() {
           onFarmerLogout={() => setCurrentFarmer(null)}
           currentOwner={currentOwner}
           onOwnerLogout={() => setCurrentOwner(null)}
+          isInstalled={pwa.isInstalled}
+          onInstallApp={pwa.promptInstall}
         />
         <main className="page-container">
           {renderPage()}
@@ -459,6 +483,9 @@ function App() {
         pendingCount={pendingCount}
         language={language}
       />
+
+      {/* PWA App Install Banner & Guided Modal */}
+      <PwaInstallPrompt language={language} pwa={pwa} />
     </div>
   );
 }

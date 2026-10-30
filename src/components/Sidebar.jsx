@@ -9,7 +9,9 @@ export default function Sidebar({
   language = 'en',
   selectedLocation,
   currentFarmer,
-  currentOwner
+  currentOwner,
+  isInstalled = false,
+  onInstallApp
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -76,6 +78,26 @@ export default function Sidebar({
             </button>
           ))}
         </nav>
+
+        {/* PWA Web App Install Widget in Sidebar */}
+        {!isInstalled && onInstallApp && (
+          <div className="sidebar-pwa-card">
+            <div className="sidebar-pwa-header">
+              <span className="sidebar-pwa-icon">📲</span>
+              <div>
+                <strong>{isTe ? 'అగ్రిరెంట్ మొబైల్ యాప్' : 'AgriRent App'}</strong>
+                <p>{isTe ? 'హోమ్ స్క్రీన్‌పై ఇన్‌స్టాల్ చేయండి' : 'Install on Mobile / PC'}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="sidebar-pwa-btn"
+              onClick={onInstallApp}
+            >
+              {isTe ? 'యాప్ ఇన్‌స్టాల్' : 'Install App'}
+            </button>
+          </div>
+        )}
 
         <div className="sidebar-footer">
           <div className="helpline-box">
