@@ -2,6 +2,7 @@ import { translations } from '../translations';
 
 export default function Header({
   activePage,
+  setActivePage,
   toggleMobileMenu,
   activeRole,
   setActiveRole,
@@ -61,6 +62,17 @@ export default function Header({
   return (
     <header className="top-header">
       <div className="header-left">
+        {activePage !== 'home' && (
+          <button
+            type="button"
+            className="header-back-btn"
+            onClick={() => setActivePage ? setActivePage('home') : window.history.back()}
+            aria-label="Back to home"
+            title={isTe ? "హోమ్‌కి వెళ్లండి" : "Back to Home"}
+          >
+            ←
+          </button>
+        )}
         <button
           className="mobile-menu-btn"
           onClick={toggleMobileMenu}

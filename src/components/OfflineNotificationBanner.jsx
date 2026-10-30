@@ -60,3 +60,4 @@ export default function OfflineNotificationBanner({ language = 'en' }) {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-// User data storage and authentication management for Farmers and Tractor Owners (Captains)
+// User data storage and authentication management for Farmers and Tractor Owners
 
 export const DEFAULT_FARMERS = [
   {
@@ -39,6 +39,7 @@ export const DEFAULT_FARMERS = [
 export const DEFAULT_OWNERS = [
   {
     fullName: "Ramesh Kumar",
+    owner: "Ramesh Kumar",
     mobile: "9876543210",
     dob: "1988-06-15",
     gender: "Male",
@@ -52,6 +53,9 @@ export const DEFAULT_OWNERS = [
     dlNumber: "DL-0420120045612",
     rcNumber: "TS04AB7890",
     aadhaarNumber: "458912349012",
+    bankAccount: "5010045678912",
+    ifscCode: "HDFC0001234",
+    upiId: "9876543210@ybl",
     photo: "/tractor1.jpeg",
     selfiePhoto: "/tractor1.jpeg",
     dlPhoto: "/tractor1.jpeg",
@@ -62,6 +66,7 @@ export const DEFAULT_OWNERS = [
   },
   {
     fullName: "Mallesh Reddy",
+    owner: "Mallesh Reddy",
     mobile: "9123456780",
     dob: "1985-03-22",
     gender: "Male",
@@ -75,6 +80,9 @@ export const DEFAULT_OWNERS = [
     dlNumber: "DL-0320150098765",
     rcNumber: "TS03CD4321",
     aadhaarNumber: "789012345678",
+    bankAccount: "6240098765412",
+    ifscCode: "SBIN0020145",
+    upiId: "malleshreddy@oksbi",
     photo: "/tractor2.jpeg",
     selfiePhoto: "/tractor2.jpeg",
     dlPhoto: "/tractor2.jpeg",
@@ -85,6 +93,7 @@ export const DEFAULT_OWNERS = [
   },
   {
     fullName: "Laxminarayana",
+    owner: "Laxminarayana",
     mobile: "9848552234",
     dob: "1982-11-14",
     gender: "Male",
@@ -98,6 +107,9 @@ export const DEFAULT_OWNERS = [
     dlNumber: "DL-0420100012345",
     rcNumber: "TS04XY9988",
     aadhaarNumber: "987654321098",
+    bankAccount: "3120045612345",
+    ifscCode: "ANDB0000412",
+    upiId: "9848552234@paytm",
     photo: "/corn_seeder.jpg",
     selfiePhoto: "/corn_seeder.jpg",
     dlPhoto: "/corn_seeder.jpg",
@@ -129,12 +141,25 @@ export function getRegisteredFarmers() {
   return DEFAULT_FARMERS;
 }
 
-// Find a farmer by phone
+// Find a farmer by phone or name
 export function findFarmerByMobile(mobile) {
   const norm = normalizePhone(mobile);
   if (!norm) return null;
   const farmers = getRegisteredFarmers();
   return farmers.find(f => normalizePhone(f.mobile) === norm) || null;
+}
+
+export function findFarmerByIdentifier(identifier) {
+  if (!identifier) return null;
+  const clean = String(identifier).trim().toLowerCase();
+  const normPhone = normalizePhone(identifier);
+  const farmers = getRegisteredFarmers();
+
+  return farmers.find(f => {
+    const fPhone = normalizePhone(f.mobile);
+    const fName = String(f.name || '').trim().toLowerCase();
+    return (normPhone && fPhone === normPhone) || (clean && fName === clean);
+  }) || null;
 }
 
 // Save or update a registered farmer
@@ -173,7 +198,7 @@ export function getRegisteredOwners() {
   return DEFAULT_OWNERS;
 }
 
-// Find an owner by phone or vehicle RC
+// Find an owner by phone, vehicle RC or name
 export function findOwnerByMobile(identifier) {
   if (!identifier) return null;
   const cleanId = String(identifier).trim().toUpperCase();
@@ -184,6 +209,20 @@ export function findOwnerByMobile(identifier) {
     const ownerPhone = normalizePhone(o.mobile);
     const ownerRc = String(o.rcNumber || o.vehicleNumber || "").trim().toUpperCase();
     return (normPhone && ownerPhone === normPhone) || (cleanId && ownerRc === cleanId);
+  }) || null;
+}
+
+export function findOwnerByIdentifier(identifier) {
+  if (!identifier) return null;
+  const clean = String(identifier).trim().toLowerCase();
+  const normPhone = normalizePhone(identifier);
+  const owners = getRegisteredOwners();
+
+  return owners.find(o => {
+    const oPhone = normalizePhone(o.mobile);
+    const oName = String(o.fullName || o.owner || '').trim().toLowerCase();
+    const oRc = String(o.rcNumber || o.vehicleNumber || '').trim().toLowerCase();
+    return (normPhone && oPhone === normPhone) || (clean && (oName === clean || oRc === clean));
   }) || null;
 }
 

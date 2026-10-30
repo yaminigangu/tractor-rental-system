@@ -78,3 +78,4 @@ function Generate-AppIcon([int]$size, [string]$outputPath) {
 Generate-AppIcon 192 "public\pwa-192.png"
 Generate-AppIcon 512 "public\pwa-512.png"
 Generate-AppIcon 180 "public\apple-touch-icon.png"
+

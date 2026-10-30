@@ -330,20 +330,12 @@ function App() {
           />
         );
       case 'farmer-login':
+      case 'farmer-onboarding':
         return (
           <FarmerLogin
             setActivePage={setActivePage}
             setCurrentFarmer={setCurrentFarmer}
             setOnboardingMobile={setOnboardingMobile}
-            language={language}
-          />
-        );
-      case 'farmer-onboarding':
-        return (
-          <FarmerOnboarding
-            initialMobile={onboardingMobile}
-            setActivePage={setActivePage}
-            setCurrentFarmer={setCurrentFarmer}
             language={language}
             selectedLocation={selectedLocation}
           />
@@ -437,6 +429,7 @@ function App() {
 
         <Header
           activePage={activePage}
+          setActivePage={setActivePage}
           toggleMobileMenu={() => setIsMobileOpen(prev => !prev)}
           activeRole={activeRole}
           setActiveRole={handleRoleChange}
