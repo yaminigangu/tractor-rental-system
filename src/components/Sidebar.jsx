@@ -20,6 +20,7 @@ export default function Sidebar({
     { id: 'home', label: t.navHome, icon: '🏡' },
     { id: 'find-tractor', label: t.navFindTractor, icon: '🔍' },
     { id: 'booking-form', label: t.navBookingTractor, icon: '📋' },
+    { id: 'portal-select', label: isTe ? '🔐 లాగిన్ ఎంపిక' : '🔐 Login Portals', icon: '🔐' },
     { 
       id: 'farmer-login', 
       label: currentFarmer ? `👨‍🌾 ${currentFarmer.name.split(' ')[0]} (Farmer)` : (isTe ? '👨‍🌾 రైతు లాగిన్' : '👨‍🌾 Farmer Login'), 

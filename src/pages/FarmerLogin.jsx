@@ -196,6 +196,20 @@ export default function FarmerLogin({
     return (
       <div className="sancharoo-backdrop page-anim">
         <div className="sancharoo-login-card">
+          {/* Switch to Dual Login Selection */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', width: '100%' }}>
+            <button
+              type="button"
+              className="portal-back-to-select-btn"
+              onClick={() => setActivePage ? setActivePage('portal-select') : setViewMode('login')}
+            >
+              ‹ {isTe ? 'లాగిన్ ఎంపిక' : 'Back to Login Selection'}
+            </button>
+            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
+              {isTe ? 'రైతు పోర్టల్' : 'Farmer Portal'}
+            </span>
+          </div>
+
           {/* Top Brand Header Badge */}
           <div className="sancharoo-header-row">
             <div className="sancharoo-icon-sq" style={{ background: '#ecfdf5' }}>

@@ -18,6 +18,7 @@ import OwnerInbox from './pages/OwnerInbox';
 import MyBookings from './pages/MyBookings';
 import Dashboard from './pages/Dashboard';
 import AdminLogin from './pages/AdminLogin';
+import DualLoginSelect from './pages/DualLoginSelect';
 import { DEFAULT_LOCATION } from './data/telanganaLocations';
 import { buildFleetForLocation } from './data/fleetData';
 import { fetchRegionWeather, getFallbackWeather } from './services/weatherService';
@@ -68,7 +69,7 @@ function App() {
     } catch {
       // ignore
     }
-    return 'home';
+    return 'portal-select'; // Opens dual login entry screen upon entering the web-app
   });
 
   const [activeRole, setActiveRole] = useState('farmer'); // 'farmer', 'owner', 'admin'
@@ -288,6 +289,16 @@ function App() {
 
   const renderPage = () => {
     switch (activePage) {
+      case 'portal-select':
+        return (
+          <DualLoginSelect
+            setActivePage={setActivePage}
+            language={language}
+            currentFarmer={currentFarmer}
+            currentOwner={currentOwner}
+            selectedLocation={selectedLocation}
+          />
+        );
       case 'home':
         return (
           <Home

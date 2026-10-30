@@ -24,6 +24,8 @@ export default function Header({
 
   const getPageTitle = (page) => {
     switch (page) {
+      case 'portal-select':
+        return language === 'te' ? 'లాగిన్ పోర్టల్ ఎంపిక' : 'Login Portal Selection';
       case 'home':
         return t.heroTitle;
       case 'find-tractor':
@@ -62,13 +64,19 @@ export default function Header({
   return (
     <header className="top-header">
       <div className="header-left">
-        {activePage !== 'home' && (
+        {activePage !== 'portal-select' && (
           <button
             type="button"
             className="header-back-btn"
-            onClick={() => setActivePage ? setActivePage('home') : window.history.back()}
-            aria-label="Back to home"
-            title={isTe ? "హోమ్‌కి వెళ్లండి" : "Back to Home"}
+            onClick={() => {
+              if (activePage === 'farmer-login' || activePage === 'owner-registration' || activePage === 'farmer-onboarding') {
+                setActivePage('portal-select');
+              } else {
+                setActivePage('home');
+              }
+            }}
+            aria-label="Back"
+            title={isTe ? "వెనుకకు" : "Back"}
           >
             ←
           </button>
