@@ -10254,3 +10254,19 @@ html {
   color: #0F172A;
   margin: 14px 0 20px;
 }
+
+/* Nav Link Single Icon Enforcements */
+.nav-icon-single {
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nav-label-text {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
