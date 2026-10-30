@@ -1,5 +1,5 @@
 // AgriRent Progressive Web App Service Worker
-const CACHE_NAME = 'agrirent-cache-v1';
+const CACHE_NAME = 'agrirent-cache-v3';
 
 const STATIC_PRECACHE_URLS = [
   '/',
@@ -34,7 +34,6 @@ const STATIC_PRECACHE_URLS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Use catch for individual items so one missing optional asset does not abort install
       return Promise.allSettled(
         STATIC_PRECACHE_URLS.map((url) =>
           cache.add(url).catch((err) => {
@@ -46,7 +45,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate Event: clean up outdated caches
+// Activate Event: clean up outdated caches immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -67,8 +66,21 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Only handle GET requests from the same origin or CDN fonts
+  // Only handle GET requests
   if (req.method !== 'GET') return;
+
+  // Never intercept or cache dev server requests or Vite HMR modules
+  if (
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.port === '5173' ||
+    url.pathname.includes('/src/') ||
+    url.pathname.includes('/@vite/') ||
+    url.pathname.includes('/@fs/') ||
+    url.pathname.includes('hot-update')
+  ) {
+    return;
+  }
 
   // Navigation requests: Network-first, fallback to cached index.html
   if (req.mode === 'navigate') {
@@ -92,21 +104,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static Assets (Images, Scripts, Styles): Cache-first with background revalidation
+  // Static Assets (Images, Scripts, Styles): Network-first with cache fallback
   event.respondWith(
-    caches.match(req).then((cachedResponse) => {
-      const fetchPromise = fetch(req)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-          }
-          return networkResponse;
-        })
-        .catch(() => cachedResponse);
-
-      return cachedResponse || fetchPromise;
-    })
+    fetch(req)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const resClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+        }
+        return networkResponse;
+      })
+      .catch(async () => {
+        const cached = await caches.match(req);
+        if (cached) return cached;
+        return new Response('Network unavailable', { status: 503, statusText: 'Service Unavailable' });
+      })
   );
 });
-

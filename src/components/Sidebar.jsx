@@ -47,10 +47,10 @@ export default function Sidebar({
     }
   };
 
-  // Helper to extract clean name without leading/trailing emoji characters
+  // Helper to extract clean name without ANY emoji characters
   const getCleanName = (rawName, fallback) => {
     if (!rawName) return fallback;
-    const cleaned = String(rawName).replace(/^[\p{Emoji}\p{Extended_Pictographic}\u200d\uFE0F\s]+/gu, '').trim();
+    const cleaned = String(rawName).replace(/[\p{Emoji}\p{Extended_Pictographic}\u200d\uFE0F]/gu, '').trim();
     return cleaned.split(' ')[0] || fallback;
   };
 
@@ -140,9 +140,9 @@ export default function Sidebar({
         {/* Navigation items with strictly 1 icon each */}
         <nav className="sidebar-nav">
           {menuItems.map((item) => {
-            // Strip any leading emoji / symbol / whitespace from label as an ironclad safeguard
+            // Strip ANY emoji / symbol / pictograph from the text label so only item.icon is shown!
             const cleanLabel = (item.label || '')
-              .replace(/^[\p{Emoji}\p{Extended_Pictographic}\u200d\uFE0F\s]+/gu, '')
+              .replace(/[\p{Emoji}\p{Extended_Pictographic}\u200d\uFE0F]/gu, '')
               .trim();
 
             return (
