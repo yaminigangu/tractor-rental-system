@@ -47,31 +47,38 @@ export default function Sidebar({
     }
   };
 
-  // Farmer display name (e.g. Kondal (Farmer))
+  // Helper to extract clean name without leading/trailing emoji characters
+  const getCleanName = (rawName, fallback) => {
+    if (!rawName) return fallback;
+    const cleaned = String(rawName).replace(/^[\p{Emoji}\p{Extended_Pictographic}\u200d\uFE0F\s]+/gu, '').trim();
+    return cleaned.split(' ')[0] || fallback;
+  };
+
+  // Farmer display name (strictly ONE farmer icon rendered separately, label has NO emojis)
   const farmerDisplayName = currentFarmer
-    ? `${currentFarmer.name ? currentFarmer.name.split(' ')[0] : 'Farmer'} (Farmer)`
+    ? `${getCleanName(currentFarmer.name, 'Farmer')} (Farmer)`
     : (isTe ? 'రైతు లాగిన్' : 'Farmer Login');
 
-  // Owner display name
+  // Owner display name (strictly ONE tractor icon rendered separately, label has NO emojis)
   const ownerDisplayName = currentOwner
-    ? `${currentOwner.fullName ? currentOwner.fullName.split(' ')[0] : 'Owner'} (Owner)`
+    ? `${getCleanName(currentOwner.fullName, 'Owner')} (Owner)`
     : (isTe ? 'ట్రాక్టర్ యజమాని లాగిన్ / నమోదు' : 'Tractor Owner Login / Register');
 
   // Strictly single icon per item: NO duplicate emojis in label!
   const menuItems = [
     { 
       id: 'home', 
-      label: t.navHome || (isTe ? 'హోమ్' : 'Home'), 
+      label: isTe ? 'హోమ్' : 'Home', 
       icon: '🏡' 
     },
     { 
       id: 'find-tractor', 
-      label: t.navFindTractor || (isTe ? 'ట్రాక్టర్లను కనుగొనండి' : 'Find Tractor'), 
+      label: isTe ? 'ట్రాక్టర్లను కనుగొనండి' : 'Find Tractor', 
       icon: '🔍' 
     },
     { 
       id: 'booking-form', 
-      label: t.navBookingTractor || (isTe ? 'ట్రాక్టర్ బుకింగ్' : 'Booking Tractor'), 
+      label: isTe ? 'ట్రాక్టర్ బుకింగ్' : 'Booking Tractor', 
       icon: '📋' 
     },
     { 
@@ -91,18 +98,18 @@ export default function Sidebar({
     },
     { 
       id: 'owner-inbox', 
-      label: t.navOwnerInbox || (isTe ? 'యజమాని వర్క్ ఇన్‌బాక్స్' : 'Owner Work Inbox'), 
+      label: isTe ? 'యజమాని వర్క్ ఇన్‌బాక్స్' : 'Owner Work Inbox', 
       icon: '📮', 
       badge: pendingCount > 0 ? pendingCount : null 
     },
     { 
       id: 'my-bookings', 
-      label: t.navMyBooking || (isTe ? 'నా బుకింగ్' : 'My Booking'), 
+      label: isTe ? 'నా బుకింగ్' : 'My Booking', 
       icon: '📄' 
     },
     { 
       id: 'admin-dashboard', 
-      label: t.navAdminDashboard || (isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard'), 
+      label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard', 
       icon: '🛡️' 
     },
   ];
@@ -132,22 +139,27 @@ export default function Sidebar({
 
         {/* Navigation items with strictly 1 icon each */}
         <nav className="sidebar-nav">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`nav-link ${activePage === item.id ? 'active' : ''}`}
-              onClick={() => handleNavClick(item.id)}
-            >
-              <div className="nav-link-content">
-                <span className="nav-icon-single">{item.icon}</span>
-                <span className="nav-label-text">
-                  {(item.label || '').replace(/^[\p{Emoji}\u200d\s]+/u, '').trim()}
-                </span>
-              </div>
-              {item.badge && <span className="nav-badge">{item.badge}</span>}
-            </button>
-          ))}
+          {menuItems.map((item) => {
+            // Strip any leading emoji / symbol / whitespace from label as an ironclad safeguard
+            const cleanLabel = (item.label || '')
+              .replace(/^[\p{Emoji}\p{Extended_Pictographic}\u200d\uFE0F\s]+/gu, '')
+              .trim();
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`nav-link ${activePage === item.id ? 'active' : ''}`}
+                onClick={() => handleNavClick(item.id)}
+              >
+                <div className="nav-link-content">
+                  <span className="nav-icon-single">{item.icon}</span>
+                  <span className="nav-label-text">{cleanLabel}</span>
+                </div>
+                {item.badge && <span className="nav-badge">{item.badge}</span>}
+              </button>
+            );
+          })}
         </nav>
 
         {/* PWA Web App Install Widget in Sidebar */}
