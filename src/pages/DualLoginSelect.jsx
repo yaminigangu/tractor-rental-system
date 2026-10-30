@@ -3,180 +3,139 @@ import { translations } from '../translations';
 export default function DualLoginSelect({
   setActivePage,
   language = 'en',
-  currentFarmer,
-  currentOwner,
+  setLanguage,
   selectedLocation
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
 
-  const villageName = selectedLocation
-    ? `${isTe ? (selectedLocation.villageTe || selectedLocation.village) : selectedLocation.village}, ${isTe ? (selectedLocation.districtTe || selectedLocation.district) : selectedLocation.district}`
-    : 'Hasanparthy, Hanamkonda';
+  const toggleLanguage = () => {
+    if (setLanguage) {
+      setLanguage(prev => (prev === 'en' ? 'te' : 'en'));
+    }
+  };
 
   return (
-    <div className="dual-login-page-wrapper page-anim">
-      <div className="dual-login-container">
-        {/* Top Header & Branding */}
-        <div className="dual-login-header">
-          <div className="dual-login-brand-badge">
-            <span className="dual-badge-icon">🌾</span>
-            <span className="dual-badge-text">
-              {isTe ? 'అగ్రిరెంట్ తెలంగాణ నెట్‌వర్క్' : 'AgriRent Telangana Network'}
+    <div className="signin-page-viewport page-anim">
+      {/* Top Header Bar matching Screenshot 1 */}
+      <header className="signin-top-nav">
+        <div className="signin-brand-group">
+          <div className="signin-brand-logo">
+            <span className="signin-sprout-icon">🌾</span>
+          </div>
+          <div className="signin-brand-text">
+            <h1 className="signin-brand-title">Agrirent</h1>
+            <span className="signin-brand-subtitle">
+              {isTe ? 'వ్యవసాయ యంత్రాల అద్దె వేదిక' : 'Farm Machinery Rental Platform'}
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="signin-lang-pill"
+          onClick={toggleLanguage}
+          title={isTe ? 'Switch to English' : 'తెలుగులోకి మార్చండి'}
+        >
+          🌐 {isTe ? 'తెలుగు ▾' : 'English ▾'}
+        </button>
+      </header>
+
+      {/* Main Container Card matching Screenshot 1 */}
+      <main className="signin-card-container">
+        <div className="signin-main-card">
+          {/* Top Gear / Settings Button */}
+          <button
+            type="button"
+            className="signin-gear-btn"
+            title="Platform Settings & Demo Auto-Fill"
+            onClick={() => setActivePage('find-tractor')}
+            aria-label="Settings"
+          >
+            ⚙️
+          </button>
+
+          {/* Top Verification Badge */}
+          <div className="signin-badge-verified">
+            <span className="signin-badge-check">✓</span>
+            <span>
+              {isTe ? '33 తెలంగాణ జిల్లాలు ధృవీకరించబడ్డాయి' : '33 Telangana Districts Verified'}
             </span>
           </div>
 
-          <h1 className="dual-login-title">
-            {isTe ? 'లాగిన్ ఎంచుకోండి' : 'Choose Your Login'}
-          </h1>
-          <p className="dual-login-subtitle">
+          {/* Main Title & Subtitle */}
+          <h2 className="signin-heading">
+            {isTe ? 'స్వాగతం! మీ సైన్-ఇన్ ఎంచుకోండి' : 'Welcome! Choose Your Sign-In'}
+          </h2>
+          <p className="signin-description">
             {isTe
-              ? 'మీరు రైతులా లేక ట్రాక్టర్ యజమానిలా? క్రింది సంబంధిత పోర్టల్‌ను ఎంచుకుని సులభంగా లాగిన్ అవ్వండి.'
-              : 'Are you a Farmer hiring machinery or a Tractor Owner listing equipment? Select your login portal below to continue into the web-app.'}
+              ? 'సమీపంలోని ట్రాక్టర్లను అద్దెకు తీసుకోవడానికి లేదా హామీ ఇవ్వబడిన అద్దె ఆదాయం పొందడానికి యంత్రాలను నమోదు చేయడానికి సైన్ ఇన్ చేయండి.'
+              : 'Sign in to rent nearby tractors or register machinery to earn guaranteed rental income.'}
           </p>
 
-          <div className="dual-location-pill">
-            📍 {villageName}
-          </div>
-        </div>
-
-        {/* 2 Login Cards Grid */}
-        <div className="dual-cards-grid">
-          {/* CARD 1: FARMER LOGIN */}
-          <div
-            className="dual-role-card farmer-role-card"
-            onClick={() => setActivePage('farmer-login')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && setActivePage('farmer-login')}
-          >
-            <div className="dual-card-top">
-              <span className="dual-role-pill farmer-pill">
-                {isTe ? '🌾 రైతు పోర్టల్' : '🌾 Farmer Portal'}
-              </span>
-              <div className="dual-avatar-circle farmer-circle">
-                <span className="dual-avatar-emoji">👨‍🌾</span>
-              </div>
-            </div>
-
-            <h2 className="dual-card-title">
-              {isTe ? 'రైతు లాగిన్' : 'Farmer Login'}
-            </h2>
-            <p className="dual-card-desc">
-              {isTe
-                ? 'మీ వ్యవసాయ పనుల కోసం ట్రాక్టర్లు, రొటవేటర్లు, హార్వెస్టర్లు & విత్తన యంత్రాలను సులభంగా బుక్ చేసుకోండి.'
-                : 'Book certified tractors, rotavators, harvesters & precision seeders directly for your fields.'}
-            </p>
-
-            <ul className="dual-card-features">
-              <li>
-                <span className="feat-check">✓</span>
-                <span>{isTe ? 'నమోదైన రైతులకు మొబైల్ నంబర్ / పేరుతో నేరుగా లాగిన్' : 'Existing farmers log in directly via mobile or name'}</span>
-              </li>
-              <li>
-                <span className="feat-check">✓</span>
-                <span>{isTe ? 'కొత్త రైతులు 1-నిమిషంలో ఆన్‌బోర్డింగ్ పూర్తి చేయవచ్చు' : 'New farmers routed to quick 1-minute onboarding'}</span>
-              </li>
-              <li>
-                <span className="feat-check">✓</span>
-                <span>{isTe ? 'గ్రామంలో సిద్ధంగా ఉన్న ట్రాక్టర్లు & ప్రత్యక్ష ధరల వివరాలు' : 'Instant access to nearby fleet, live rates & booking'}</span>
-              </li>
-            </ul>
-
-            {currentFarmer && (
-              <div className="dual-logged-banner farmer-logged">
-                ✓ Logged in as: <strong>{currentFarmer.name}</strong>
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="dual-action-btn farmer-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setActivePage('farmer-login');
-              }}
-            >
-              <span>{isTe ? 'రైతుగా లాగిన్ అవ్వండి →' : 'Continue as Farmer →'}</span>
-            </button>
-          </div>
-
-          {/* CARD 2: TRACTOR OWNER LOGIN */}
-          <div
-            className="dual-role-card owner-role-card"
-            onClick={() => setActivePage('owner-registration')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && setActivePage('owner-registration')}
-          >
-            <div className="dual-card-top">
-              <span className="dual-role-pill owner-pill">
-                {isTe ? '🚜 యజమాని / కెప్టెన్ పోర్టల్' : '🚜 Tractor Owner Portal'}
-              </span>
-              <div className="dual-avatar-circle owner-circle">
-                <span className="dual-avatar-emoji">🚜</span>
-              </div>
-            </div>
-
-            <h2 className="dual-card-title">
-              {isTe ? 'ట్రాక్టర్ యజమాని లాగిన్' : 'Tractor Owner Login'}
-            </h2>
-            <p className="dual-card-desc">
-              {isTe
-                ? 'మీ ట్రాక్టర్ & పరికరాలను నమోదు చేసి, స్థానిక రైతుల నుండి బుకింగ్ ఆర్డర్లు పొంది రోజూ అద్దె ఆదాయం సంపాదించండి.'
-                : 'List machinery, accept booking orders from local farmers, and earn steady rental income across Telangana.'}
-            </p>
-
-            <ul className="dual-card-features">
-              <li>
-                <span className="feat-check">✓</span>
-                <span>{isTe ? 'ఇప్పటికే ఉన్న యజమానులకు మొబైల్ / RC తో నేరుగా లాగిన్' : 'Existing owners log in directly to Owner Inbox'}</span>
-              </li>
-              <li>
-                <span className="feat-check">✓</span>
-                <span>{isTe ? 'కొత్త యంత్రాల కోసం 4-దశల సులభమైన KYC ధృవీకరణ' : 'New owners complete the 4-step KYC authentication'}</span>
-              </li>
-              <li>
-                <span className="feat-check">✓</span>
-                <span>{isTe ? 'రైతుల నుండి బుకింగ్ అభ్యర్థనలను ప్రత్యక్షంగా నిర్వహించండి' : 'Real-time booking management & UPI payouts'}</span>
-              </li>
-            </ul>
-
-            {currentOwner && (
-              <div className="dual-logged-banner owner-logged">
-                ✓ Logged in as: <strong>{currentOwner.fullName}</strong>
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="dual-action-btn owner-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setActivePage('owner-registration');
-              }}
-            >
-              <span>{isTe ? 'యజమానిగా లాగిన్ అవ్వండి →' : 'Continue as Tractor Owner →'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Footer Guest Browsing Link & Helpline */}
-        <div className="dual-login-footer">
+          {/* Action Choice 1: Farmer Sign-In */}
           <button
             type="button"
-            className="dual-guest-btn"
-            onClick={() => setActivePage('find-tractor')}
+            className="signin-choice-card choice-farmer"
+            onClick={() => setActivePage('farmer-login')}
           >
-            🔍 {isTe ? 'లాగిన్ లేకుండా ట్రాక్టర్ల వివరాలు చూడండి (అతిథి మోడ్) →' : 'Browse Tractor Fleet Without Login (Guest View) →'}
+            <div className="signin-choice-icon-wrap icon-farmer">
+              <span className="signin-avatar-emoji">👨‍🌾</span>
+            </div>
+            <div className="signin-choice-info">
+              <h3 className="signin-choice-title title-farmer">
+                {isTe ? 'రైతు సైన్-ఇన్' : 'Farmer Sign-In'}
+              </h3>
+              <span className="signin-choice-sub">
+                {isTe ? 'యంత్రాలను అద్దెకు తీసుకోండి' : 'Rent Machinery'}
+              </span>
+            </div>
           </button>
 
-          <div className="dual-helpline-tag">
-            <span>📞 {isTe ? 'రైతు & యజమాని టోల్-ఫ్రీ హెల్ప్‌లైన్:' : 'Farmer & Owner 24/7 Helpline:'}</span>
-            <strong>1800-425-1122 / 9032004060</strong>
+          {/* Action Choice 2: Tractor Owner */}
+          <button
+            type="button"
+            className="signin-choice-card choice-owner"
+            onClick={() => setActivePage('owner-registration')}
+          >
+            <div className="signin-choice-icon-wrap icon-owner">
+              <span className="signin-avatar-emoji">🚜</span>
+            </div>
+            <div className="signin-choice-info">
+              <h3 className="signin-choice-title title-owner">
+                {isTe ? 'ట్రాక్టర్ యజమాని' : 'Tractor Owner'}
+              </h3>
+              <span className="signin-choice-sub">
+                {isTe ? '4-దశల KYC ధృవీకరణ' : '4-Step KYC Verification'}
+              </span>
+            </div>
+          </button>
+
+          {/* Guest Browsing Link */}
+          <div className="signin-guest-link-box">
+            <span className="signin-guest-prompt">
+              {isTe ? 'కేవలం చూడాలనుకుంటున్నారా? ' : 'Just browsing? '}
+            </span>
+            <button
+              type="button"
+              className="signin-guest-btn"
+              onClick={() => setActivePage('find-tractor')}
+            >
+              {isTe ? 'ట్రాక్టర్ మార్కెట్‌ప్లేస్‌ను అతిథిగా చూడండి →' : 'Explore Tractors Marketplace as Guest →'}
+            </button>
           </div>
         </div>
-      </div>
+
+        {/* Footer Norms Disclaimer */}
+        <footer className="signin-safety-footer">
+          <span className="signin-shield-icon">🛡️</span>
+          <span>
+            {isTe
+              ? 'తెలంగాణ రవాణా మరియు వ్యవసాయ భద్రతా సమాచార నిబంధనలకు అగ్రిరెంట్ కట్టుబడి ఉంటుంది.'
+              : 'Agrirent adheres to Telangana transport & agriculture safety data norms.'}
+          </span>
+        </footer>
+      </main>
     </div>
   );
 }

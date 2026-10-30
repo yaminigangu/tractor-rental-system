@@ -426,9 +426,12 @@ function App() {
         isMobileOpen={isMobileOpen}
         closeMobileMenu={() => setIsMobileOpen(false)}
         language={language}
+        setLanguage={setLanguage}
         selectedLocation={selectedLocation}
         currentFarmer={currentFarmer}
+        onFarmerLogout={() => setCurrentFarmer(null)}
         currentOwner={currentOwner}
+        onOwnerLogout={() => setCurrentOwner(null)}
         isInstalled={pwa.isInstalled}
         onInstallApp={pwa.promptInstall}
       />

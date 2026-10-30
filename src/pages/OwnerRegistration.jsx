@@ -6,6 +6,7 @@ export default function OwnerRegistration({
   setTractors,
   setActivePage,
   language = 'en',
+  setLanguage,
   currentOwner,
   setCurrentOwner,
   selectedLocation
@@ -13,260 +14,192 @@ export default function OwnerRegistration({
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
 
-  // Current view: 'login' (Starting screen) or 'register' (4 Steps KYC) or 'verified' (Success)
-  const [viewMode, setViewMode] = useState('login');
+  const defaultVillage = selectedLocation
+    ? (isTe ? (selectedLocation.villageTe || selectedLocation.village) : selectedLocation.village)
+    : 'Hasanparthy';
+  const defaultDistrict = selectedLocation?.district || 'Hanumakonda';
 
-  // Multi-step progress (1: Personal, 2: Vehicle, 3: Identity, 4: Documents)
+  // Active Tab: 'kyc' (4-Step KYC Authentication) or 'login' (Returning Owner Login)
+  const [activeTab, setActiveTab] = useState('kyc');
+
+  // Multi-step progress (1: Identity, 2: Vehicle RC, 3: Bank/UPI, 4: Machinery)
   const [currentStep, setCurrentStep] = useState(1);
+  const [otpSent, setOtpSent] = useState(true); // Pre-sent by default as shown in Screenshot 1
+  const [enteredOtp, setEnteredOtp] = useState('354498');
   const [errorMsg, setErrorMsg] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
-  const [registeredData, setRegisteredData] = useState(null);
 
-  // Login input state
-  const [loginPhone, setLoginPhone] = useState('');
+  // Returning owner input
+  const [returningQuery, setReturningQuery] = useState('');
 
-  // Default village string from active location
-  const defaultVillage = selectedLocation
-    ? `${isTe ? (selectedLocation.villageTe || selectedLocation.village) : selectedLocation.village}, ${isTe ? (selectedLocation.districtTe || selectedLocation.district) : selectedLocation.district}`
-    : 'Hasanparthy, Hanamkonda';
-
-  // 4-Step Registration Form State (Matching Screenshots 1-5)
+  // Form State (Exact match to Screenshots 1 - 4)
   const [formData, setFormData] = useState({
-    // Step 1: Personal & General
-    fullName: '',
-    dob: '',
-    gender: 'Male',
-    referralCode: '',
-    mobile: '',
+    // Step 1: Owner Mobile & Identity
+    fullName: 'G. Srinivas Rao',
+    mobile: '9440156789',
 
-    // Step 2: Vehicle Details
-    vehicleType: 'Tractor',
-    tractorModel: 'Mahindra 575 DI XP Plus',
-    vehicleNumber: '',
+    // Step 2: Tractor RC & Vehicle Specs
+    rcNumber: 'TS 03 AB 4589',
+    dlNumber: 'TS-03-2018-004521',
+    engineHp: '48',
+    regYear: '2023',
 
-    // Step 3: Identity Numbers
-    drivingLicenseNumber: '',
-    vehicleRcNumber: '',
-    aadhaarNumber: '',
+    // Step 3: Payout Details
+    upiId: '9440156789@ybl',
+    bankAccount: '50100456123489',
+    ifscCode: 'HDFC0000123',
 
-    // Step 4: Document Verification Files
-    selfiePhoto: '',
-    dlFrontPhoto: '',
-    rcFrontPhoto: '',
-    rcBackPhoto: '',
-
-    // Financial & Machinery Extras
-    pricing: 1200,
-    villageLocation: defaultVillage,
-    bankAccount: '',
-    upiId: ''
+    // Step 4: Machinery Specs & Location
+    brand: 'Swaraj',
+    modelSpecs: '744 FE High Torque (48 HP)',
+    district: defaultDistrict,
+    mandalBase: defaultVillage,
+    whereabouts: 'Hasanparthy Rythu Vedika & Market Yard',
+    priceHour: 900,
+    priceAcre: 1800,
+    implements: ['Ploughing', 'Rotavator', 'Trailer Services'],
+    selectedPhoto: '/tractor2.jpeg', // Swaraj Blue Tractor photo
+    photoName: 'Swaraj Blue Tractor'
   });
 
-  const vehicleOptions = [
-    { id: 'Tractor', label: isTe ? 'ట్రాక్టర్ (Tractor)' : 'Tractor' },
-    { id: 'Mini Tractor', label: isTe ? 'మినీ ట్రాక్టర్ (Mini Tractor)' : 'Mini Tractor' },
-    { id: 'Corn Harvester', label: isTe ? 'మొక్కజొన్న కోత యంత్రం (Corn Harvester)' : 'Corn Harvester' },
-    { id: 'Round Straw Baler', label: isTe ? 'రౌండ్ స్ట్రా బెయిలర్ (Straw Baler)' : 'Round Straw Baler' },
-    { id: 'Power Tiller', label: isTe ? 'పవర్ టిల్లర్ (Power Tiller)' : 'Power Tiller' },
-    { id: 'Corn Seeder', label: isTe ? 'హ్యాండ్ కార్న్ సీడర్ (Corn Seeder)' : 'Corn Seeder' }
+  const brandOptions = ['Mahindra', 'Swaraj', 'John Deere', 'Sonalika', 'Massey Ferguson'];
+
+  const implementOptions = [
+    { id: 'Ploughing', label: isTe ? 'దుక్కి దున్నడం' : 'Ploughing' },
+    { id: 'Rotavator', label: isTe ? 'రొటవేటర్' : 'Rotavator' },
+    { id: 'Cultivator', label: isTe ? 'కల్టివేటర్' : 'Cultivator' },
+    { id: 'Trailer Services', label: isTe ? 'ట్రాలీ రవాణా' : 'Trailer Services' },
+    { id: 'Corn Harvester', label: isTe ? 'మొక్కజొన్న కోత' : 'Corn Harvester' },
+    { id: 'Straw Baler', label: isTe ? 'గడ్డి బెయిలర్' : 'Straw Baler' },
+    { id: 'Corn Seeder', label: isTe ? 'విత్తన యంత్రం' : 'Corn Seeder' },
+    { id: 'Other Work', label: isTe ? 'ఇతర పనులు' : 'Other Work' }
   ];
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const photoOptions = [
+    { id: 'Swaraj Blue Tractor', label: 'Swaraj Blue Tractor', src: '/tractor2.jpeg' },
+    { id: 'Mahindra 575 DI', label: 'Mahindra 575 DI', src: '/tractor1.jpeg' },
+    { id: 'John Deere 531', label: 'John Deere 531', src: '/tractor3.jpeg' }
+  ];
+
+  const handleInputChange = (field, val) => {
+    setFormData(prev => ({ ...prev, [field]: val }));
     setErrorMsg('');
   };
 
-  // File Upload Handler with live base64 preview
-  const handleFileUpload = (field, e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFormData(prev => ({ ...prev, [field]: reader.result }));
-      };
-      reader.readAsDataURL(file);
+  const handleImplementToggle = (itemId) => {
+    setFormData(prev => {
+      const exists = prev.implements.includes(itemId);
+      const updated = exists
+        ? prev.implements.filter(i => i !== itemId)
+        : [...prev.implements, itemId];
+      return { ...prev, implements: updated };
+    });
+  };
+
+  const toggleLanguage = () => {
+    if (setLanguage) {
+      setLanguage(prev => (prev === 'en' ? 'te' : 'en'));
     }
   };
 
-  // Demo auto-fill helper for instant 1-click testing
-  const handleFillDemo = (type) => {
-    if (type === 'existing') {
-      setLoginPhone('9876543210');
-      setErrorMsg('');
-      setSuccessNotice('💡 Demo Owner: Ramesh Kumar (+91 9876543210) loaded. Click Continue to log in!');
-    } else if (type === 'new') {
-      setLoginPhone('9849001122');
-      setErrorMsg('');
-      setSuccessNotice('💡 New Owner Phone (+91 9849001122) set. Click Continue to start 4-Step Registration!');
-    } else {
-      // Auto-fill all 4 steps for quick verification
-      setFormData({
-        fullName: 'Ramesh Kumar',
-        dob: '1988-06-15',
-        gender: 'Male',
-        referralCode: 'AGRI2026',
-        mobile: loginPhone || '9876543210',
-        vehicleType: 'Tractor',
-        tractorModel: 'Mahindra 575 DI XP Plus',
-        vehicleNumber: 'TS 04 AB 7890',
-        drivingLicenseNumber: 'DL-0420120045612',
-        vehicleRcNumber: 'TS 04 AB 7890',
-        aadhaarNumber: '458912349012',
-        selfiePhoto: '/tractor1.jpeg',
-        dlFrontPhoto: '/tractor2.jpeg',
-        rcFrontPhoto: '/tractor3.jpeg',
-        rcBackPhoto: '',
-        pricing: 1200,
-        villageLocation: defaultVillage,
-        bankAccount: '5010045678912',
-        upiId: '9876543210@ybl'
-      });
-      setErrorMsg('');
-      setSuccessNotice('💡 Sample KYC data loaded into all 4 steps!');
-    }
-  };
-
-  // =========================================================================
-  // LOGIN SUBMIT: If owner exists -> direct login. If not -> start 4 steps!
-  // =========================================================================
-  const handleLoginSubmit = (e) => {
-    if (e) e.preventDefault();
+  // Demo auto-fill helper
+  const handleFillDemo = () => {
+    setFormData({
+      fullName: 'G. Srinivas Rao',
+      mobile: '9440156789',
+      rcNumber: 'TS 03 AB 4589',
+      dlNumber: 'TS-03-2018-004521',
+      engineHp: '48',
+      regYear: '2023',
+      upiId: '9440156789@ybl',
+      bankAccount: '50100456123489',
+      ifscCode: 'HDFC0000123',
+      brand: 'Swaraj',
+      modelSpecs: '744 FE High Torque (48 HP)',
+      district: defaultDistrict,
+      mandalBase: defaultVillage,
+      whereabouts: 'Hasanparthy Rythu Vedika & Market Yard',
+      priceHour: 900,
+      priceAcre: 1800,
+      implements: ['Ploughing', 'Rotavator', 'Trailer Services'],
+      selectedPhoto: '/tractor2.jpeg',
+      photoName: 'Swaraj Blue Tractor'
+    });
+    setEnteredOtp('354498');
     setErrorMsg('');
-    setSuccessNotice('');
-
-    const cleanInput = loginPhone.trim();
-    if (!cleanInput) {
-      setErrorMsg(isTe ? 'దయచేసి మీ మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter your mobile number.');
-      return;
-    }
-
-    const digits = cleanInput.replace(/\D/g, '');
-    if (digits.length < 10) {
-      setErrorMsg(isTe ? 'దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter a valid 10-digit mobile number.');
-      return;
-    }
-
-    // Check if owner exists in registered database
-    const existingOwner = findOwnerByIdentifier(digits);
-
-    if (existingOwner) {
-      // EXISTING OWNER -> Directly Log In!
-      if (setCurrentOwner) {
-        setCurrentOwner(existingOwner);
-        try {
-          localStorage.setItem('agri_current_owner', JSON.stringify(existingOwner));
-        } catch (err) {
-          console.warn(err);
-        }
-      }
-      setSuccessNotice(
-        isTe
-          ? `స్వాగతం ${existingOwner.fullName}! మీ ఓనర్ ఇన్‌బాక్స్‌కి రీడైరెక్ట్ అవుతోంది...`
-          : `Welcome back, ${existingOwner.fullName}! Logging you in directly to Owner Inbox...`
-      );
-      setTimeout(() => {
-        setActivePage('owner-inbox');
-      }, 700);
-    } else {
-      // NEW OWNER -> Auto-direct to Step 1 of 4-step KYC registration!
-      setFormData(prev => ({
-        ...prev,
-        mobile: digits.slice(-10)
-      }));
-      setSuccessNotice(
-        isTe
-          ? 'మీరు కొత్త యజమానిగా గుర్తించబడ్డారు! దయచేసి క్రింది 4-దశల KYC రిజిస్ట్రేషన్ పూర్తి చేయండి.'
-          : 'New owner detected! Please complete your 4-step KYC registration.'
-      );
-      setViewMode('register');
-      setCurrentStep(1);
-    }
   };
 
-  // =========================================================================
-  // 4-STEP REGISTRATION NAVIGATION & VALIDATION
-  // =========================================================================
-  const handleStepNext = () => {
-    setErrorMsg('');
-    setSuccessNotice('');
-
-    if (currentStep === 1) {
-      if (!formData.fullName.trim()) {
-        setErrorMsg(isTe ? 'దయచేసి పూర్తి పేరు నమోదు చేయండి.' : 'Please enter your full name.');
-        return;
-      }
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      if (!formData.vehicleNumber.trim()) {
-        setErrorMsg(isTe ? 'దయచేసి వాహనం నంబర్ నమోదు చేయండి.' : 'Please enter vehicle number.');
-        return;
-      }
-      // Auto sync vehicle number with RC number for convenience
-      if (!formData.vehicleRcNumber) {
-        setFormData(prev => ({ ...prev, vehicleRcNumber: prev.vehicleNumber.toUpperCase() }));
-      }
-      setCurrentStep(3);
-    } else if (currentStep === 3) {
-      if (!formData.drivingLicenseNumber.trim()) {
-        setErrorMsg(isTe ? 'దయచేసి డ్రైవింగ్ లైసెన్స్ నంబర్ నమోదు చేయండి.' : 'Please enter driving license number.');
-        return;
-      }
-      if (!formData.vehicleRcNumber.trim()) {
-        setErrorMsg(isTe ? 'దయచేసి వాహన RC నంబర్ నమోదు చేయండి.' : 'Please enter vehicle RC number.');
-        return;
-      }
-      if (!formData.aadhaarNumber.trim() || formData.aadhaarNumber.replace(/\D/g, '').length < 12) {
-        setErrorMsg(isTe ? 'దయచేసి 12 అంకెల ఆధార్ నంబర్ నమోదు చేయండి.' : 'Please enter valid 12-digit Aadhaar number.');
-        return;
-      }
-      setCurrentStep(4);
-    }
-  };
-
-  const handleStepBack = () => {
-    setErrorMsg('');
-    if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
-    } else {
-      // Back to starting login screen
-      setViewMode('login');
-    }
-  };
-
-  // STEP 4 FINAL SUBMIT
-  const handleFinalSubmit = (e) => {
+  // Step 1: Verify OTP and advance to Step 2
+  const handleVerifyOtp = (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
 
-    let machinePhoto = '/tractor1.jpeg';
-    if (formData.vehicleType === 'Corn Harvester') machinePhoto = '/corn_harvester.jpg';
-    else if (formData.vehicleType === 'Round Straw Baler') machinePhoto = '/straw_baler.jpg';
-    else if (formData.vehicleType === 'Corn Seeder') machinePhoto = '/corn_seeder.jpg';
-    else if (formData.selfiePhoto && formData.selfiePhoto.startsWith('data:image')) machinePhoto = formData.selfiePhoto;
+    if (!formData.fullName.trim()) {
+      setErrorMsg(isTe ? 'దయచేసి యజమాని పూర్తి పేరు నమోదు చేయండి.' : 'Please enter Owner Full Name.');
+      return;
+    }
+    const cleanPhone = formData.mobile.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setErrorMsg(isTe ? 'దయచేసి 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter 10-digit mobile number.');
+      return;
+    }
+    if (enteredOtp.trim().length < 4) {
+      setErrorMsg(isTe ? 'దయచేసి OTP నమోదు చేయండి.' : 'Please enter the 6-digit OTP code.');
+      return;
+    }
+
+    setCurrentStep(2);
+  };
+
+  // Step 2: Next to Payout Details
+  const handleNextPayout = (e) => {
+    if (e) e.preventDefault();
+    setErrorMsg('');
+
+    if (!formData.rcNumber.trim()) {
+      setErrorMsg(isTe ? 'దయచేసి వాహన RC నంబర్ నమోదు చేయండి.' : 'Please enter Tractor RC Registration Number.');
+      return;
+    }
+    setCurrentStep(3);
+  };
+
+  // Step 3: Next to Machinery Details
+  const handleNextMachinery = (e) => {
+    if (e) e.preventDefault();
+    setErrorMsg('');
+
+    if (!formData.upiId.trim() && !formData.bankAccount.trim()) {
+      setErrorMsg(isTe ? 'దయచేసి UPI ID లేదా బ్యాంక్ ఖాతా నంబర్ నమోదు చేయండి.' : 'Please enter UPI ID or Bank Account.');
+      return;
+    }
+    setCurrentStep(4);
+  };
+
+  // Step 4: Final Submit & Enter Marketplace / Inbox
+  const handleCompleteKyc = (e) => {
+    if (e) e.preventDefault();
+    setErrorMsg('');
 
     const newOwnerRecord = {
       fullName: formData.fullName.trim(),
       owner: formData.fullName.trim(),
-      mobile: formData.mobile || loginPhone || '9876543210',
-      dob: formData.dob || '1990-01-01',
-      gender: formData.gender,
-      referralCode: formData.referralCode,
-      vehicleType: formData.vehicleType,
-      tractorModel: formData.tractorModel || `${formData.vehicleType} Standard`,
-      vehicleNumber: formData.vehicleNumber.toUpperCase(),
-      pricing: Number(formData.pricing) || 1200,
-      village: formData.villageLocation,
-      district: selectedLocation?.district || 'Telangana',
-      dlNumber: formData.drivingLicenseNumber.toUpperCase(),
-      rcNumber: (formData.vehicleRcNumber || formData.vehicleNumber).toUpperCase(),
-      aadhaarNumber: formData.aadhaarNumber,
-      bankAccount: formData.bankAccount || '5010045678912',
-      upiId: formData.upiId || `${formData.mobile || '9876543210'}@upi`,
-      photo: machinePhoto,
-      selfiePhoto: formData.selfiePhoto || machinePhoto,
-      dlPhoto: formData.dlFrontPhoto || machinePhoto,
-      rcFrontPhoto: formData.rcFrontPhoto || machinePhoto,
-      rcBackPhoto: formData.rcBackPhoto || machinePhoto,
+      mobile: formData.mobile,
+      brand: formData.brand,
+      tractorModel: `${formData.brand} ${formData.modelSpecs}`,
+      vehicleNumber: formData.rcNumber.toUpperCase(),
+      pricing: Number(formData.priceHour) || 900,
+      priceAcre: Number(formData.priceAcre) || 1800,
+      village: formData.mandalBase,
+      district: formData.district,
+      whereabouts: formData.whereabouts,
+      engineHp: formData.engineHp,
+      regYear: formData.regYear,
+      dlNumber: formData.dlNumber,
+      rcNumber: formData.rcNumber.toUpperCase(),
+      bankAccount: formData.bankAccount,
+      ifscCode: formData.ifscCode,
+      upiId: formData.upiId,
+      photo: formData.selectedPhoto || '/tractor2.jpeg',
       isVerified: true,
       registeredAt: new Date().toISOString().split('T')[0]
     };
@@ -276,20 +209,24 @@ export default function OwnerRegistration({
     const newTractorEntry = {
       id: Date.now(),
       owner: formData.fullName.trim(),
-      mobile: newOwnerRecord.mobile,
-      location: formData.villageLocation,
-      brand: formData.vehicleType === 'Tractor' ? 'Mahindra' : formData.vehicleType,
-      model: formData.tractorModel || formData.vehicleType,
-      equipment: 'Ploughing, Rotavator, Cultivator',
-      pricing: Number(formData.pricing) || 1200,
+      mobile: formData.mobile,
+      location: formData.mandalBase,
+      district: formData.district,
+      brand: formData.brand,
+      model: formData.modelSpecs,
+      equipment: formData.implements.join(', '),
+      pricing: Number(formData.priceHour) || 900,
+      priceAcre: Number(formData.priceAcre) || 1800,
+      engineHp: formData.engineHp,
       availability: 'Available',
-      photo: machinePhoto,
-      rating: 5.0,
-      jobsDone: 0,
+      photo: formData.selectedPhoto || '/tractor2.jpeg',
+      rating: 4.9,
+      jobsDone: 24,
       registeredAt: new Date().toLocaleDateString(),
-      vehicleNumber: formData.vehicleNumber.toUpperCase(),
+      vehicleNumber: formData.rcNumber.toUpperCase(),
       isCaptainVerified: true,
-      distanceKm: 0.8
+      distanceKm: 1.0,
+      dispatchMins: 13
     };
 
     if (setTractors) {
@@ -305,602 +242,689 @@ export default function OwnerRegistration({
       }
     }
 
-    setRegisteredData(newOwnerRecord);
-    setViewMode('verified');
+    // Direct into Marketplace Fleet (Screenshot 5)
+    setActivePage('find-tractor');
   };
 
-  // =========================================================================
-  // RENDER VIEW 1: STARTING LOGIN SCREEN (MATCHES IMAGE 6 EXACTLY)
-  // =========================================================================
-  if (viewMode === 'login') {
-    return (
-      <div className="sancharoo-backdrop page-anim">
-        <div className="sancharoo-login-card">
-          {/* Switch to Dual Login Selection */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', width: '100%' }}>
-            <button
-              type="button"
-              className="portal-back-to-select-btn"
-              onClick={() => setActivePage ? setActivePage('portal-select') : setViewMode('login')}
-            >
-              ‹ {isTe ? 'లాగిన్ ఎంపిక' : 'Back to Login Selection'}
-            </button>
-            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
-              {isTe ? 'ట్రాక్టర్ పోర్టల్' : 'Owner Portal'}
+  // Returning owner login handler
+  const handleReturningLogin = (e) => {
+    if (e) e.preventDefault();
+    setErrorMsg('');
+
+    const cleanInput = returningQuery.trim();
+    if (!cleanInput) {
+      setErrorMsg(isTe ? 'దయచేసి మీ మొబైల్ లేదా RC నంబర్ నమోదు చేయండి.' : 'Please enter mobile or RC number.');
+      return;
+    }
+
+    const existing = findOwnerByIdentifier(cleanInput);
+    if (existing) {
+      if (setCurrentOwner) {
+        setCurrentOwner(existing);
+        try {
+          localStorage.setItem('agri_current_owner', JSON.stringify(existing));
+        } catch (err) {
+          console.warn(err);
+        }
+      }
+      setActivePage('owner-inbox');
+    } else {
+      setErrorMsg(isTe ? 'నమోదైన యజమాని కనుగొనబడలేదు. దయచేసి 4-దశల KYC ని పూర్తి చేయండి.' : 'Owner not found. Please complete the 4-step KYC authentication.');
+      setActiveTab('kyc');
+      setCurrentStep(1);
+    }
+  };
+
+  return (
+    <div className="signin-page-viewport page-anim">
+      {/* Top Header Bar matching Screenshots 1 - 4 */}
+      <header className="signin-top-nav">
+        <div className="signin-nav-left">
+          <button
+            type="button"
+            className="signin-header-back-sq"
+            onClick={() => setActivePage('portal-select')}
+            title="Back to selection"
+            aria-label="Back"
+          >
+            ←
+          </button>
+          <div className="signin-brand-group">
+            <h1 className="signin-brand-title">Agrirent</h1>
+            <span className="signin-brand-subtitle">
+              {isTe ? 'వ్యవసాయ యంత్రాల అద్దె వేదిక' : 'Farm Machinery Rental Platform'}
             </span>
-          </div>
-
-          {/* Top Brand Header Badge (User specified "AgriRent Tractor Owner") */}
-          <div className="sancharoo-header-row">
-            <div className="sancharoo-icon-sq">
-              <span className="sancharoo-sq-icon">🚜</span>
-            </div>
-            <span className="sancharoo-brand-name">AGRIRENT</span>
-            <span className="sancharoo-pill-badge">
-              {isTe ? 'ట్రాక్టర్ యజమాని' : 'TRACTOR OWNER'}
-            </span>
-          </div>
-
-          {/* Title & Subtitle */}
-          <h1 className="sancharoo-title">{isTe ? 'లాగిన్' : 'Login'}</h1>
-          <p className="sancharoo-sub">
-            {isTe ? 'కొనసాగించడానికి మీ మొబైల్ నంబర్ నమోదు చేయండి' : 'Enter your mobile number to continue'}
-          </p>
-
-          {/* Error / Success Notifications */}
-          {errorMsg && <div className="sancharoo-alert-error">⚠️ {errorMsg}</div>}
-          {successNotice && <div className="sancharoo-alert-success">{successNotice}</div>}
-
-          {/* Mobile Number Input with +91 */}
-          <form onSubmit={handleLoginSubmit}>
-            <div className="sancharoo-phone-box">
-              <span className="sancharoo-dial-code">+91</span>
-              <input
-                type="tel"
-                maxLength={10}
-                className="sancharoo-phone-field"
-                placeholder={isTe ? 'మొబైల్ నంబర్ నమోదు చేయండి' : 'Enter mobile number'}
-                value={loginPhone}
-                onChange={(e) => {
-                  setLoginPhone(e.target.value.replace(/\D/g, ''));
-                  setErrorMsg('');
-                }}
-                autoFocus
-              />
-            </div>
-
-            <button type="submit" className="sancharoo-btn-submit">
-              {isTe ? 'కొనసాగించండి →' : 'Continue →'}
-            </button>
-          </form>
-
-          {/* Terms Disclaimer */}
-          <p className="sancharoo-terms-text">
-            {isTe ? (
-              <>కొనసాగడం ద్వారా, మీరు మా <a href="#terms">నిబంధనలు</a> మరియు <a href="#privacy">గోప్యతా విధానాన్ని</a> అంగీకరిస్తున్నారు.</>
-            ) : (
-              <>By continuing, you agree to our <a href="#terms">Terms of Service</a> and <a href="#privacy">Privacy Policy</a>.</>
-            )}
-          </p>
-
-          {/* Direct link to start registration */}
-          <div style={{ marginTop: '16px', textAlign: 'center' }}>
-            <button
-              type="button"
-              className="sancharoo-link-btn"
-              onClick={() => {
-                setViewMode('register');
-                setCurrentStep(1);
-              }}
-            >
-              ⚡ {isTe ? 'కొత్త యజమాని? 4-దశల KYC రిజిస్ట్రేషన్ ప్రారంభించండి' : 'New Tractor Owner? Start 4-Step KYC Registration'}
-            </button>
-          </div>
-
-          {/* Fast Testing Options */}
-          <div className="sancharoo-demo-box">
-            <span className="sancharoo-demo-title">💡 FAST TESTING OPTIONS:</span>
-            <button
-              type="button"
-              className="sancharoo-demo-item"
-              onClick={() => handleFillDemo('existing')}
-            >
-              ⚡ Existing Owner: Ramesh Kumar (9876543210)
-            </button>
-            <button
-              type="button"
-              className="sancharoo-demo-item"
-              onClick={() => handleFillDemo('new')}
-            >
-              ⚡ New Owner (+91 9849001122): Start 4 Steps
-            </button>
-          </div>
-
-          <div className="sancharoo-powered-footer">
-            powered by <strong>AgriRent Technologies</strong>
           </div>
         </div>
-      </div>
-    );
-  }
 
-  // =========================================================================
-  // RENDER VIEW 2: 4-STEP REGISTRATION FLOW (MATCHES IMAGES 1, 2, 3, 4, 5)
-  // =========================================================================
-  if (viewMode === 'register') {
-    return (
-      <div className="captain-reg-backdrop page-anim">
-        <div className="captain-reg-card">
-          {/* Top Header matching user's screenshots */}
-          <div className="captain-header-area">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h1 className="captain-reg-title">
-                {isTe ? 'కెప్టెన్ రిజిస్ట్రేషన్' : 'Captain Registration'}
-              </h1>
-              <button
-                type="button"
-                className="captain-demo-btn"
-                onClick={() => handleFillDemo('all')}
-                title="Auto-fill sample data for all 4 steps"
-              >
-                ⚙️ Demo Fill
-              </button>
-            </div>
-            <div className="captain-step-indicator">
-              {isTe ? `దశ ${currentStep} / 4` : `Step ${currentStep} of 4`}
-            </div>
-            {/* Horizontal Teal Progress Bar */}
-            <div className="captain-progress-bar-track">
-              <div
-                className="captain-progress-bar-fill"
-                style={{ width: `${currentStep * 25}%` }}
-              />
-            </div>
+        <button
+          type="button"
+          className="signin-lang-pill"
+          onClick={toggleLanguage}
+          title={isTe ? 'Switch to English' : 'తెలుగులోకి మార్చండి'}
+        >
+          🌐 {isTe ? 'తెలుగు ▾' : 'English ▾'}
+        </button>
+      </header>
+
+      {/* Main Container Card matching Screenshots */}
+      <main className="signin-card-container">
+        {/* OTP Notification Banner (Step 1) */}
+        {activeTab === 'kyc' && currentStep === 1 && (
+          <div className="signin-otp-banner page-anim">
+            ✓ 📲 {isTe ? `ధృవీకరణ OTP +91 ${formData.mobile} కి పంపబడింది!` : `Verification OTP sent to +91 ${formData.mobile}!`}
+          </div>
+        )}
+
+        <div className="signin-main-card">
+          {/* Top Row: Back to Selection & Blue Settings Gear */}
+          <div className="signin-card-top-row">
+            <button
+              type="button"
+              className="signin-back-pill-btn"
+              onClick={() => setActivePage('portal-select')}
+            >
+              ← {isTe ? 'ఎంపికకి వెనుకకు' : 'Back to Selection'}
+            </button>
+
+            <button
+              type="button"
+              className="signin-gear-btn-blue"
+              title="Auto-fill demo tractor details"
+              onClick={handleFillDemo}
+              aria-label="Settings"
+            >
+              ⚙️
+            </button>
           </div>
 
-          {/* Alert messages */}
-          {errorMsg && <div className="captain-alert-error">⚠️ {errorMsg}</div>}
-          {successNotice && <div className="captain-alert-success">{successNotice}</div>}
+          {/* Segmented Switcher Pill Bar (4-Step KYC Authentication vs Returning Owner Login) */}
+          <div className="portal-tabs-pill" style={{ marginBottom: '16px' }}>
+            <button
+              type="button"
+              className={`portal-tab-btn ${activeTab === 'kyc' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('kyc');
+                setErrorMsg('');
+              }}
+            >
+              ⚡ {isTe ? '4-దశల KYC ధృవీకరణ' : '4-Step KYC Authentication'}
+            </button>
+            <button
+              type="button"
+              className={`portal-tab-btn ${activeTab === 'login' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('login');
+                setErrorMsg('');
+              }}
+            >
+              🔑 {isTe ? 'ఇప్పటికే ఉన్న యజమాని లాగిన్' : 'Returning Owner Login'}
+            </button>
+          </div>
 
-          {/* Inner Form Card */}
-          <div className="captain-inner-card">
-            {/* =========================================================
-                STEP 1: Full Name, DOB, Gender, Referral Code
-                ========================================================= */}
-            {currentStep === 1 && (
-              <div className="captain-step-content page-anim">
-                <div className="captain-input-wrap">
+          {errorMsg && <div className="signin-error-box">⚠️ {errorMsg}</div>}
+
+          {/* ========================================================
+              TAB 1: 4-STEP KYC FLOW
+              ======================================================== */}
+          {activeTab === 'kyc' && (
+            <div className="page-anim">
+              {/* Stepper 4-Circles (Identity, Vehicle RC, Bank/UPI, Machinery) */}
+              <div className="owner-stepper-track">
+                {[
+                  { step: 1, label: isTe ? 'గుర్తింపు' : 'Identity' },
+                  { step: 2, label: isTe ? 'వాహన RC' : 'Vehicle RC' },
+                  { step: 3, label: isTe ? 'బ్యాంక్/UPI' : 'Bank/UPI' },
+                  { step: 4, label: isTe ? 'యంత్రాలు' : 'Machinery' }
+                ].map((s) => {
+                  const isPassed = currentStep > s.step;
+                  const isCurrent = currentStep === s.step;
+                  return (
+                    <div 
+                      key={s.step} 
+                      className="owner-step-item"
+                      onClick={() => s.step < currentStep && setCurrentStep(s.step)}
+                    >
+                      <div className={`owner-circle-node ${isPassed ? 'passed' : ''} ${isCurrent ? 'current' : ''}`}>
+                        {isPassed ? '✓' : s.step}
+                      </div>
+                      <span className={`owner-step-caption ${isCurrent ? 'current' : ''} ${isPassed ? 'passed' : ''}`}>
+                        {s.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ----------------------------------------------------
+                  STEP 1 OF 4: Owner Mobile & Identity (Screenshot 1)
+                  ---------------------------------------------------- */}
+              {currentStep === 1 && (
+                <form onSubmit={handleVerifyOtp} className="page-anim">
+                  <div className="owner-step-header">
+                    <span className="owner-step-mini-tag">
+                      {isTe ? 'దశ 1 / 4' : 'STEP 1 OF 4'}
+                    </span>
+                    <h3 className="owner-step-main-title">
+                      {isTe ? 'యజమాని మొబైల్ & గుర్తింపు' : 'Owner Mobile & Identity'}
+                    </h3>
+                  </div>
+
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'యజమాని పూర్తి పేరు (RC ప్రకారం) *' : 'Owner Full Name (as on RC) *'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="signin-input-icon icon-person">👤</span>
+                      <input
+                        type="text"
+                        className="signin-input-text font-bold"
+                        value={formData.fullName}
+                        onChange={(e) => handleInputChange('fullName', e.target.value)}
+                        placeholder="e.g. G. Srinivas Rao"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? '10-అంకెల మొబైల్ నంబర్ *' : '10-Digit Mobile Number *'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="signin-flag-badge">🇮🇳 +91</span>
+                      <input
+                        type="tel"
+                        maxLength={10}
+                        className="signin-input-text font-bold"
+                        value={formData.mobile}
+                        onChange={(e) => handleInputChange('mobile', e.target.value.replace(/\D/g, ''))}
+                        placeholder="9440156789"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="signin-field-group signin-otp-block">
+                    <label className="signin-field-label" style={{ fontWeight: 800 }}>
+                      {isTe ? '6-అంకెల OTP కోడ్ నమోదు చేయండి' : 'Enter 6-Digit OTP Code'}
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      className="signin-otp-input"
+                      value={enteredOtp}
+                      onChange={(e) => setEnteredOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="354498"
+                    />
+                    <span className="signin-demo-otp-hint">
+                      {isTe ? 'డెమో OTP ప్రివ్యూ: 354498' : 'Demo OTP preview: 354498'}
+                    </span>
+                  </div>
+
+                  <button type="submit" className="owner-btn-primary-blue">
+                    <span>{isTe ? 'OTP ధృవీకరించి కొనసాగించండి →' : 'Verify OTP & Continue →'}</span>
+                  </button>
+                </form>
+              )}
+
+              {/* ----------------------------------------------------
+                  STEP 2 OF 4: Tractor RC & Vehicle Specs (Screenshot 2)
+                  ---------------------------------------------------- */}
+              {currentStep === 2 && (
+                <form onSubmit={handleNextPayout} className="page-anim">
+                  <div className="owner-step-header">
+                    <span className="owner-step-mini-tag">
+                      {isTe ? 'దశ 2 / 4' : 'STEP 2 OF 4'}
+                    </span>
+                    <h3 className="owner-step-main-title">
+                      {isTe ? 'ట్రాక్టర్ RC & వాహన వివరాలు' : 'Tractor RC & Vehicle Specs'}
+                    </h3>
+                  </div>
+
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'ట్రాక్టర్ RC రిజిస్ట్రేషన్ నంబర్ (తెలంగాణ RTO) *' : 'Tractor RC Registration Number (Telangana RTO) *'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="owner-bullet">•</span>
+                      <input
+                        type="text"
+                        className="signin-input-text font-bold uppercase"
+                        value={formData.rcNumber}
+                        onChange={(e) => handleInputChange('rcNumber', e.target.value.toUpperCase())}
+                        placeholder="TS 03 AB 4589"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="owner-verified-note">
+                      🔒 {isTe ? 'తెలంగాణ రవాణా RTO రికార్డుల ప్రకారం ధృవీకరించబడింది.' : 'Verified against Telangana Transport RTO records.'}
+                    </div>
+                  </div>
+
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'డ్రైవింగ్ లైసెన్స్ / ఆధార్ (ఐచ్ఛికం)' : 'Driving License / Aadhaar (Optional)'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="owner-bullet">•</span>
+                      <input
+                        type="text"
+                        className="signin-input-text font-bold uppercase"
+                        value={formData.dlNumber}
+                        onChange={(e) => handleInputChange('dlNumber', e.target.value.toUpperCase())}
+                        placeholder="TS-03-2018-004521"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="owner-two-col-grid">
+                    <div className="signin-field-group">
+                      <label className="signin-field-label">
+                        {isTe ? 'ఇంజిన్ HP *' : 'Engine HP *'}
+                      </label>
+                      <div className="signin-field-input-box">
+                        <input
+                          type="number"
+                          className="signin-input-text font-bold text-center"
+                          value={formData.engineHp}
+                          onChange={(e) => handleInputChange('engineHp', e.target.value)}
+                          placeholder="48"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="signin-field-group">
+                      <label className="signin-field-label">
+                        {isTe ? 'రిజిస్ట్రేషన్ సంవత్సరం *' : 'Reg. Year *'}
+                      </label>
+                      <div className="signin-field-input-box">
+                        <input
+                          type="number"
+                          className="signin-input-text font-bold text-center"
+                          value={formData.regYear}
+                          onChange={(e) => handleInputChange('regYear', e.target.value)}
+                          placeholder="2023"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="owner-actions-flex">
+                    <button
+                      type="button"
+                      className="owner-btn-back-white"
+                      onClick={() => setCurrentStep(1)}
+                    >
+                      ← {isTe ? 'వెనుకకు' : 'Back'}
+                    </button>
+                    <button type="submit" className="owner-btn-primary-blue flex-2">
+                      <span>{isTe ? 'తరువాత: చెల్లింపు వివరాలు →' : 'Next: Payout Details →'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* ----------------------------------------------------
+                  STEP 3 OF 4: Farmer Rental Payout Account (Screenshot 3 & 4)
+                  ---------------------------------------------------- */}
+              {currentStep === 3 && (
+                <form onSubmit={handleNextMachinery} className="page-anim">
+                  <div className="owner-step-header">
+                    <span className="owner-step-mini-tag">
+                      {isTe ? 'దశ 3 / 4' : 'STEP 3 OF 4'}
+                    </span>
+                    <h3 className="owner-step-main-title">
+                      {isTe ? 'రైతు అద్దె చెల్లింపు ఖాతా' : 'Farmer Rental Payout Account'}
+                    </h3>
+                  </div>
+
+                  {/* Shield Notification Note */}
+                  <div className="owner-payout-shield-card">
+                    <span className="owner-shield-icon">🛡️</span>
+                    <span>
+                      {isTe
+                        ? 'పని పూర్తయిన వెంటనే అద్దె ఆదాయం నేరుగా ఈ ఖాతాకు జమ చేయబడుతుంది.'
+                        : 'Rental earnings are credited directly to this account upon job completion.'}
+                    </span>
+                  </div>
+
+                  {/* UPI ID Field */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'తక్షణ డైరెక్ట్ క్రెడిట్ కోసం UPI ID *' : 'UPI ID for Instant Direct Credit *'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="owner-upi-prefix">UPI:</span>
+                      <input
+                        type="text"
+                        className="signin-input-text font-bold"
+                        value={formData.upiId}
+                        onChange={(e) => handleInputChange('upiId', e.target.value)}
+                        placeholder="9440156789@ybl"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div className="owner-or-divider">
+                    <span>— {isTe ? 'లేదా బ్యాంక్ ఖాతా' : 'OR BANK ACCOUNT'} —</span>
+                  </div>
+
+                  {/* Bank Account */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'బ్యాంక్ ఖాతా నంబర్' : 'Bank Account Number'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="owner-bullet">•</span>
+                      <input
+                        type="text"
+                        className="signin-input-text font-bold"
+                        value={formData.bankAccount}
+                        onChange={(e) => handleInputChange('bankAccount', e.target.value)}
+                        placeholder="50100456123489"
+                      />
+                    </div>
+                  </div>
+
+                  {/* IFSC Code */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'IFSC కోడ్' : 'IFSC Code'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <input
+                        type="text"
+                        className="signin-input-text font-bold uppercase"
+                        value={formData.ifscCode}
+                        onChange={(e) => handleInputChange('ifscCode', e.target.value.toUpperCase())}
+                        placeholder="HDFC0000123"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="owner-actions-flex">
+                    <button
+                      type="button"
+                      className="owner-btn-back-white"
+                      onClick={() => setCurrentStep(2)}
+                    >
+                      ← {isTe ? 'వెనుకకు' : 'Back'}
+                    </button>
+                    <button type="submit" className="owner-btn-primary-blue flex-2">
+                      <span>{isTe ? 'తరువాత: యంత్రాల వివరాలు →' : 'Next: Machinery Details →'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* ----------------------------------------------------
+                  STEP 4 OF 4: Machinery Specs & Location (Screenshot 5 & 6)
+                  ---------------------------------------------------- */}
+              {currentStep === 4 && (
+                <form onSubmit={handleCompleteKyc} className="page-anim">
+                  <div className="owner-step-header">
+                    <span className="owner-step-mini-tag">
+                      {isTe ? 'దశ 4 / 4' : 'STEP 4 OF 4'}
+                    </span>
+                    <h3 className="owner-step-main-title">
+                      {isTe ? 'యంత్రాల వివరాలు & లొకేషన్' : 'Machinery Specs & Location'}
+                    </h3>
+                  </div>
+
+                  {/* Tractor Brand Chips */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'ట్రాక్టర్ బ్రాండ్ *' : 'Tractor Brand *'}
+                    </label>
+                    <div className="owner-brand-chips-row">
+                      {brandOptions.map((brand) => (
+                        <button
+                          key={brand}
+                          type="button"
+                          className={`owner-chip-btn ${formData.brand === brand ? 'active' : ''}`}
+                          onClick={() => handleInputChange('brand', brand)}
+                        >
+                          {brand}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Model & Specs */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'మోడల్ & స్పెసిఫికేషన్లు *' : 'Model & Specs *'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <input
+                        type="text"
+                        className="signin-input-text font-bold"
+                        value={formData.modelSpecs}
+                        onChange={(e) => handleInputChange('modelSpecs', e.target.value)}
+                        placeholder="744 FE High Torque (48 HP)"
+                      />
+                    </div>
+                  </div>
+
+                  {/* District & Mandal */}
+                  <div className="owner-two-col-grid">
+                    <div className="signin-field-group">
+                      <label className="signin-field-label">
+                        {isTe ? 'జిల్లా *' : 'District *'}
+                      </label>
+                      <div className="signin-field-input-box">
+                        <input
+                          type="text"
+                          className="signin-input-text font-bold"
+                          value={formData.district}
+                          onChange={(e) => handleInputChange('district', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="signin-field-group">
+                      <label className="signin-field-label">
+                        {isTe ? 'మండలం / బేస్ *' : 'Mandal / Base *'}
+                      </label>
+                      <div className="signin-field-input-box">
+                        <input
+                          type="text"
+                          className="signin-input-text font-bold"
+                          value={formData.mandalBase}
+                          onChange={(e) => handleInputChange('mandalBase', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stationed Whereabouts */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'నిలిపి ఉంచే స్థలం (Whereabouts) *' : 'Stationed Whereabouts *'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="owner-bullet">•</span>
+                      <input
+                        type="text"
+                        className="signin-input-text font-bold"
+                        value={formData.whereabouts}
+                        onChange={(e) => handleInputChange('whereabouts', e.target.value)}
+                        placeholder="Hasanparthy Rythu Vedika & Market Yard"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pricing (Price/Hour and Price/Acre) */}
+                  <div className="owner-two-col-grid">
+                    <div className="signin-field-group">
+                      <label className="signin-field-label">
+                        {isTe ? 'ధర / గంటకు (₹)' : 'Price / Hour (₹)'}
+                      </label>
+                      <div className="signin-field-input-box">
+                        <input
+                          type="number"
+                          className="signin-input-text font-bold text-center"
+                          value={formData.priceHour}
+                          onChange={(e) => handleInputChange('priceHour', e.target.value)}
+                          placeholder="900"
+                        />
+                      </div>
+                    </div>
+                    <div className="signin-field-group">
+                      <label className="signin-field-label">
+                        {isTe ? 'ధర / ఎకరానికి (₹)' : 'Price / Acre (₹)'}
+                      </label>
+                      <div className="signin-field-input-box">
+                        <input
+                          type="number"
+                          className="signin-input-text font-bold text-center"
+                          value={formData.priceAcre}
+                          onChange={(e) => handleInputChange('priceAcre', e.target.value)}
+                          placeholder="1800"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Attached Implements & Services */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'అనుసంధానించబడిన పరికరాలు & సేవలు' : 'Attached Implements & Services'}
+                    </label>
+                    <div className="owner-implements-grid">
+                      {implementOptions.map((item) => {
+                        const isSelected = formData.implements.includes(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`owner-implement-btn ${isSelected ? 'selected' : ''}`}
+                            onClick={() => handleImplementToggle(item.id)}
+                          >
+                            {isSelected ? '✓ ' : '+ '}
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Machinery Photo */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'యంత్రం ఫోటో' : 'Machinery Photo'}
+                    </label>
+                    <div className="owner-photos-horizontal">
+                      {photoOptions.map((photo) => {
+                        const isSelected = formData.photoName === photo.id;
+                        return (
+                          <div
+                            key={photo.id}
+                            className={`owner-photo-card ${isSelected ? 'selected' : ''}`}
+                            onClick={() => {
+                              handleInputChange('photoName', photo.id);
+                              handleInputChange('selectedPhoto', photo.src);
+                            }}
+                          >
+                            <img src={photo.src} alt={photo.label} className="owner-tractor-thumb" />
+                            <span className="owner-photo-caption">{photo.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="owner-actions-flex" style={{ marginTop: '22px' }}>
+                    <button
+                      type="button"
+                      className="owner-btn-back-white"
+                      onClick={() => setCurrentStep(3)}
+                    >
+                      ← {isTe ? 'వెనుకకు' : 'Back'}
+                    </button>
+                    <button
+                      type="submit"
+                      className="owner-btn-complete-green flex-2"
+                    >
+                      <span>{isTe ? '4-దశల KYC పూర్తి చేసి లాగిన్ అవ్వండి →' : 'Complete 4-Step KYC & Login →'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* ========================================================
+              TAB 2: RETURNING OWNER LOGIN
+              ======================================================== */}
+          {activeTab === 'login' && (
+            <form onSubmit={handleReturningLogin} className="page-anim">
+              <div className="owner-step-header">
+                <span className="owner-step-mini-tag">RETURNING OWNER</span>
+                <h3 className="owner-step-main-title">
+                  {isTe ? 'మీ మొబైల్ లేదా RC నంబర్‌తో ప్రవేశించండి' : 'Enter with Mobile or Vehicle RC'}
+                </h3>
+              </div>
+
+              <div className="signin-field-group">
+                <label className="signin-field-label">
+                  {isTe ? 'మొబైల్ లేదా వాహన RC నంబర్ *' : 'Registered Mobile or RC Number *'}
+                </label>
+                <div className="signin-field-input-box">
+                  <span className="signin-input-icon">🔑</span>
                   <input
                     type="text"
-                    className="captain-input-plain"
-                    placeholder={isTe ? 'పూర్తి పేరు నమోదు చేయండి' : 'Enter full name'}
-                    value={formData.fullName}
-                    onChange={(e) => handleInputChange('fullName', e.target.value)}
+                    className="signin-input-text font-bold"
+                    placeholder="e.g. 9440156789 or TS 03 AB 4589"
+                    value={returningQuery}
+                    onChange={(e) => setReturningQuery(e.target.value)}
                     autoFocus
                   />
                 </div>
-
-                <div className="captain-field-block">
-                  <label className="captain-field-label">
-                    {isTe ? 'పుట్టిన తేదీ' : 'Date of Birth'}
-                  </label>
-                  <input
-                    type="date"
-                    className="captain-input-field"
-                    value={formData.dob}
-                    onChange={(e) => handleInputChange('dob', e.target.value)}
-                  />
-                </div>
-
-                <div className="captain-field-block">
-                  <label className="captain-field-label">
-                    {isTe ? 'లింగం' : 'Gender'}
-                  </label>
-                  <div className="captain-gender-row">
-                    {['Male', 'Female', 'Other'].map((g) => (
-                      <button
-                        key={g}
-                        type="button"
-                        className={`captain-gender-pill ${formData.gender === g ? 'active' : ''}`}
-                        onClick={() => handleInputChange('gender', g)}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="captain-field-block">
-                  <label className="captain-field-label">
-                    {isTe ? 'రిఫరల్ కోడ్ (ఐచ్ఛికం)' : 'Referral Code (Optional)'}
-                  </label>
-                  <input
-                    type="text"
-                    className="captain-input-field"
-                    placeholder="ENTER REFERRAL CODE"
-                    value={formData.referralCode}
-                    onChange={(e) => handleInputChange('referralCode', e.target.value.toUpperCase())}
-                  />
-                </div>
-
-                <div className="captain-divider" />
-
-                <div className="captain-actions-row">
-                  <button
-                    type="button"
-                    className="captain-btn-back"
-                    onClick={handleStepBack}
-                  >
-                    ‹ {isTe ? 'లాగిన్‌కి వెళ్లండి' : 'Back to Login'}
-                  </button>
-                  <button
-                    type="button"
-                    className="captain-btn-continue"
-                    onClick={handleStepNext}
-                  >
-                    {isTe ? 'కొనసాగించండి >' : 'Continue >'}
-                  </button>
-                </div>
               </div>
-            )}
 
-            {/* =========================================================
-                STEP 2: Vehicle Details (Vehicle Type, Vehicle Number)
-                ========================================================= */}
-            {currentStep === 2 && (
-              <div className="captain-step-content page-anim">
-                <div className="captain-section-heading">
-                  <span className="captain-heading-icon">🚗</span>
-                  <h3 className="captain-heading-text">
-                    {isTe ? 'వాహన వివరాలు' : 'Vehicle Details'}
-                  </h3>
-                </div>
+              <button type="submit" className="owner-btn-primary-blue" style={{ marginTop: '14px' }}>
+                <span>{isTe ? 'ఓనర్ ఇన్‌బాక్స్‌లోకి లాగిన్ అవ్వండి →' : 'Login to Owner Inbox →'}</span>
+              </button>
 
-                <div className="captain-field-block">
-                  <label className="captain-field-label">
-                    {isTe ? 'వాహనం రకం' : 'Vehicle Type'}
-                  </label>
-                  <select
-                    className="captain-select-field"
-                    value={formData.vehicleType}
-                    onChange={(e) => handleInputChange('vehicleType', e.target.value)}
-                  >
-                    {vehicleOptions.map((v) => (
-                      <option key={v.id} value={v.id}>{v.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="captain-field-block">
-                  <label className="captain-field-label">
-                    {isTe ? 'ట్రాక్టర్ / యంత్రం మోడల్' : 'Machine Model'}
-                  </label>
-                  <input
-                    type="text"
-                    className="captain-input-field"
-                    placeholder="e.g. Mahindra 575 DI XP Plus"
-                    value={formData.tractorModel}
-                    onChange={(e) => handleInputChange('tractorModel', e.target.value)}
-                  />
-                </div>
-
-                <div className="captain-field-block">
-                  <label className="captain-field-label">
-                    {isTe ? 'వాహనం నంబర్' : 'Vehicle Number'}
-                  </label>
-                  <input
-                    type="text"
-                    className="captain-input-field"
-                    placeholder="FSGDSSGG"
-                    value={formData.vehicleNumber}
-                    onChange={(e) => handleInputChange('vehicleNumber', e.target.value.toUpperCase())}
-                  />
-                </div>
-
-                <div className="captain-divider" />
-
-                <div className="captain-actions-row">
-                  <button type="button" className="captain-btn-back" onClick={handleStepBack}>
-                    ‹ {isTe ? 'వెనుకకు' : 'Back'}
-                  </button>
-                  <button type="button" className="captain-btn-continue" onClick={handleStepNext}>
-                    {isTe ? 'కొనసాగించండి >' : 'Continue >'}
-                  </button>
-                </div>
+              <div className="sancharoo-demo-box" style={{ marginTop: '20px' }}>
+                <span className="sancharoo-demo-title">💡 TEST WITH REGISTERED OWNER:</span>
+                <button
+                  type="button"
+                  className="sancharoo-demo-item"
+                  onClick={() => setReturningQuery('9876543210')}
+                >
+                  ⚡ Ramesh Kumar (9876543210) — TS 04 AB 7890
+                </button>
               </div>
-            )}
+            </form>
+          )}
 
-            {/* =========================================================
-                STEP 3: Identity Numbers (DL, RC, Aadhaar)
-                ========================================================= */}
-            {currentStep === 3 && (
-              <div className="captain-step-content page-anim">
-                <div className="captain-section-heading">
-                  <span className="captain-heading-icon">🛡️</span>
-                  <h3 className="captain-heading-text">
-                    {isTe ? 'గుర్తింపు నంబర్లు' : 'Identity Numbers'}
-                  </h3>
-                </div>
-
-                <div className="captain-field-block">
-                  <label className="captain-field-label">
-                    {isTe ? 'డ్రైవింగ్ లైసెన్స్ నంబర్' : 'Driving License Number'}
-                  </label>
-                  <input
-                    type="text"
-                    className="captain-input-field"
-                    placeholder="3543645645"
-                    value={formData.drivingLicenseNumber}
-                    onChange={(e) => handleInputChange('drivingLicenseNumber', e.target.value.toUpperCase())}
-                  />
-                </div>
-
-                <div className="captain-field-block">
-                  <label className="captain-field-label">
-                    {isTe ? 'వాహన RC నంబర్' : 'Vehicle RC Number'}
-                  </label>
-                  <input
-                    type="text"
-                    className="captain-input-field"
-                    placeholder="SCFFEE"
-                    value={formData.vehicleRcNumber}
-                    onChange={(e) => handleInputChange('vehicleRcNumber', e.target.value.toUpperCase())}
-                  />
-                </div>
-
-                <div className="captain-field-block">
-                  <label className="captain-field-label">
-                    {isTe ? 'ఆధార్ నంబర్' : 'Aadhaar Number'}
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={12}
-                    className="captain-input-field"
-                    placeholder="123456789054"
-                    value={formData.aadhaarNumber}
-                    onChange={(e) => handleInputChange('aadhaarNumber', e.target.value.replace(/\D/g, ''))}
-                  />
-                </div>
-
-                <div className="captain-divider" />
-
-                <div className="captain-actions-row">
-                  <button type="button" className="captain-btn-back" onClick={handleStepBack}>
-                    ‹ {isTe ? 'వెనుకకు' : 'Back'}
-                  </button>
-                  <button type="button" className="captain-btn-continue" onClick={handleStepNext}>
-                    {isTe ? 'కొనసాగించండి >' : 'Continue >'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* =========================================================
-                STEP 4: Document Verification Files (Selfie, DL, RC Front, RC Back)
-                ========================================================= */}
-            {currentStep === 4 && (
-              <div className="captain-step-content page-anim">
-                <div className="captain-section-heading">
-                  <span className="captain-heading-icon">📄</span>
-                  <h3 className="captain-heading-text">
-                    {isTe ? 'పత్రాల ధృవీకరణ ఫైల్స్' : 'Document Verification Files'}
-                  </h3>
-                </div>
-
-                {/* 1. Selfie Photo */}
-                <div className="captain-upload-card">
-                  <label className="captain-field-label">
-                    {isTe ? 'సెల్ఫీ ఫోటో *' : 'Selfie Photo *'}
-                  </label>
-                  <label className={`captain-dropzone ${formData.selfiePhoto ? 'uploaded' : ''}`}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="captain-file-input"
-                      onChange={(e) => handleFileUpload('selfiePhoto', e)}
-                    />
-                    {formData.selfiePhoto ? (
-                      <div className="captain-preview">
-                        <img src={formData.selfiePhoto} alt="Selfie" className="captain-thumb" />
-                        <span className="captain-uploaded-tag">✓ {isTe ? 'సెల్ఫీ అప్‌లోడ్ అయింది' : 'Selfie Uploaded'}</span>
-                      </div>
-                    ) : (
-                      <div className="captain-dropzone-inner">
-                        <span className="captain-drop-icon">📷</span>
-                        <span className="captain-drop-text">
-                          {isTe ? 'సెల్ఫీ ఫోటో తీయండి / అప్‌లోడ్ చేయండి' : 'Capture/Upload Selfie'}
-                        </span>
-                      </div>
-                    )}
-                  </label>
-                </div>
-
-                {/* 2. Driving License Front Side */}
-                <div className="captain-upload-card">
-                  <label className="captain-field-label">
-                    {isTe ? 'డ్రైవింగ్ లైసెన్స్ ముందు భాగం *' : 'Driving License Front Side *'}
-                  </label>
-                  <label className={`captain-dropzone ${formData.dlFrontPhoto ? 'uploaded' : ''}`}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="captain-file-input"
-                      onChange={(e) => handleFileUpload('dlFrontPhoto', e)}
-                    />
-                    {formData.dlFrontPhoto ? (
-                      <div className="captain-preview">
-                        <img src={formData.dlFrontPhoto} alt="DL" className="captain-thumb" />
-                        <span className="captain-uploaded-tag">✓ {isTe ? 'DL ముందు భాగం అప్‌లోడ్ అయింది' : 'DL Front Uploaded'}</span>
-                      </div>
-                    ) : (
-                      <div className="captain-dropzone-inner">
-                        <span className="captain-drop-icon">☁️</span>
-                        <span className="captain-drop-text">
-                          {isTe ? 'DL ముందు భాగం అప్‌లోడ్ చేయండి' : 'Upload DL Front'}
-                        </span>
-                      </div>
-                    )}
-                  </label>
-                </div>
-
-                {/* 3. RC Front Side */}
-                <div className="captain-upload-card">
-                  <label className="captain-field-label">
-                    {isTe ? 'RC ముందు భాగం *' : 'RC Front Side *'}
-                  </label>
-                  <label className={`captain-dropzone ${formData.rcFrontPhoto ? 'uploaded' : ''}`}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="captain-file-input"
-                      onChange={(e) => handleFileUpload('rcFrontPhoto', e)}
-                    />
-                    {formData.rcFrontPhoto ? (
-                      <div className="captain-preview">
-                        <img src={formData.rcFrontPhoto} alt="RC Front" className="captain-thumb" />
-                        <span className="captain-uploaded-tag">✓ {isTe ? 'RC ముందు భాగం అప్‌లోడ్ అయింది' : 'RC Front Uploaded'}</span>
-                      </div>
-                    ) : (
-                      <div className="captain-dropzone-inner">
-                        <span className="captain-drop-icon">☁️</span>
-                        <span className="captain-drop-text">
-                          {isTe ? 'RC ముందు భాగం అప్‌లోడ్ చేయండి' : 'Upload RC Front'}
-                        </span>
-                      </div>
-                    )}
-                  </label>
-                </div>
-
-                {/* 4. RC Back Side (Optional) */}
-                <div className="captain-upload-card">
-                  <label className="captain-field-label">
-                    {isTe ? 'RC వెనుక భాగం (ఐచ్ఛికం)' : 'RC Back Side (Optional)'}
-                  </label>
-                  <label className={`captain-dropzone ${formData.rcBackPhoto ? 'uploaded' : ''}`}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="captain-file-input"
-                      onChange={(e) => handleFileUpload('rcBackPhoto', e)}
-                    />
-                    {formData.rcBackPhoto ? (
-                      <div className="captain-preview">
-                        <img src={formData.rcBackPhoto} alt="RC Back" className="captain-thumb" />
-                        <span className="captain-uploaded-tag">✓ {isTe ? 'RC వెనుక భాగం అప్‌లోడ్ అయింది' : 'RC Back Uploaded'}</span>
-                      </div>
-                    ) : (
-                      <div className="captain-dropzone-inner">
-                        <span className="captain-drop-icon">☁️</span>
-                        <span className="captain-drop-text">
-                          {isTe ? 'RC వెనుక భాగం అప్‌లోడ్ చేయండి' : 'Upload RC Back'}
-                        </span>
-                      </div>
-                    )}
-                  </label>
-                </div>
-
-                {/* Rate & Village confirmation */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                  <div className="captain-field-block">
-                    <label className="captain-field-label">{isTe ? 'గంటకు ధర (₹/Hr)' : 'Hourly Rate (₹/Hr)'}</label>
-                    <input
-                      type="number"
-                      className="captain-input-field"
-                      value={formData.pricing}
-                      onChange={(e) => handleInputChange('pricing', e.target.value)}
-                    />
-                  </div>
-                  <div className="captain-field-block">
-                    <label className="captain-field-label">{isTe ? 'లొకేషన్' : 'Location'}</label>
-                    <input
-                      type="text"
-                      className="captain-input-field"
-                      value={formData.villageLocation}
-                      onChange={(e) => handleInputChange('villageLocation', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="captain-divider" />
-
-                <div className="captain-actions-row">
-                  <button type="button" className="captain-btn-back" onClick={handleStepBack}>
-                    ‹ {isTe ? 'వెనుకకు' : 'Back'}
-                  </button>
-                  <button
-                    type="button"
-                    className="captain-btn-submit"
-                    onClick={handleFinalSubmit}
-                  >
-                    {isTe ? 'పత్రాలను సమర్పించండి' : 'Submit Documents'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // =========================================================================
-  // RENDER VIEW 3: KYC VERIFICATION SUCCESS CARD
-  // =========================================================================
-  return (
-    <div className="captain-reg-backdrop page-anim">
-      <div className="captain-reg-card" style={{ textAlign: 'center' }}>
-        <div className="captain-success-badge">
-          <span>✓</span>
-        </div>
-        <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginBottom: '8px' }}>
-          {isTe ? 'KYC ధృవీకరణ విజయవంతమైంది!' : 'KYC Verification Successful!'}
-        </h2>
-        <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.5, marginBottom: '20px' }}>
-          {isTe
-            ? `అభినందనలు ${registeredData?.fullName}! మీ ట్రాక్టర్ (${registeredData?.vehicleNumber}) విజయవంతంగా నమోదు చేయబడింది.`
-            : `Congratulations ${registeredData?.fullName}! Your machine (${registeredData?.vehicleNumber}) has been verified and listed on AgriRent.`}
-        </p>
-
-        <div className="captain-summary-card">
-          <div className="captain-summary-row">
-            <span>Owner Name:</span>
-            <strong>{registeredData?.fullName}</strong>
-          </div>
-          <div className="captain-summary-row">
-            <span>Machine Type:</span>
-            <strong>{registeredData?.vehicleType}</strong>
-          </div>
-          <div className="captain-summary-row">
-            <span>Vehicle RC:</span>
-            <strong>{registeredData?.vehicleNumber}</strong>
-          </div>
-          <div className="captain-summary-row">
-            <span>Hourly Rental:</span>
-            <strong>₹{registeredData?.pricing}/hr</strong>
-          </div>
-          <div className="captain-summary-row">
-            <span>Location:</span>
-            <strong>{registeredData?.village}</strong>
+          {/* Guest Browsing Link */}
+          <div className="signin-guest-link-box" style={{ marginTop: '20px' }}>
+            <span className="signin-guest-prompt">
+              {isTe ? 'కేవలం చూడాలనుకుంటున్నారా? ' : 'Just browsing? '}
+            </span>
+            <button
+              type="button"
+              className="signin-guest-btn"
+              onClick={() => setActivePage('find-tractor')}
+            >
+              {isTe ? 'ట్రాక్టర్ మార్కెట్‌ప్లేస్‌ను అతిథిగా చూడండి →' : 'Explore Tractors Marketplace as Guest →'}
+            </button>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', marginTop: '22px' }}>
-          <button
-            type="button"
-            className="captain-btn-continue"
-            onClick={() => setActivePage('owner-inbox')}
-          >
-            {isTe ? 'ఓనర్ ఇన్‌బాక్స్‌కి వెళ్లండి →' : 'Go to Owner Inbox →'}
-          </button>
-          <button
-            type="button"
-            className="captain-btn-back"
-            onClick={() => setActivePage('find-tractor')}
-          >
-            {isTe ? 'ఫ్లీట్ చూడండి' : 'View Fleet'}
-          </button>
-        </div>
-      </div>
+        {/* Footer Safety Norms */}
+        <footer className="signin-safety-footer">
+          <span className="signin-shield-icon">🛡️</span>
+          <span>
+            {isTe
+              ? 'తెలంగాణ రవాణా మరియు వ్యవసాయ భద్రతా సమాచార నిబంధనలకు అగ్రిరెంట్ కట్టుబడి ఉంటుంది.'
+              : 'Agrirent adheres to Telangana transport & agriculture safety data norms.'}
+          </span>
+        </footer>
+      </main>
     </div>
   );
 }
