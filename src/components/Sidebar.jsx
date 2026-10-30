@@ -1,8 +1,8 @@
 import { translations } from '../translations';
 
-export default function Sidebar({ 
-  activePage, 
-  setActivePage, 
+export default function Sidebar({
+  activePage,
+  setActivePage,
   pendingCount = 2,
   isMobileOpen,
   closeMobileMenu,
@@ -49,7 +49,7 @@ export default function Sidebar({
 
   // User Profile details
   const userName = currentFarmer?.name || currentOwner?.fullName || 'N. Ramesh Kumar';
-  const userRoleText = currentOwner 
+  const userRoleText = currentOwner
     ? (isTe ? '✓ ధృవీకరించబడిన యజమాని' : '✓ Verified Owner')
     : (isTe ? '✓ ధృవీకరించబడిన రైతు' : '✓ Verified Farmer');
 
@@ -119,8 +119,8 @@ export default function Sidebar({
   return (
     <>
       {/* Backdrop overlay for mobile drawer */}
-      <div 
-        className={`sidebar-overlay ${isMobileOpen ? 'open' : ''}`} 
+      <div
+        className={`sidebar-overlay ${isMobileOpen ? 'open' : ''}`}
         onClick={closeMobileMenu}
         aria-hidden="true"
       />
@@ -151,7 +151,7 @@ export default function Sidebar({
         </div>
 
         {/* Top User Profile Card (Screenshot 2) */}
-        <div 
+        <div
           className="drawer-profile-card"
           onClick={() => handleNavClick(currentOwner ? 'owner-inbox' : 'farmer-login')}
           role="button"
@@ -184,7 +184,7 @@ export default function Sidebar({
                   }
                 }}
               >
-                <div 
+                <div
                   className="drawer-item-icon-box"
                   style={{ background: item.iconBg }}
                 >
