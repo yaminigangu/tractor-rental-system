@@ -19,6 +19,19 @@ export default function OwnerRegistration({
     : 'Hasanparthy';
   const defaultDistrict = selectedLocation?.district || 'Hanumakonda';
 
+  // Check if owner previously registered on this device
+  const [lastOwner, setLastOwner] = useState(() => {
+    try {
+      const saved = localStorage.getItem('agri_last_owner');
+      if (saved) return JSON.parse(saved);
+      const curr = localStorage.getItem('agri_current_owner');
+      if (curr) return JSON.parse(curr);
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
   // Active Tab: 'kyc' (4-Step KYC Authentication) or 'login' (Returning Owner Login)
   const [activeTab, setActiveTab] = useState('kyc');
 
@@ -236,6 +249,7 @@ export default function OwnerRegistration({
     if (setCurrentOwner) {
       setCurrentOwner(newOwnerRecord);
       try {
+        localStorage.setItem('agri_last_owner', JSON.stringify(newOwnerRecord));
         localStorage.setItem('agri_current_owner', JSON.stringify(newOwnerRecord));
       } catch (err) {
         console.warn(err);
@@ -244,6 +258,23 @@ export default function OwnerRegistration({
 
     // Direct into Marketplace Fleet (Screenshot 5)
     setActivePage('find-tractor');
+  };
+
+  // Instant 1-Tap Login for recognized returning owner
+  const handleOneTapOwnerLogin = (targetOwner) => {
+    const ownerToLogin = targetOwner || lastOwner;
+    if (!ownerToLogin) return;
+
+    if (setCurrentOwner) {
+      setCurrentOwner(ownerToLogin);
+    }
+    try {
+      localStorage.setItem('agri_last_owner', JSON.stringify(ownerToLogin));
+      localStorage.setItem('agri_current_owner', JSON.stringify(ownerToLogin));
+    } catch (err) {
+      console.warn(err);
+    }
+    setActivePage('owner-inbox');
   };
 
   // Returning owner login handler
@@ -262,6 +293,7 @@ export default function OwnerRegistration({
       if (setCurrentOwner) {
         setCurrentOwner(existing);
         try {
+          localStorage.setItem('agri_last_owner', JSON.stringify(existing));
           localStorage.setItem('agri_current_owner', JSON.stringify(existing));
         } catch (err) {
           console.warn(err);
@@ -337,6 +369,33 @@ export default function OwnerRegistration({
               ⚙️
             </button>
           </div>
+
+          {/* RETURNING OWNER 1-TAP LOGIN CARD (If recognized member on device) */}
+          {lastOwner && (
+            <div className="signin-returning-farmer-card page-anim" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)', borderColor: '#93c5fd' }}>
+              <div className="returning-farmer-header">
+                <div className="returning-avatar-circle" style={{ background: '#dbeafe', borderColor: '#bfdbfe' }}>🚜</div>
+                <div className="returning-text-col">
+                  <span className="returning-tag" style={{ color: '#1d4ed8' }}>
+                    ✓ {isTe ? 'నమోదిత ట్రాక్టర్ యజమాని' : 'Recognized Tractor Owner'}
+                  </span>
+                  <strong className="returning-name">{lastOwner.fullName || lastOwner.owner}</strong>
+                  <span className="returning-meta">
+                    {lastOwner.tractorModel || 'Tractor'} • {lastOwner.vehicleNumber || lastOwner.rcNumber} • +91 {lastOwner.mobile}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="signin-returning-tap-btn"
+                style={{ background: '#1d4ed8' }}
+                onClick={() => handleOneTapOwnerLogin(lastOwner)}
+              >
+                <span>⚡ {isTe ? `1-ట్యాప్ ఓనర్ లాగిన్ (${(lastOwner.fullName || 'Owner').split(' ')[0]}) →` : `1-Tap Login to Owner Inbox (${(lastOwner.fullName || 'Owner').split(' ')[0]}) →`}</span>
+              </button>
+            </div>
+          )}
 
           {/* Segmented Switcher Pill Bar (4-Step KYC Authentication vs Returning Owner Login) */}
           <div className="portal-tabs-pill" style={{ marginBottom: '16px' }}>
@@ -877,14 +936,42 @@ export default function OwnerRegistration({
                     className="signin-input-text font-bold"
                     placeholder="e.g. 9440156789 or TS 03 AB 4589"
                     value={returningQuery}
-                    onChange={(e) => setReturningQuery(e.target.value)}
+                    onChange={(e) => {
+                      setReturningQuery(e.target.value);
+                      setErrorMsg('');
+                    }}
                     autoFocus
                   />
                 </div>
               </div>
 
+              {returningQuery.trim() && (() => {
+                const matched = findOwnerByIdentifier(returningQuery.trim());
+                if (matched) {
+                  return (
+                    <div className="signin-recognized-status-banner is-member page-anim" style={{ marginTop: '10px' }}>
+                      <span>✓</span>
+                      <span>
+                        {isTe
+                          ? `నమోదిత యజమాని గుర్తించబడ్డారు: ${matched.fullName || matched.owner} (${matched.vehicleNumber || matched.rcNumber})`
+                          : `Registered Owner Recognized: ${matched.fullName || matched.owner} (${matched.vehicleNumber || matched.rcNumber})`}
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               <button type="submit" className="owner-btn-primary-blue" style={{ marginTop: '14px' }}>
-                <span>{isTe ? 'ఓనర్ ఇన్‌బాక్స్‌లోకి లాగిన్ అవ్వండి →' : 'Login to Owner Inbox →'}</span>
+                <span>
+                  {(() => {
+                    const matched = returningQuery.trim() ? findOwnerByIdentifier(returningQuery.trim()) : null;
+                    if (matched) {
+                      return `⚡ ${isTe ? '1-ట్యాప్ ఓనర్ లాగిన్' : '1-Tap Owner Login'} (${(matched.fullName || 'Owner').split(' ')[0]}) →`;
+                    }
+                    return isTe ? 'ఓనర్ ఇన్‌బాక్స్‌లోకి లాగిన్ అవ్వండి →' : 'Login to Owner Inbox →';
+                  })()}
+                </span>
               </button>
 
               <div className="sancharoo-demo-box" style={{ marginTop: '20px' }}>

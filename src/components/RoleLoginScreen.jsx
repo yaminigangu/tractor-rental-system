@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { findFarmerByMobile, saveRegisteredFarmer } from '../data/userData';
 
 export default function RoleLoginScreen({
   language = 'en',
@@ -28,6 +29,14 @@ export default function RoleLoginScreen({
   const [farmerOtp, setFarmerOtp] = useState('');
   const [farmerOtpSent, setFarmerOtpSent] = useState(false);
   const [farmerOtpPreview, setFarmerOtpPreview] = useState('874885');
+
+  const cleanFarmerPhone = useMemo(() => farmerPhone.replace(/\D/g, '').slice(-10), [farmerPhone]);
+  const recognizedFarmer = useMemo(() => {
+    if (cleanFarmerPhone.length >= 10) {
+      return findFarmerByMobile(cleanFarmerPhone);
+    }
+    return null;
+  }, [cleanFarmerPhone]);
 
   // --------------------------------------------------------------------------
   // TRACTOR OWNER 4-STEP STATE
@@ -121,7 +130,7 @@ export default function RoleLoginScreen({
     }
     const user = {
       id: 201,
-      name: farmerName.trim() || 'N. Ramesh Kumar',
+      name: farmerName.trim() || 'Farmer Member',
       phone: cleanPhone || '9848012345',
       role: 'farmer',
       village: farmerVillage || 'Hasanparthy',
@@ -129,11 +138,26 @@ export default function RoleLoginScreen({
       district: 'Hanumakonda',
       isVerified: true
     };
+    saveRegisteredFarmer(user);
+    try {
+      localStorage.setItem('agri_last_farmer', JSON.stringify(user));
+    } catch (e) {
+      console.warn(e);
+    }
     onLoginFarmer(user);
   };
 
   const handleQuickFarmerLogin = () => {
-    const user = {
+    const user = recognizedFarmer ? {
+      id: 201,
+      name: recognizedFarmer.name,
+      phone: cleanFarmerPhone,
+      role: 'farmer',
+      village: recognizedFarmer.village || 'Hasanparthy',
+      mandal: 'Hasanparthy',
+      district: 'Hanumakonda',
+      isVerified: true
+    } : {
       id: 201,
       name: 'N. Ramesh Kumar',
       phone: '9848012345',
@@ -143,6 +167,11 @@ export default function RoleLoginScreen({
       district: 'Hanumakonda',
       isVerified: true
     };
+    try {
+      localStorage.setItem('agri_last_farmer', JSON.stringify(user));
+    } catch (e) {
+      console.warn(e);
+    }
     onLoginFarmer(user);
   };
 
@@ -480,31 +509,41 @@ export default function RoleLoginScreen({
 
               {/* Primary Action Button */}
               {!farmerOtpSent ? (
-                <button
-                  type="button"
-                  className="native-btn-primary green-bg"
-                  onClick={handleFarmerSendOtp}
-                >
-                  • {isTe ? 'ధృవీకరణ OTP పంపండి 📲' : 'Send Verification OTP 📲'}
-                </button>
+                recognizedFarmer ? (
+                  <>
+                    <button
+                      type="button"
+                      className="native-btn-primary green-bg"
+                      onClick={handleQuickFarmerLogin}
+                    >
+                      ⚡ {isTe ? `1-ట్యాప్ లాగిన్ (${recognizedFarmer.name.split(' ')[0]})` : `1-Tap Login as ${recognizedFarmer.name.split(' ')[0]}`}
+                    </button>
+                    <button
+                      type="button"
+                      className="native-btn-secondary green-outline"
+                      onClick={handleFarmerSendOtp}
+                    >
+                      📲 {isTe ? 'OTP ద్వారా ప్రవేశించండి' : 'or Verify with SMS OTP instead'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="native-btn-primary green-bg"
+                    onClick={handleFarmerSendOtp}
+                  >
+                    • {isTe ? 'ధృవీకరణ OTP పంపండి 📲' : 'Send Verification OTP 📲'}
+                  </button>
+                )
               ) : (
                 <button
                   type="button"
                   className="native-btn-primary green-bg"
                   onClick={handleFarmerVerify}
                 >
-                  {isTe ? 'ధృవీకరించి మార్కెట్‌లోకి ప్రవేశించండి →' : 'Verify & Enter Marketplace →'}
+                  {isTe ? 'ధృవీకరించి నమోదు పూర్తి చేయండి →' : 'Verify & Complete Sign-Up →'}
                 </button>
               )}
-
-              {/* Quick 1-Tap Login Button */}
-              <button
-                type="button"
-                className="native-btn-secondary green-outline"
-                onClick={handleQuickFarmerLogin}
-              >
-                ⚡ {isTe ? 'త్వరిత రైతు 1-ట్యాప్ లాగిన్' : 'Quick Farmer 1-Tap Login'}
-              </button>
 
               {/* Guest Browsing Link */}
               <button

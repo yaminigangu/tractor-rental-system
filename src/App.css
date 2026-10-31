@@ -10270,3 +10270,132 @@ html {
   font-weight: 600;
   line-height: 1.2;
 }
+
+
+/* Returning Member 1-Tap Login Card & Dynamic Recognition */
+.signin-returning-farmer-card {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(22, 101, 52, 0.08);
+}
+
+.returning-farmer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.returning-avatar-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #dcfce7;
+  border: 1.5px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.returning-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.returning-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #15803d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.returning-name {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: #14532d;
+}
+
+.returning-meta {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.signin-returning-tap-btn {
+  width: 100%;
+  background: #15803d;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);
+}
+
+.signin-returning-tap-btn:hover {
+  background: #14532d;
+  transform: translateY(-1px);
+}
+
+.signin-or-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 16px 0 14px;
+  color: #94a3b8;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.signin-or-divider::before,
+.signin-or-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.signin-or-divider span {
+  padding: 0 10px;
+}
+
+.signin-recognized-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  transition: all 0.2s ease;
+}
+
+.signin-recognized-status-banner.is-member {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+
+.signin-recognized-status-banner.is-new {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}

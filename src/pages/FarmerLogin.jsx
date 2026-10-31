@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { translations } from '../translations';
-import { saveRegisteredFarmer, findFarmerByIdentifier } from '../data/userData';
+import { saveRegisteredFarmer, findFarmerByMobile, findFarmerByIdentifier } from '../data/userData';
 
 export default function FarmerLogin({
   setActivePage,
@@ -16,10 +16,23 @@ export default function FarmerLogin({
     ? (isTe ? (selectedLocation.villageTe || selectedLocation.village) : selectedLocation.village)
     : 'Hasanparthy';
 
-  // Form Fields (Exact match to Screenshot 2 & 3)
-  const [fullName, setFullName] = useState('N. Ramesh Kumar');
-  const [mobileNumber, setMobileNumber] = useState('9848012345');
-  const [villageBase, setVillageBase] = useState(defaultVillage);
+  // Check if a farmer previously signed up or logged in on this browser/device
+  const [lastFarmer, setLastFarmer] = useState(() => {
+    try {
+      const saved = localStorage.getItem('agri_last_farmer');
+      if (saved) return JSON.parse(saved);
+      const curr = localStorage.getItem('agri_current_farmer');
+      if (curr) return JSON.parse(curr);
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
+  // Form Fields: Start with last registered farmer if exists, otherwise blank for new visitor
+  const [fullName, setFullName] = useState(() => lastFarmer?.name || '');
+  const [mobileNumber, setMobileNumber] = useState(() => lastFarmer?.mobile || '');
+  const [villageBase, setVillageBase] = useState(() => lastFarmer?.village || defaultVillage);
 
   // OTP State (Screenshot 2 -> Screenshot 3)
   const [otpSent, setOtpSent] = useState(false);
@@ -33,12 +46,73 @@ export default function FarmerLogin({
     }
   };
 
-  // Trigger Send OTP (transitions to Screenshot 3)
+  // Clean phone digits
+  const cleanPhone = useMemo(() => mobileNumber.replace(/\D/g, ''), [mobileNumber]);
+
+  // Real-time lookup: Is this person ALREADY a registered member in AgriRent?
+  const recognizedFarmer = useMemo(() => {
+    if (cleanPhone.length >= 10) {
+      return findFarmerByMobile(cleanPhone);
+    }
+    return null;
+  }, [cleanPhone]);
+
+  // Check whether current entered phone is recognized as an existing member
+  const isAlreadyPart = Boolean(
+    recognizedFarmer || 
+    (lastFarmer && cleanPhone.length >= 10 && cleanPhone === String(lastFarmer.mobile).replace(/\D/g, ''))
+  );
+
+  const activeMember = recognizedFarmer || (isAlreadyPart ? lastFarmer : null);
+
+  // When a 10-digit number matches a registered member, auto-populate their registered name & village
+  useEffect(() => {
+    if (recognizedFarmer) {
+      if (!fullName || fullName === 'N. Ramesh Kumar' || fullName !== recognizedFarmer.name) {
+        setFullName(recognizedFarmer.name);
+      }
+      if (recognizedFarmer.village) {
+        setVillageBase(recognizedFarmer.village);
+      }
+    }
+  }, [recognizedFarmer]);
+
+  // Complete 1-Tap Login for recognized returning member
+  const handleOneTapLogin = (targetFarmer) => {
+    setErrorMsg('');
+    const farmerToLogin = targetFarmer || activeMember || {
+      name: fullName.trim() || 'Farmer Member',
+      mobile: cleanPhone || '9848012345',
+      village: villageBase || defaultVillage,
+      district: selectedLocation?.district || 'Hanamkonda',
+      landArea: 3.5,
+      crops: ['Paddy', 'Cotton'],
+      isVerified: true,
+      registeredAt: new Date().toISOString().split('T')[0]
+    };
+
+    // Save and mark as verified returning farmer
+    saveRegisteredFarmer(farmerToLogin);
+    try {
+      localStorage.setItem('agri_last_farmer', JSON.stringify(farmerToLogin));
+      localStorage.setItem('agri_current_farmer', JSON.stringify(farmerToLogin));
+    } catch (err) {
+      console.warn(err);
+    }
+
+    if (setCurrentFarmer) {
+      setCurrentFarmer(farmerToLogin);
+    }
+
+    // Direct into Marketplace
+    setActivePage('find-tractor');
+  };
+
+  // Trigger Send OTP for new farmer sign-up or manual verification
   const handleSendOtp = (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
 
-    const cleanPhone = mobileNumber.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
       setErrorMsg(isTe ? 'దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter a valid 10-digit mobile number.');
       return;
@@ -53,7 +127,7 @@ export default function FarmerLogin({
     );
   };
 
-  // Complete Login with Farmer session & route to Marketplace
+  // Verify OTP and complete sign-up for new farmers
   const handleVerifyAndEnter = (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
@@ -63,11 +137,10 @@ export default function FarmerLogin({
       return;
     }
 
-    const cleanPhone = mobileNumber.replace(/\D/g, '');
     const farmerRecord = {
-      name: fullName.trim() || 'N. Ramesh Kumar',
+      name: fullName.trim() || (isTe ? 'రైతు సభ్యుడు' : 'Farmer Member'),
       mobile: cleanPhone || '9848012345',
-      village: villageBase || 'Hasanparthy',
+      village: villageBase || defaultVillage,
       district: selectedLocation?.district || 'Hanamkonda',
       landArea: 3.5,
       crops: ['Paddy', 'Cotton'],
@@ -75,44 +148,41 @@ export default function FarmerLogin({
       registeredAt: new Date().toISOString().split('T')[0]
     };
 
-    // Save in storage
+    // Save newly signed-up farmer in database & remember as last farmer on this device
     saveRegisteredFarmer(farmerRecord);
-    if (setCurrentFarmer) {
-      setCurrentFarmer(farmerRecord);
-      try {
-        localStorage.setItem('agri_current_farmer', JSON.stringify(farmerRecord));
-      } catch (err) {
-        console.warn(err);
-      }
+    try {
+      localStorage.setItem('agri_last_farmer', JSON.stringify(farmerRecord));
+      localStorage.setItem('agri_current_farmer', JSON.stringify(farmerRecord));
+    } catch (err) {
+      console.warn(err);
     }
 
-    // Direct into Marketplace (Screenshot 4)
+    if (setCurrentFarmer) {
+      setCurrentFarmer(farmerRecord);
+    }
+
+    // Direct into Marketplace
     setActivePage('find-tractor');
   };
 
-  // Instant 1-Tap Login
-  const handleQuickOneTap = () => {
-    const quickFarmer = {
-      name: fullName.trim() || 'N. Ramesh Kumar',
-      mobile: mobileNumber.replace(/\D/g, '') || '9848012345',
-      village: villageBase || 'Hasanparthy',
-      district: selectedLocation?.district || 'Hanamkonda',
-      landArea: 3.5,
-      crops: ['Paddy', 'Cotton'],
-      isVerified: true,
-      registeredAt: new Date().toISOString().split('T')[0]
-    };
-
-    saveRegisteredFarmer(quickFarmer);
-    if (setCurrentFarmer) {
-      setCurrentFarmer(quickFarmer);
-      try {
-        localStorage.setItem('agri_current_farmer', JSON.stringify(quickFarmer));
-      } catch (err) {
-        console.warn(err);
-      }
+  // Quick Demo Auto-fill Toggle (Settings ⚙️ icon)
+  const handleToggleDemoState = () => {
+    if (mobileNumber) {
+      // Clear for new user testing
+      setFullName('');
+      setMobileNumber('');
+      setVillageBase(defaultVillage);
+      setOtpSent(false);
+      setErrorMsg('');
+      setAlertNotice('');
+    } else {
+      // Fill demo registered member
+      setFullName('N. Ramesh Kumar');
+      setMobileNumber('9848012345');
+      setVillageBase('Hasanparthy');
+      setOtpSent(false);
+      setErrorMsg('');
     }
-    setActivePage('find-tractor');
   };
 
   return (
@@ -147,7 +217,7 @@ export default function FarmerLogin({
         </button>
       </header>
 
-      {/* Main Container Card matching Screenshot 2 & 3 */}
+      {/* Main Container Card */}
       <main className="signin-card-container">
         {/* OTP Notification Banner (Screenshot 3) */}
         {otpSent && alertNotice && (
@@ -170,12 +240,8 @@ export default function FarmerLogin({
             <button
               type="button"
               className="signin-gear-btn-blue"
-              title="Quick auto-fill demo profile"
-              onClick={() => {
-                setFullName('N. Ramesh Kumar');
-                setMobileNumber('9848012345');
-                setVillageBase('Hasanparthy');
-              }}
+              title={mobileNumber ? 'Clear for New Farmer sign-up test' : 'Auto-fill Demo Registered Farmer'}
+              onClick={handleToggleDemoState}
               aria-label="Settings"
             >
               ⚙️
@@ -192,16 +258,64 @@ export default function FarmerLogin({
           <h2 className="signin-heading" style={{ fontSize: '24px', marginTop: '4px' }}>
             {isTe ? 'ఫోన్ & OTP తో ప్రవేశించండి' : 'Enter with Phone & OTP'}
           </h2>
-          <p className="signin-description" style={{ marginBottom: '18px' }}>
+          <p className="signin-description" style={{ marginBottom: '16px' }}>
             {isTe
               ? 'తక్షణ ఫోన్ ధృవీకరణ. పాస్‌వర్డ్‌లు అవసరం లేదు.'
               : 'Instant phone verification. No passwords required.'}
           </p>
 
+          {/* CASE 1: PROMINENT ONE-TAP LOGIN CARD FOR RETURNING SIGNED-UP MEMBER */}
+          {lastFarmer && !otpSent && (
+            <div className="signin-returning-farmer-card page-anim">
+              <div className="returning-farmer-header">
+                <div className="returning-avatar-circle">👨‍🌾</div>
+                <div className="returning-text-col">
+                  <span className="returning-tag">
+                    ✓ {isTe ? 'గుర్తించబడిన రైతు సభ్యుడు' : 'Recognized Member'}
+                  </span>
+                  <strong className="returning-name">{lastFarmer.name}</strong>
+                  <span className="returning-meta">
+                    +91 {lastFarmer.mobile} • {lastFarmer.village}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="signin-returning-tap-btn"
+                onClick={() => handleOneTapLogin(lastFarmer)}
+              >
+                <span>⚡ {isTe ? `1-ట్యాప్ లాగిన్ (${lastFarmer.name.split(' ')[0]}) →` : `1-Tap Login as ${lastFarmer.name.split(' ')[0]} →`}</span>
+              </button>
+            </div>
+          )}
+
+          {lastFarmer && !otpSent && (
+            <div className="signin-or-divider">
+              <span>{isTe ? 'లేదా మరొక నంబర్‌తో ప్రవేశించండి' : 'or sign in with another phone number'}</span>
+            </div>
+          )}
+
+          {/* DYNAMIC MEMBER STATUS BANNER WHEN ENTERING PHONE */}
+          {cleanPhone.length >= 10 && (
+            <div className={`signin-recognized-status-banner page-anim ${isAlreadyPart ? 'is-member' : 'is-new'}`}>
+              <span>{isAlreadyPart ? '✓' : '🌱'}</span>
+              <span>
+                {isAlreadyPart
+                  ? (isTe 
+                      ? `నమోదిత రైతు ఖాతా గుర్తించబడింది: స్వాగతం ${activeMember?.name || ''}!` 
+                      : `Registered Member Account: Welcome back, ${activeMember?.name || ''}!`)
+                  : (isTe
+                      ? 'కొత్త రైతు నంబర్: ప్రవేశించడానికి OTP తో నమోదు చేసుకోండి.'
+                      : 'New Farmer detected: Verify with OTP to complete sign-up.')}
+              </span>
+            </div>
+          )}
+
           {errorMsg && <div className="signin-error-box">⚠️ {errorMsg}</div>}
 
           {/* Inputs Section */}
-          <form onSubmit={otpSent ? handleVerifyAndEnter : handleSendOtp}>
+          <form onSubmit={otpSent ? handleVerifyAndEnter : (isAlreadyPart ? () => handleOneTapLogin() : handleSendOtp)}>
             {/* Field 1: Farmer Full Name */}
             <div className="signin-field-group">
               <label className="signin-field-label">
@@ -231,7 +345,12 @@ export default function FarmerLogin({
                   maxLength={10}
                   className="signin-input-text font-bold"
                   value={mobileNumber}
-                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setMobileNumber(val);
+                    setOtpSent(false);
+                    setErrorMsg('');
+                  }}
                   placeholder="9848012345"
                 />
               </div>
@@ -254,7 +373,7 @@ export default function FarmerLogin({
               </div>
             </div>
 
-            {/* OPTIONAL STEP: 6-Digit OTP Box (Appears after clicking Send OTP - Screenshot 3) */}
+            {/* OTP Step: 6-Digit Verification OTP (Screenshot 3) */}
             {otpSent && (
               <div className="signin-field-group signin-otp-block page-anim">
                 <label className="signin-field-label" style={{ fontWeight: 800 }}>
@@ -275,25 +394,40 @@ export default function FarmerLogin({
               </div>
             )}
 
-            {/* Main Action Button (Screenshot 2: Send OTP / Screenshot 3: Verify & Enter) */}
+            {/* DYNAMIC ACTION BUTTONS:
+                - If ALREADY PART OF IT: Offers 1-Tap Login!
+                - If NEW FARMER: Offers Send Verification OTP & complete sign-up. 1-Tap is hidden until they sign up! */}
             {!otpSent ? (
-              <button type="submit" className="signin-btn-forest-green">
-                <span>• {isTe ? 'ధృవీకరణ OTP పంపండి 📲' : 'Send Verification OTP 📲'}</span>
-              </button>
+              isAlreadyPart ? (
+                <>
+                  <button
+                    type="button"
+                    className="signin-btn-forest-green"
+                    style={{ background: '#15803d' }}
+                    onClick={() => handleOneTapLogin()}
+                  >
+                    <span>⚡ {isTe ? `1-ట్యాప్ లాగిన్ (${(fullName || 'రైతు').split(' ')[0]}) →` : `1-Tap Login as ${(fullName || 'Farmer').split(' ')[0]} →`}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="signin-btn-quick-tap"
+                    style={{ borderStyle: 'dashed' }}
+                    onClick={handleSendOtp}
+                  >
+                    <span>📲 {isTe ? 'OTP ద్వారా ధృవీకరించి ప్రవేశించండి' : 'or Verify with SMS OTP instead'}</span>
+                  </button>
+                </>
+              ) : (
+                <button type="submit" className="signin-btn-forest-green">
+                  <span>• {isTe ? 'ధృవీకరణ OTP పంపండి 📲' : 'Send Verification OTP 📲'}</span>
+                </button>
+              )
             ) : (
               <button type="submit" className="signin-btn-forest-green">
-                <span>• {isTe ? 'ధృవీకరించి మార్కెట్‌ప్లేస్‌లో ప్రవేశించండి →' : 'Verify & Enter Marketplace →'}</span>
+                <span>• {isTe ? 'ధృవీకరించి నమోదు పూర్తి చేయండి →' : 'Verify & Complete Sign-Up →'}</span>
               </button>
             )}
-
-            {/* Secondary Button: Quick Farmer 1-Tap Login */}
-            <button
-              type="button"
-              className="signin-btn-quick-tap"
-              onClick={handleQuickOneTap}
-            >
-              <span>⚡ {isTe ? 'త్వరిత రైతు 1-ట్యాప్ లాగిన్' : 'Quick Farmer 1-Tap Login'}</span>
-            </button>
           </form>
 
           {/* Guest Browsing Link */}
