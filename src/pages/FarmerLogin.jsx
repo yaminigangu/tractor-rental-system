@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredFarmer, findFarmerByMobile } from '../data/userData';
+import AuthShowcasePanel from '../components/AuthShowcasePanel';
 
 export default function FarmerLogin({
   setActivePage,
@@ -247,39 +248,54 @@ export default function FarmerLogin({
 
   return (
     <div className="signin-page-viewport page-anim">
-      <div className="signin-center-wrapper">
-        {/* Top Header Bar */}
-        <header className="signin-top-nav">
-          <div className="signin-nav-left">
+      {/* Background Animated Floating Elements */}
+      <div className="auth-bg-particles" aria-hidden="true">
+        <span className="bg-particle p1">🌾</span>
+        <span className="bg-particle p2">✨</span>
+        <span className="bg-particle p3">🌱</span>
+        <span className="bg-particle p4">🚜</span>
+        <span className="bg-particle p5">✨</span>
+        <span className="bg-particle p6">🌾</span>
+      </div>
+
+      <div className="auth-split-layout">
+        {/* Left Side 3D Showcase Panel on Desktop */}
+        <AuthShowcasePanel isTe={isTe} portalType="farmer" />
+
+        {/* Right Side Card */}
+        <div className="auth-card-side">
+          {/* Top Header Bar */}
+          <header className="signin-top-nav">
+            <div className="signin-nav-left">
+              <button
+                type="button"
+                className="signin-header-back-sq"
+                onClick={() => setActivePage('portal-select')}
+                title="Back to portal selection"
+                aria-label="Back"
+              >
+                ←
+              </button>
+              <div className="signin-brand-group">
+                <h1 className="signin-brand-title">Agrirent</h1>
+                <span className="signin-brand-subtitle">
+                  {isTe ? 'రైతు మొబైల్ పోర్టల్' : 'Farmer Mobile Portal'}
+                </span>
+              </div>
+            </div>
+
             <button
               type="button"
-              className="signin-header-back-sq"
-              onClick={() => setActivePage('portal-select')}
-              title="Back to portal selection"
-              aria-label="Back"
+              className="signin-lang-pill"
+              onClick={toggleLanguage}
+              title={isTe ? 'Switch to English' : 'తెలుగులోకి మార్చండి'}
             >
-              ←
+              🌐 {isTe ? 'తెలుగు ▾' : 'English ▾'}
             </button>
-            <div className="signin-brand-group">
-              <h1 className="signin-brand-title">Agrirent</h1>
-              <span className="signin-brand-subtitle">
-                {isTe ? 'రైతు మొబైల్ పోర్టల్' : 'Farmer Mobile Portal'}
-              </span>
-            </div>
-          </div>
+          </header>
 
-          <button
-            type="button"
-            className="signin-lang-pill"
-            onClick={toggleLanguage}
-            title={isTe ? 'Switch to English' : 'తెలుగులోకి మార్చండి'}
-          >
-            🌐 {isTe ? 'తెలుగు ▾' : 'English ▾'}
-          </button>
-        </header>
-
-        {/* Main Card Container */}
-        <main className="signin-card-container">
+          {/* Main Card Container */}
+          <main className="signin-card-container">
           <div className="signin-main-card">
             {/* Top Navigation Row: Back Button */}
             <div className="signin-card-top-row">
@@ -669,5 +685,6 @@ export default function FarmerLogin({
         </main>
       </div>
     </div>
-  );
+  </div>
+);
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredOwner, findOwnerByIdentifier } from '../data/userData';
+import AuthShowcasePanel from '../components/AuthShowcasePanel';
 
 export default function OwnerRegistration({
   setTractors,
@@ -388,38 +389,54 @@ export default function OwnerRegistration({
 
   return (
     <div className="signin-page-viewport page-anim">
-      {/* Top Header Bar matching Screenshots 1 - 4 */}
-      <header className="signin-top-nav">
-        <div className="signin-nav-left">
-          <button
-            type="button"
-            className="signin-header-back-sq"
-            onClick={() => setActivePage('portal-select')}
-            title="Back to selection"
-            aria-label="Back"
-          >
-            ←
-          </button>
-          <div className="signin-brand-group">
-            <h1 className="signin-brand-title">Agrirent</h1>
-            <span className="signin-brand-subtitle">
-              {isTe ? 'వ్యవసాయ యంత్రాల అద్దె వేదిక' : 'Farm Machinery Rental Platform'}
-            </span>
-          </div>
-        </div>
+      {/* Background Animated Floating Elements */}
+      <div className="auth-bg-particles" aria-hidden="true">
+        <span className="bg-particle p1">🌾</span>
+        <span className="bg-particle p2">✨</span>
+        <span className="bg-particle p3">🌱</span>
+        <span className="bg-particle p4">🚜</span>
+        <span className="bg-particle p5">✨</span>
+        <span className="bg-particle p6">🌾</span>
+      </div>
 
-        <button
-          type="button"
-          className="signin-lang-pill"
-          onClick={toggleLanguage}
-          title={isTe ? 'Switch to English' : 'తెలుగులోకి మార్చండి'}
-        >
-          🌐 {isTe ? 'తెలుగు ▾' : 'English ▾'}
-        </button>
-      </header>
+      <div className="auth-split-layout">
+        {/* Left Side 3D Showcase Panel on Desktop */}
+        <AuthShowcasePanel isTe={isTe} portalType="owner" />
 
-      {/* Main Container Card matching Screenshots */}
-      <main className="signin-card-container">
+        {/* Right Side Card Side */}
+        <div className="auth-card-side">
+          {/* Top Header Bar matching Screenshots 1 - 4 */}
+          <header className="signin-top-nav">
+            <div className="signin-nav-left">
+              <button
+                type="button"
+                className="signin-header-back-sq"
+                onClick={() => setActivePage('portal-select')}
+                title="Back to selection"
+                aria-label="Back"
+              >
+                ←
+              </button>
+              <div className="signin-brand-group">
+                <h1 className="signin-brand-title">Agrirent</h1>
+                <span className="signin-brand-subtitle">
+                  {isTe ? 'వ్యవసాయ యంత్రాల అద్దె వేదిక' : 'Farm Machinery Rental Platform'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="signin-lang-pill"
+              onClick={toggleLanguage}
+              title={isTe ? 'Switch to English' : 'తెలుగులోకి మార్చండి'}
+            >
+              🌐 {isTe ? 'తెలుగు ▾' : 'English ▾'}
+            </button>
+          </header>
+
+          {/* Main Container Card matching Screenshots */}
+          <main className="signin-card-container">
         {/* OTP Notification Banner (Step 1) */}
         {activeTab === 'kyc' && currentStep === 1 && (
           <div className="signin-otp-banner page-anim">
@@ -1082,5 +1099,7 @@ export default function OwnerRegistration({
         </footer>
       </main>
     </div>
-  );
+  </div>
+</div>
+);
 }
