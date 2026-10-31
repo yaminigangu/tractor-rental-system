@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredFarmer, findFarmerByMobile } from '../data/userData';
-import AuthShowcasePanel from '../components/AuthShowcasePanel';
 
 export default function FarmerLogin({
   setActivePage,
@@ -258,14 +257,9 @@ export default function FarmerLogin({
         <span className="bg-particle p6">🌾</span>
       </div>
 
-      <div className="auth-split-layout">
-        {/* Left Side 3D Showcase Panel on Desktop */}
-        <AuthShowcasePanel isTe={isTe} portalType="farmer" />
-
-        {/* Right Side Card */}
-        <div className="auth-card-side">
-          {/* Top Header Bar */}
-          <header className="signin-top-nav">
+      <div className="signin-center-wrapper">
+        {/* Top Header Bar */}
+        <header className="signin-top-nav">
             <div className="signin-nav-left">
               <button
                 type="button"
@@ -685,6 +679,5 @@ export default function FarmerLogin({
         </main>
       </div>
     </div>
-  </div>
-);
+  );
 }
