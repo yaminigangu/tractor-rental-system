@@ -4,6 +4,8 @@ export default function DualLoginSelect({
   setActivePage,
   language = 'en',
   setLanguage,
+  currentFarmer,
+  setCurrentFarmer,
   selectedLocation
 }) {
   const t = translations[language] || translations.en;
@@ -12,6 +14,27 @@ export default function DualLoginSelect({
   const toggleLanguage = () => {
     if (setLanguage) {
       setLanguage(prev => (prev === 'en' ? 'te' : 'en'));
+    }
+  };
+
+  // If already authenticated as a Farmer, directly login and go to marketplace!
+  const handleFarmerPortalClick = () => {
+    const existingFarmer = currentFarmer || (() => {
+      try {
+        const s = localStorage.getItem('agri_current_farmer');
+        return s ? JSON.parse(s) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (existingFarmer) {
+      if (setCurrentFarmer) {
+        setCurrentFarmer(existingFarmer);
+      }
+      setActivePage('find-tractor');
+    } else {
+      setActivePage('farmer-login');
     }
   };
 
@@ -59,7 +82,7 @@ export default function DualLoginSelect({
             <button
               type="button"
               className="signin-choice-card choice-farmer"
-              onClick={() => setActivePage('farmer-login')}
+              onClick={handleFarmerPortalClick}
             >
               <div className="signin-choice-icon-wrap icon-farmer">
                 <span className="signin-avatar-emoji">👨‍🌾</span>

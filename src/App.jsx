@@ -331,6 +331,7 @@ function App() {
             language={language}
             setLanguage={setLanguage}
             currentFarmer={currentFarmer}
+            setCurrentFarmer={setCurrentFarmer}
             currentOwner={currentOwner}
             selectedLocation={selectedLocation}
           />
