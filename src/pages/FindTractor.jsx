@@ -112,6 +112,7 @@ export const getHpDisplay = (tractor) => {
 
 export default function FindTractor({
   tractors = [],
+  setTractors,
   setActivePage,
   setSelectedTractor,
   serviceFilter,
@@ -121,11 +122,14 @@ export default function FindTractor({
   weatherData,
   isLoadingWeather,
   onOpenLocationPicker,
-  isUserLoggedIn = false
+  isUserLoggedIn = false,
+  currentOwner
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recommended');
   const [onlyLocalFleet, setOnlyLocalFleet] = useState(false);
+  const [isListModalOpen, setIsListModalOpen] = useState(false);
+  const [listSuccessToast, setListSuccessToast] = useState('');
 
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -282,12 +286,123 @@ export default function FindTractor({
 
   const containerRef = useRef(null);
 
+  // List Machinery Modal Form State
+  const [newMachineForm, setNewMachineForm] = useState({
+    ownerName: currentOwner?.fullName || '',
+    mobile: currentOwner?.mobile || '',
+    brand: 'Mahindra',
+    model: '575 DI XP Plus (47 HP)',
+    implements: ['Ploughing', 'Rotavator'],
+    priceHour: 1100,
+    priceAcre: 2200,
+    village: activeVillage,
+    photo: '/images/mahindra_575.jpg'
+  });
+
+  const availableBrands = [
+    'Mahindra',
+    'Swaraj',
+    'John Deere',
+    'Eicher',
+    'Sonalika',
+    'Massey Ferguson',
+    'New Holland',
+    'Farmtrac',
+    'Kubota',
+    'Kisan Tools'
+  ];
+
+  const availableImplements = [
+    { id: 'Ploughing', label: isTe ? 'దుక్కి దున్నడం' : 'Ploughing' },
+    { id: 'Rotavator', label: isTe ? 'రొటవేటర్' : 'Rotavator' },
+    { id: 'Cultivator', label: isTe ? 'కల్టివేటర్' : 'Cultivator' },
+    { id: 'Corn Harvester', label: isTe ? 'మొక్కజొన్న కోత' : 'Harvester' },
+    { id: 'Straw Baler', label: isTe ? 'గడ్డి బెయిలర్' : 'Straw Baler' },
+    { id: 'Corn Seeder', label: isTe ? 'విత్తన యంత్రం' : 'Seed Planter' },
+    { id: 'Trailer Services', label: isTe ? 'ట్రాలీ రవాణా' : 'Trailer' }
+  ];
+
+  const selectablePhotos = [
+    { id: 'mahindra_575', label: 'Mahindra 575 DI', src: '/images/mahindra_575.jpg' },
+    { id: 'mahindra_475', label: 'Mahindra 475 DI', src: '/tractor1.jpeg' },
+    { id: 'swaraj_744', label: 'Swaraj 744 FE', src: '/tractor4.jpeg' },
+    { id: 'john_deere_5310', label: 'John Deere 5310', src: '/images/john_deere_5310.jpg' },
+    { id: 'eicher_380', label: 'Eicher 380 Super DI', src: '/eicher_380_clean.jpg' },
+    { id: 'farmtrac_60', label: 'Farmtrac 60', src: '/farmtrac_60.jpg' },
+    { id: 'new_holland', label: 'New Holland 3630', src: '/new_holland_3630.jpg' },
+    { id: 'sonalika', label: 'Sonalika Tiger 55', src: '/sonalika_tiger_55.jpg' },
+    { id: 'harvester', label: 'Corn Harvester', src: '/corn_harvester.jpg' },
+    { id: 'baler', label: 'Straw Baler', src: '/straw_baler.jpg' },
+    { id: 'seeder', label: 'Corn Seeder', src: '/corn_seeder.jpg' },
+    { id: 'trailer', label: 'Trailer Trolley', src: '/tractor9.jpg' }
+  ];
+
+  const handleToggleImplement = (implId) => {
+    setNewMachineForm(prev => {
+      const exists = prev.implements.includes(implId);
+      return {
+        ...prev,
+        implements: exists 
+          ? prev.implements.filter(i => i !== implId)
+          : [...prev.implements, implId]
+      };
+    });
+  };
+
+  const handleListMachinerySubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!newMachineForm.ownerName.trim() || !newMachineForm.mobile.trim()) {
+      alert(isTe ? 'దయచేసి మీ పేరు మరియు మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter owner name and mobile number.');
+      return;
+    }
+
+    const createdTractor = {
+      id: Date.now(),
+      owner: newMachineForm.ownerName.trim(),
+      mobile: newMachineForm.mobile.trim(),
+      location: newMachineForm.village || activeVillage,
+      district: activeDistrict,
+      brand: newMachineForm.brand,
+      model: newMachineForm.model,
+      equipment: newMachineForm.implements.length > 0 ? newMachineForm.implements.join(', ') : 'Ploughing, Rotavator',
+      pricing: Number(newMachineForm.priceHour) || 1000,
+      priceAcre: Number(newMachineForm.priceAcre) || 2000,
+      engineHp: '48 HP',
+      availability: 'Available',
+      photo: newMachineForm.photo || getAccurateTractorPhoto({ brand: newMachineForm.brand, model: newMachineForm.model }),
+      rating: 5.0,
+      jobsDone: 0,
+      registeredAt: 'Just Now',
+      distanceKm: 0.5,
+      dispatchMins: 12
+    };
+
+    if (setTractors) {
+      setTractors(prev => [createdTractor, ...(Array.isArray(prev) ? prev : [])]);
+    }
+
+    setIsListModalOpen(false);
+    setListSuccessToast(
+      isTe
+        ? `✅ మీ ${newMachineForm.brand} ${newMachineForm.model} అగ్రిరెంట్‌లో విజయవంతంగా చేర్చబడింది!`
+        : `✅ Your ${newMachineForm.brand} ${newMachineForm.model} is now live in the AgriRent Fleet!`
+    );
+
+    setTimeout(() => {
+      const el = document.getElementById('fleet-results');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 250);
+
+    setTimeout(() => {
+      setListSuccessToast('');
+    }, 6000);
+  };
+
   // GSAP Entrance Animations on Mount
   useEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline();
       tl.from('.jfarm-badge-pill', { opacity: 0, y: -12, duration: 0.35, ease: 'power2.out' })
-        .from('.jfarm-portal-switch', { opacity: 0, y: -10, duration: 0.35, ease: 'power2.out' }, '-=0.2')
         .from('.jfarm-hero-title', { opacity: 0, y: 22, duration: 0.45, ease: 'power3.out' }, '-=0.2')
         .from('.jfarm-hero-subtitle', { opacity: 0, y: 16, duration: 0.4, ease: 'power3.out' }, '-=0.25')
         .from('.jfarm-tab-pill', { opacity: 0, scale: 0.85, y: 12, stagger: 0.03, duration: 0.32, ease: 'back.out(2)' }, '-=0.2')
@@ -349,34 +464,12 @@ export default function FindTractor({
         </div>
       )}
 
-      {/* JFarm Services Desktop Hero Banner & QuickRide-style Quick Search Bar (Edge-to-Edge Full Workspace) */}
+      {/* AgriRent Desktop Hero Banner (Edge-to-Edge Full Workspace) */}
       <section className="jfarm-hero-section page-anim">
         <div className="jfarm-hero-header">
-          <div className="jfarm-header-top-row">
-            <div className="jfarm-badge-pill">
-              <span className="jfarm-badge-dot">●</span>
-              <span>{isTe ? 'తెలంగాణ వ్యవసాయ యంత్రీకరణ వేదిక' : 'Telangana Farm Machinery Rental Platform'}</span>
-            </div>
-
-            {/* JFarm Services Hirer vs Renter Mode Switch (Reference: jfarmservices.in/renter.php) */}
-            <div className="jfarm-portal-switch" role="tablist">
-              <button
-                type="button"
-                className="jfarm-switch-pill active"
-                title={isTe ? 'రైతు అద్దె వేదిక' : 'Hire Machinery (Farmer)'}
-              >
-                <span>🌾 {isTe ? 'రైతు అద్దె వేదిక' : 'Hire Machinery'}</span>
-              </button>
-              <button
-                type="button"
-                className="jfarm-switch-pill"
-                onClick={() => setActivePage('owner-registration')}
-                title={isTe ? 'యంత్రాల యజమాని పోర్టల్' : 'List Machinery (Renter Hub)'}
-              >
-                <span>🚜 {isTe ? 'యంత్ర యజమానుల కేంద్రం' : 'List Machinery (Renter Hub)'}</span>
-                <span className="jfarm-zero-badge">0% Fee</span>
-              </button>
-            </div>
+          <div className="jfarm-badge-pill">
+            <span className="jfarm-badge-dot">●</span>
+            <span>{isTe ? 'తెలంగాణ వ్యవసాయ యంత్రీకరణ వేదిక' : 'Telangana Farm Machinery Rental Platform'}</span>
           </div>
 
           <h1 className="jfarm-hero-title">
@@ -416,9 +509,9 @@ export default function FindTractor({
           </div>
         </div>
 
-        {/* QuickRide Desktop Search Toolbar (Horizontal across 1140px-1200px) */}
+        {/* Clean Two-Field Search Toolbar */}
         <div className="jfarm-search-card">
-          <form className="jfarm-search-form" onSubmit={handleSearchSubmit}>
+          <form className="jfarm-search-form clean-search-bar" onSubmit={handleSearchSubmit}>
             {/* Field 1: Location */}
             <div
               className="jfarm-search-field field-location"
@@ -438,34 +531,7 @@ export default function FindTractor({
               </div>
             </div>
 
-            {/* Field 2: Equipment Implement */}
-            <div className="jfarm-search-field field-implement">
-              <label htmlFor="jfarm-implement-select" className="jfarm-field-label">
-                {isTe ? 'యంత్ర రకం' : 'IMPLEMENT TYPE'}
-              </label>
-              <div className="jfarm-field-select-wrap">
-                <span className="jfarm-field-icon">🚜</span>
-                <select
-                  id="jfarm-implement-select"
-                  className="jfarm-field-select"
-                  value={serviceFilter}
-                  onChange={(e) => setServiceFilter(e.target.value)}
-                >
-                  <option value="All">{isTe ? 'అన్ని యంత్రాలు (All)' : 'All Machinery'}</option>
-                  <option value="Ploughing">🌱 {isTe ? 'దుక్కి దున్నడం (Ploughing)' : 'Ploughing'}</option>
-                  <option value="Rotavator">🔄 {isTe ? 'రొటవేటర్ (Rotavator)' : 'Rotavator'}</option>
-                  <option value="Cultivator">🌾 {isTe ? 'కల్టివేటర్ (Cultivator)' : 'Cultivator'}</option>
-                  <option value="Corn Harvester">🌽 {isTe ? 'మొక్కజొన్న కోత (Harvester)' : 'Corn Harvester'}</option>
-                  <option value="Straw Baler">📦 {isTe ? 'గడ్డి బెయిలర్ (Straw Baler)' : 'Straw Baler'}</option>
-                  <option value="Corn Seeder">🌱 {isTe ? 'విత్తన యంత్రం (Seed Planter)' : 'Seed Planter'}</option>
-                  <option value="Trailer Services">🚚 {isTe ? 'ట్రాలీ రవాణా (Trailer)' : 'Trailer Trolley'}</option>
-                  <option value="Heavy 50+ HP">⚡ {isTe ? '50+ HP హెవీ ట్రాక్టర్' : '50+ HP Heavy Duty'}</option>
-                </select>
-                <span className="jfarm-select-chevron">▾</span>
-              </div>
-            </div>
-
-            {/* Field 3: Search keyword */}
+            {/* Field 2: Search keyword */}
             <div className="jfarm-search-field field-search">
               <label htmlFor="jfarm-search-input" className="jfarm-field-label">
                 {isTe ? 'శోధన' : 'SEARCH MODEL / VILLAGE'}
@@ -476,7 +542,7 @@ export default function FindTractor({
                   id="jfarm-search-input"
                   type="text"
                   className="jfarm-field-input"
-                  placeholder={isTe ? "ఉదా: మహీంద్రా, స్వరాజ్, రొటవేటర్..." : "e.g. Mahindra, Swaraj, 575..."}
+                  placeholder={isTe ? "ఉదా: మహీంద్రా, స్వరాజ్, రొటవేటర్, హసన్‌పర్తి..." : "e.g. Mahindra, Swaraj, 575, Hasanparthy..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -492,32 +558,6 @@ export default function FindTractor({
                 )}
               </div>
             </div>
-
-            {/* Field 4: Sorting */}
-            <div className="jfarm-search-field field-sort">
-              <label htmlFor="jfarm-sort-select" className="jfarm-field-label">
-                {isTe ? 'క్రమబద్ధీకరించు' : 'SORT BY'}
-              </label>
-              <div className="jfarm-field-select-wrap">
-                <select
-                  id="jfarm-sort-select"
-                  className="jfarm-field-select"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                >
-                  <option value="recommended">⭐ {isTe ? 'సిఫార్సు' : 'Recommended'}</option>
-                  <option value="price-low">📉 {isTe ? 'ధర: తక్కువ నుండి ఎక్కువ' : 'Price: Low to High'}</option>
-                  <option value="price-high">📈 {isTe ? 'ధర: ఎక్కువ నుండి తక్కువ' : 'Price: High to Low'}</option>
-                  <option value="rating">🏆 {isTe ? 'రేటింగ్: ఉత్తమం' : 'Top Rating'}</option>
-                </select>
-                <span className="jfarm-select-chevron">▾</span>
-              </div>
-            </div>
-
-            {/* CTA Button */}
-            <button type="submit" className="jfarm-search-cta-btn">
-              <span>{isTe ? 'యంత్రాలు వెతకండి 🚜' : 'SEARCH MACHINERY 🚜'}</span>
-            </button>
           </form>
 
           {/* JFarm Services Trust & Hotline Footer Strip */}
@@ -748,12 +788,12 @@ export default function FindTractor({
         })}
       </div>
 
-      {/* JFarm Services Renter & Machinery Owner Hub Section (Direct Reference to https://www.jfarmservices.in/renter.php) */}
+      {/* AgriRent Machinery Owner & Renter Hub Section */}
       <section className="jfarm-renter-hub-card page-anim">
         <div className="jfarm-renter-hub-content">
           <div className="jfarm-renter-badge-row">
             <span className="jfarm-renter-kicker">
-              🚜 {isTe ? 'TAFE / అగ్రిరెంట్ యంత్రాల యజమానుల నెట్‌వర్క్' : 'JFarm Machinery Renter & Owner Network'}
+              🚜 {isTe ? 'అగ్రిరెంట్ యంత్రాల యజమానుల నెట్‌వర్క్' : 'AgriRent Machinery Owner & Renter Network'}
             </span>
             <span className="jfarm-renter-pill">0% Platform Fee • 100% Direct</span>
           </div>
@@ -766,8 +806,8 @@ export default function FindTractor({
 
           <p className="jfarm-renter-subheading">
             {isTe
-              ? 'తెలంగాణలోని 33 జిల్లాల్లో సమీప గ్రామాల రైతులతో నేరుగా అనుసంధానం అవ్వండి. 0% కమీషన్, ఉచిత నమోదు మరియు నేరుగా రైతు నుండి యజమానికి చెల్లింపులు.'
-              : 'Tafe JFarm Services & AgriRent model connects tractor, rotavator, and harvester owners directly with neighborhood farmers across 33 Telangana districts. Zero brokerage, instant WhatsApp work orders, and direct payments.'}
+              ? 'అగ్రిరెంట్ వేదిక ద్వారా ట్రాక్టర్లు, రొటవేటర్లు, హార్వెస్టర్ల యజమానులు నేరుగా స్థానిక గ్రామాల రైతులతో అనుసంధానం కావచ్చు. 0% కమీషన్, ఉచిత నమోదు మరియు నేరుగా చెల్లింపులు.'
+              : 'AgriRent connects tractor, rotavator, and harvester owners directly with verified farmers across 33 Telangana districts. Zero brokerage, instant WhatsApp work orders, and 100% direct payments.'}
           </p>
 
           <div className="jfarm-renter-highlights">
@@ -799,7 +839,7 @@ export default function FindTractor({
           <button
             type="button"
             className="btn-jfarm-renter-primary"
-            onClick={() => setActivePage('owner-registration')}
+            onClick={() => setIsListModalOpen(true)}
           >
             <span>{isTe ? 'యంత్రం నమోదు చేయండి 🚜' : 'List Machinery as Renter 🚜'}</span>
           </button>
@@ -812,6 +852,186 @@ export default function FindTractor({
           </button>
         </div>
       </section>
+
+      {/* Celebratory Toast When Machinery Is Successfully Listed */}
+      {listSuccessToast && (
+        <div className="list-success-toast">
+          <span>{listSuccessToast}</span>
+        </div>
+      )}
+
+      {/* Direct List Machinery Modal: Instantly lists machinery on AgriRent without redirecting to Vehicle Owner KYC Login */}
+      {isListModalOpen && (
+        <div className="list-machinery-modal-overlay" onClick={() => setIsListModalOpen(false)}>
+          <div className="list-machinery-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="list-machinery-modal-header">
+              <div className="list-machinery-header-left">
+                <div className="list-machinery-header-icon">🚜</div>
+                <div>
+                  <h3 className="list-machinery-title">
+                    {isTe ? 'అగ్రిరెంట్‌లో యంత్రాన్ని నమోదు చేయండి' : 'List Machinery on AgriRent'}
+                  </h3>
+                  <p className="list-machinery-sub">
+                    {isTe ? '0% కమీషన్ • తక్షణమే ఫ్లీట్‌లో కనిపిస్తుంది' : '0% Commission • Instant Fleet Listing'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="list-machinery-close-btn"
+                onClick={() => setIsListModalOpen(false)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleListMachinerySubmit} className="list-machinery-form">
+              <div className="list-form-row">
+                <div className="list-form-group">
+                  <label className="list-form-label">{isTe ? 'యజమాని పూర్తి పేరు *' : 'Owner Full Name *'}</label>
+                  <input
+                    type="text"
+                    required
+                    className="list-form-input"
+                    placeholder={isTe ? "ఉదా: రమేష్ రావు" : "e.g. Ramesh Rao"}
+                    value={newMachineForm.ownerName}
+                    onChange={(e) => setNewMachineForm({ ...newMachineForm, ownerName: e.target.value })}
+                  />
+                </div>
+                <div className="list-form-group">
+                  <label className="list-form-label">{isTe ? '10-అంకెల మొబైల్ నంబర్ *' : '10-Digit Mobile *'}</label>
+                  <input
+                    type="tel"
+                    pattern="[0-9]{10}"
+                    required
+                    className="list-form-input"
+                    placeholder={isTe ? "10 అంకెల మొబైల్" : "10-digit mobile"}
+                    value={newMachineForm.mobile}
+                    onChange={(e) => setNewMachineForm({ ...newMachineForm, mobile: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="list-form-row">
+                <div className="list-form-group">
+                  <label className="list-form-label">{isTe ? 'ట్రాక్టర్ బ్రాండ్' : 'Machinery Brand'}</label>
+                  <select
+                    className="list-form-select"
+                    value={newMachineForm.brand}
+                    onChange={(e) => {
+                      const selectedB = e.target.value;
+                      const defaultM = `${selectedB} 575 DI (47 HP)`;
+                      setNewMachineForm({
+                        ...newMachineForm,
+                        brand: selectedB,
+                        model: defaultM,
+                        photo: getAccurateTractorPhoto({ brand: selectedB, model: defaultM })
+                      });
+                    }}
+                  >
+                    {availableBrands.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="list-form-group">
+                  <label className="list-form-label">{isTe ? 'మోడల్ & HP వివరణ *' : 'Model & HP Specs *'}</label>
+                  <input
+                    type="text"
+                    required
+                    className="list-form-input"
+                    placeholder="e.g. 575 DI XP Plus (47 HP)"
+                    value={newMachineForm.model}
+                    onChange={(e) => setNewMachineForm({ ...newMachineForm, model: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="list-form-group">
+                <label className="list-form-label">{isTe ? 'అందుబాటులో ఉన్న పరికరాలు (Implements)' : 'Available Attachments / Implements'}</label>
+                <div className="list-implements-grid">
+                  {availableImplements.map((impl) => {
+                    const active = newMachineForm.implements.includes(impl.id);
+                    return (
+                      <button
+                        key={impl.id}
+                        type="button"
+                        className={`list-implement-pill ${active ? 'active' : ''}`}
+                        onClick={() => handleToggleImplement(impl.id)}
+                      >
+                        {active ? '✓ ' : '+ '}{impl.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="list-form-row">
+                <div className="list-form-group">
+                  <label className="list-form-label">{isTe ? 'గంటకు అద్దె ధర (₹/hr) *' : 'Rental Rate (₹/hr) *'}</label>
+                  <input
+                    type="number"
+                    min="300"
+                    max="5000"
+                    required
+                    className="list-form-input"
+                    value={newMachineForm.priceHour}
+                    onChange={(e) => setNewMachineForm({
+                      ...newMachineForm,
+                      priceHour: e.target.value,
+                      priceAcre: (Number(e.target.value) || 1000) * 2
+                    })}
+                  />
+                </div>
+                <div className="list-form-group">
+                  <label className="list-form-label">{isTe ? 'ఎకరానికి ధర (₹/acre)' : 'Per Acre Rate (₹/acre)'}</label>
+                  <input
+                    type="number"
+                    className="list-form-input"
+                    value={newMachineForm.priceAcre}
+                    onChange={(e) => setNewMachineForm({ ...newMachineForm, priceAcre: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="list-form-group">
+                <label className="list-form-label">{isTe ? 'గ్రామం / మండలం లొకేషన్ *' : 'Base Village / Location *'}</label>
+                <input
+                  type="text"
+                  required
+                  className="list-form-input"
+                  value={newMachineForm.village}
+                  onChange={(e) => setNewMachineForm({ ...newMachineForm, village: e.target.value })}
+                />
+              </div>
+
+              <div className="list-form-group">
+                <label className="list-form-label">{isTe ? 'యంత్రం ఫోటో ఎంచుకోండి' : 'Choose Machinery Photo'}</label>
+                <div className="list-photos-picker">
+                  {selectablePhotos.map((p) => {
+                    const isSelected = newMachineForm.photo === p.src;
+                    return (
+                      <div
+                        key={p.id}
+                        className={`list-photo-thumb-wrap ${isSelected ? 'selected' : ''}`}
+                        onClick={() => setNewMachineForm({ ...newMachineForm, photo: p.src })}
+                        title={p.label}
+                      >
+                        <img src={p.src} alt={p.label} className="list-photo-thumb" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button type="submit" className="list-machinery-submit-btn">
+                <span>{isTe ? 'యంత్రాన్ని ఫ్లీట్‌లో ప్రచురించండి 🚀' : 'Publish Machinery to AgriRent Fleet 🚀'}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

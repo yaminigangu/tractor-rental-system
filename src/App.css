@@ -10794,14 +10794,17 @@ html {
 }
 
 .swiggy-categories-track {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  padding: 6px 4px 10px 4px;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+  gap: 10px !important;
+  overflow-x: auto !important;
+  padding: 8px 4px 14px 4px !important;
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
+  box-sizing: border-box !important;
 }
 
 .swiggy-categories-track::-webkit-scrollbar {
@@ -10809,20 +10812,31 @@ html {
 }
 
 .swiggy-cat-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  min-width: 82px;
-  max-width: 90px;
-  flex-shrink: 0;
-  text-align: center;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  scroll-snap-align: start;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 4px 2px !important;
+  text-align: center !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@media (max-width: 900px) {
+  .swiggy-cat-card {
+    min-width: 82px !important;
+    flex: 0 0 auto !important;
+  }
+  .swiggy-categories-track {
+    justify-content: flex-start !important;
+    gap: 16px !important;
+  }
 }
 
 .swiggy-cat-card:hover {
@@ -10831,13 +10845,14 @@ html {
 
 .swiggy-cat-circle-wrap {
   position: relative;
-  width: 78px;
-  height: 78px;
+  width: 82px;
+  height: 82px;
+  margin: 0 auto;
 }
 
 .swiggy-cat-circle {
-  width: 78px;
-  height: 78px;
+  width: 82px;
+  height: 82px;
   border-radius: 50%;
   overflow: hidden;
   background: #f8fafc;
@@ -11181,29 +11196,16 @@ html {
 
 .jfarm-search-form {
   display: grid;
-  grid-template-columns: 1.4fr 1.3fr 1.8fr 1fr auto;
-  gap: 14px;
+  grid-template-columns: 1.1fr 2fr;
+  gap: 16px;
   align-items: flex-end;
   margin-bottom: 18px;
 }
 
-@media (max-width: 1080px) {
-  .jfarm-search-form {
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  .jfarm-search-cta-btn {
-    grid-column: span 2;
-  }
-}
-
-@media (max-width: 680px) {
+@media (max-width: 768px) {
   .jfarm-search-form {
     grid-template-columns: 1fr;
     gap: 12px;
-  }
-  .jfarm-search-cta-btn {
-    grid-column: span 1;
   }
 }
 
@@ -12199,6 +12201,248 @@ html {
   border-radius: 10px;
   letter-spacing: 0.5px;
 }
+
+/* ========================================================
+   LIST MACHINERY MODAL (AGRIRENT RENTER LISTING)
+   ======================================================== */
+.list-machinery-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+.list-machinery-modal-card {
+  background: #ffffff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3);
+  border: 1px solid #e2e8f0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.list-machinery-modal-header {
+  padding: 24px 28px 18px 28px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border-radius: 24px 24px 0 0;
+}
+
+.list-machinery-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.list-machinery-header-icon {
+  font-size: 32px;
+  background: #ffffff;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.12);
+  border: 1px solid #bbf7d0;
+}
+
+.list-machinery-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 0;
+}
+
+.list-machinery-sub {
+  font-size: 13px;
+  color: #15803d;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.list-machinery-close-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.list-machinery-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.list-machinery-form {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.list-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .list-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.list-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.list-form-label {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #334155;
+}
+
+.list-form-input, .list-form-select {
+  padding: 10px 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.list-form-input:focus, .list-form-select:focus {
+  border-color: #16a34a;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.list-implements-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.list-implement-pill {
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.list-implement-pill.active {
+  background: #15803d;
+  color: #ffffff;
+  border-color: #15803d;
+}
+
+.list-photos-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.list-photo-thumb-wrap {
+  position: relative;
+  height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.list-photo-thumb-wrap.selected {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+}
+
+.list-photo-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.list-machinery-submit-btn {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #ffffff;
+  border: none;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(22, 163, 74, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: 6px;
+}
+
+.list-machinery-submit-btn:hover {
+  background: linear-gradient(135deg, #15803d 0%, #14532d 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(22, 163, 74, 0.45);
+}
+
+.list-success-toast {
+  position: fixed;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100000;
+  background: #15803d;
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toastSlideDown 0.3s ease-out;
+}
+
+@keyframes toastSlideDown {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 
 
 

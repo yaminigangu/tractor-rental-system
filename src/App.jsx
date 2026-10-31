@@ -351,6 +351,7 @@ function App() {
         return (
           <FindTractor
             tractors={tractors}
+            setTractors={setTractors}
             setActivePage={setActivePage}
             setSelectedTractor={setSelectedTractor}
             serviceFilter={serviceFilter}
@@ -361,6 +362,7 @@ function App() {
             isLoadingWeather={isLoadingWeather}
             onOpenLocationPicker={() => setIsLocationModalOpen(true)}
             isUserLoggedIn={isUserLoggedIn}
+            currentOwner={currentOwner}
           />
         );
       case 'booking-form':
