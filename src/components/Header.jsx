@@ -82,11 +82,14 @@ export default function Header({
           </button>
         )}
         <button
-          className="mobile-menu-btn"
+          type="button"
+          className="header-menu-btn"
           onClick={toggleMobileMenu}
           aria-label="Toggle navigation menu"
+          title={isTe ? "మెనూ తెరవండి" : "Open Menu"}
         >
-          ☰
+          <span className="header-menu-icon">☰</span>
+          <span className="header-menu-text">{isTe ? "మెనూ" : "Menu"}</span>
         </button>
         <div className="header-mobile-brand">
           <span className="brand-icon">🌾</span>

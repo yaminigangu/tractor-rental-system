@@ -164,11 +164,22 @@ export default function Sidebar({
       <aside className={`app-sidebar ${isMobileOpen ? 'open' : ''}`}>
         {/* Sidebar Brand Header */}
         <div className="sidebar-brand">
-          <span className="brand-icon">🌾</span>
-          <div className="brand-text">
-            <h1>{t.brandName || 'AgriRent'}</h1>
-            <small>{t.brandSubtitle || 'TRACTOR SERVICES'}</small>
+          <div className="brand-header-left">
+            <span className="brand-icon">🌾</span>
+            <div className="brand-text">
+              <h1>{t.brandName || 'AgriRent'}</h1>
+              <small>{t.brandSubtitle || 'TRACTOR SERVICES'}</small>
+            </div>
           </div>
+          <button
+            type="button"
+            className="sidebar-close-btn"
+            onClick={closeMobileMenu}
+            aria-label="Close Navigation Menu"
+            title={isTe ? "మెనూ మూసివేయండి" : "Close Menu"}
+          >
+            ✕
+          </button>
         </div>
 
         {/* Navigation items with strictly 1 icon each */}
