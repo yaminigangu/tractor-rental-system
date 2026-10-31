@@ -349,7 +349,7 @@ export default function OwnerRegistration({
         )}
 
         <div className="signin-main-card">
-          {/* Top Row: Back to Selection & Blue Settings Gear */}
+          {/* Top Row: Back to Selection */}
           <div className="signin-card-top-row">
             <button
               type="button"
@@ -357,16 +357,6 @@ export default function OwnerRegistration({
               onClick={() => setActivePage('portal-select')}
             >
               ← {isTe ? 'ఎంపికకి వెనుకకు' : 'Back to Selection'}
-            </button>
-
-            <button
-              type="button"
-              className="signin-gear-btn-blue"
-              title="Auto-fill demo tractor details"
-              onClick={handleFillDemo}
-              aria-label="Settings"
-            >
-              ⚙️
             </button>
           </div>
 
@@ -377,7 +367,7 @@ export default function OwnerRegistration({
                 <div className="returning-avatar-circle" style={{ background: '#dbeafe', borderColor: '#bfdbfe' }}>🚜</div>
                 <div className="returning-text-col">
                   <span className="returning-tag" style={{ color: '#1d4ed8' }}>
-                    ✓ {isTe ? 'నమోదిత ట్రాక్టర్ యజమాని' : 'Recognized Tractor Owner'}
+                    ✓ {isTe ? 'నమోదిత వాహన యజమాని' : 'Recognized Vehicle Owner'}
                   </span>
                   <strong className="returning-name">{lastOwner.fullName || lastOwner.owner}</strong>
                   <span className="returning-meta">
@@ -417,7 +407,7 @@ export default function OwnerRegistration({
                 setErrorMsg('');
               }}
             >
-              🔑 {isTe ? 'ఇప్పటికే ఉన్న యజమాని లాగిన్' : 'Returning Owner Login'}
+              🔑 {isTe ? 'వాహన యజమాని లాగిన్' : 'Returning Vehicle Owner Login'}
             </button>
           </div>
 

@@ -211,7 +211,7 @@ export default function Sidebar({
                   {currentFarmer 
                     ? (isTe ? 'రైతు (లాగిన్ అయ్యారు)' : 'Farmer (Logged In)') 
                     : (currentOwner 
-                        ? (isTe ? 'యజమాని (లాగిన్ అయ్యారు)' : 'Owner (Logged In)') 
+                        ? (isTe ? 'వాహన యజమాని (లాగిన్ అయ్యారు)' : 'Vehicle Owner (Logged In)') 
                         : (isTe ? 'అడ్మినిస్ట్రేటర్' : 'Administrator'))}
                 </span>
               </div>

@@ -29,7 +29,7 @@ export default function Header({
       case 'home':
         return t.heroTitle;
       case 'find-tractor':
-        return language === 'te' ? 'గ్రామంలో అందుబాటులో ఉన్న ట్రాక్టర్లు' : 'Find Tractor Fleet in Locality';
+        return language === 'te' ? 'ట్రాక్టర్ ఫ్లీట్' : 'Find Tractor Fleet';
       case 'booking-form':
         return t.bookingFormTitle;
       case 'owner-registration':
@@ -97,34 +97,7 @@ export default function Header({
         </div>
       </div>
 
-      <div className="header-right">
-        {/* Interactive Locality Selector Pill */}
-        <button
-          className="locality-pill-btn"
-          onClick={onOpenLocationPicker}
-          title={isTe ? "తెలంగాణ ప్రాంతం / గ్రామం మార్చండి" : "Click to select any village or district across Telangana"}
-          type="button"
-        >
-          <span className="pill-pin">📍</span>
-          <span className="pill-text pill-text-desktop">{displayLocation}</span>
-          <span className="pill-text pill-text-mobile">{displayLocationShort}</span>
-          <span className="pill-arrow">▾</span>
-        </button>
-
-        {/* PWA App Install Button (Pill) */}
-        {!isInstalled && onInstallApp && (
-          <button
-            type="button"
-            className="header-pwa-btn"
-            onClick={onInstallApp}
-            title={isTe ? "ఈ వెబ్‌సైట్‌ను ఫోన్/కంప్యూటర్‌లో యాప్ లాగా ఇన్‌స్టాల్ చేసుకోండి" : "Install AgriRent as a Progressive Web App on your phone/PC"}
-          >
-            <span className="header-pwa-icon">📲</span>
-            <span className="header-pwa-text header-pwa-text-desktop">{isTe ? "యాప్ ఇన్‌స్టాల్" : "Install App"}</span>
-            <span className="header-pwa-text header-pwa-text-mobile">{isTe ? "యాప్" : "App"}</span>
-          </button>
-        )}
-
+      <div className="header-right header-right-minimal">
         {/* Language Switcher */}
         <button
           className="lang-toggle-btn"
@@ -162,7 +135,7 @@ export default function Header({
             <div className="header-user-badge owner-badge">
               <span className="user-badge-avatar">🚜</span>
               <span className="user-badge-name">{currentOwner.fullName ? currentOwner.fullName.split(' ')[0] : 'Owner'}</span>
-              <span className="user-badge-role">({isTe ? 'యజమాని' : 'Owner'})</span>
+              <span className="user-badge-role">({isTe ? 'వాహన యజమాని' : 'Vehicle Owner'})</span>
             </div>
             {onOwnerLogout && (
               <button

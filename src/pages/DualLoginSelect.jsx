@@ -44,27 +44,8 @@ export default function DualLoginSelect({
       {/* Main Container Card matching Screenshot 1 */}
       <main className="signin-card-container">
         <div className="signin-main-card">
-          {/* Top Gear / Settings Button */}
-          <button
-            type="button"
-            className="signin-gear-btn"
-            title="Platform Settings & Demo Auto-Fill"
-            onClick={() => setActivePage('find-tractor')}
-            aria-label="Settings"
-          >
-            ⚙️
-          </button>
-
-          {/* Top Verification Badge */}
-          <div className="signin-badge-verified">
-            <span className="signin-badge-check">✓</span>
-            <span>
-              {isTe ? '33 తెలంగాణ జిల్లాలు ధృవీకరించబడ్డాయి' : '33 Telangana Districts Verified'}
-            </span>
-          </div>
-
           {/* Main Title & Subtitle */}
-          <h2 className="signin-heading">
+          <h2 className="signin-heading" style={{ marginTop: '10px' }}>
             {isTe ? 'స్వాగతం! మీ సైన్-ఇన్ ఎంచుకోండి' : 'Welcome! Choose Your Sign-In'}
           </h2>
           <p className="signin-description">
@@ -92,7 +73,7 @@ export default function DualLoginSelect({
             </div>
           </button>
 
-          {/* Action Choice 2: Tractor Owner */}
+          {/* Action Choice 2: Vehicle Owner */}
           <button
             type="button"
             className="signin-choice-card choice-owner"
@@ -103,7 +84,7 @@ export default function DualLoginSelect({
             </div>
             <div className="signin-choice-info">
               <h3 className="signin-choice-title title-owner">
-                {isTe ? 'ట్రాక్టర్ యజమాని' : 'Tractor Owner'}
+                {isTe ? 'వాహన యజమాని' : 'Vehicle Owner'}
               </h3>
               <span className="signin-choice-sub">
                 {isTe ? '4-దశల KYC ధృవీకరణ' : '4-Step KYC Verification'}

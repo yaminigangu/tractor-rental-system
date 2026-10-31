@@ -95,17 +95,6 @@ export default function FindTractor({
 
   return (
     <div className="find-tractor-page page-anim">
-      {/* Floating Demo / Settings Gear Button */}
-      <button
-        type="button"
-        className="marketplace-floating-gear"
-        onClick={onOpenLocationPicker}
-        title="Settings & Change Locality"
-        aria-label="Settings"
-      >
-        ⚙️
-      </button>
-
       {/* Guest Mode Banner with return to Login Portal */}
       {!isUserLoggedIn && (
         <div className="guest-browse-banner">

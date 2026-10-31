@@ -227,7 +227,7 @@ export default function FarmerLogin({
         )}
 
         <div className="signin-main-card">
-          {/* Top Row: Back to Selection & Blue Settings Gear */}
+          {/* Top Row: Back to Selection */}
           <div className="signin-card-top-row">
             <button
               type="button"
@@ -235,16 +235,6 @@ export default function FarmerLogin({
               onClick={() => setActivePage('portal-select')}
             >
               ← {isTe ? 'ఎంపికకి వెనుకకు' : 'Back to Selection'}
-            </button>
-
-            <button
-              type="button"
-              className="signin-gear-btn-blue"
-              title={mobileNumber ? 'Clear for New Farmer sign-up test' : 'Auto-fill Demo Registered Farmer'}
-              onClick={handleToggleDemoState}
-              aria-label="Settings"
-            >
-              ⚙️
             </button>
           </div>
 
