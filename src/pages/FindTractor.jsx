@@ -22,16 +22,94 @@ export default function FindTractor({
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
 
-  const servicesList = [
-    { id: 'All', label: isTe ? '🚜 అన్ని యంత్రాలు' : '🚜 All Machinery' },
-    { id: 'Ploughing', label: isTe ? 'దుక్కి దున్నడం' : 'Ploughing' },
-    { id: 'Rotavator', label: isTe ? 'రొటవేటర్' : 'Rotavator' },
-    { id: 'Cultivator', label: isTe ? 'కల్టివేటర్' : 'Cultivator' },
-    { id: 'Trailer Services', label: isTe ? 'ట్రాలీ రవాణా' : 'Trailer Services' },
-    { id: 'Corn Harvester', label: isTe ? 'మొక్కజొన్న హార్వెస్టర్' : 'Corn Harvester' },
-    { id: 'Straw Baler', label: isTe ? 'గడ్డి బెయిలర్' : 'Straw Baler' },
-    { id: 'Corn Seeder', label: isTe ? 'విత్తన యంత్రం' : 'Corn Seeder' },
+  // Swiggy-style visual machinery category list matching user request & screenshots
+  const machineryCategories = [
+    {
+      id: 'All',
+      name: 'All Fleet',
+      nameTe: 'అన్ని యంత్రాలు',
+      image: '/tractor1.jpeg',
+      emoji: '🚜',
+      badge: 'All'
+    },
+    {
+      id: 'Ploughing',
+      name: 'Ploughing',
+      nameTe: 'దుక్కి దున్నడం',
+      image: '/images/swaraj_blue.jpg',
+      emoji: '🌱',
+      badge: 'Popular'
+    },
+    {
+      id: 'Rotavator',
+      name: 'Rotavator',
+      nameTe: 'రొటవేటర్',
+      image: '/images/mahindra_575.jpg',
+      emoji: '🔄',
+      badge: 'Top Pick'
+    },
+    {
+      id: 'Cultivator',
+      name: 'Cultivator',
+      nameTe: 'కల్టివేటర్',
+      image: '/images/john_deere_5310.jpg',
+      emoji: '🌾',
+      badge: 'Tillage'
+    },
+    {
+      id: 'Corn Harvester',
+      name: 'Harvester',
+      nameTe: 'కోత యంత్రం',
+      image: '/corn_harvester.jpg',
+      emoji: '🌽',
+      badge: 'Harvest'
+    },
+    {
+      id: 'Trailer Services',
+      name: 'Trailer Trolley',
+      nameTe: 'ట్రాలీ రవాణా',
+      image: '/tractor4.jpeg',
+      emoji: '🚚',
+      badge: 'Haulage'
+    },
+    {
+      id: 'Straw Baler',
+      name: 'Straw Baler',
+      nameTe: 'గడ్డి బెయిలర్',
+      image: '/straw_baler.jpg',
+      emoji: '📦',
+      badge: 'Baling'
+    },
+    {
+      id: 'Corn Seeder',
+      name: 'Seed Planter',
+      nameTe: 'విత్తన యంత్రం',
+      image: '/corn_seeder.jpg',
+      emoji: '🌱',
+      badge: 'Seeding'
+    },
+    {
+      id: 'Heavy 50+ HP',
+      name: '50+ HP Heavy',
+      nameTe: '50+ HP హెవీ',
+      image: '/tractor3.jpeg',
+      emoji: '⚡',
+      badge: 'Heavy'
+    },
+    {
+      id: 'Mini Tractor',
+      name: 'Mini Orchard',
+      nameTe: 'మినీ ట్రాక్టర్',
+      image: '/tractor5.jpeg',
+      emoji: '🚜',
+      badge: 'Compact'
+    }
   ];
+
+  const servicesList = machineryCategories.map(c => ({
+    id: c.id,
+    label: `${c.emoji} ${isTe ? c.nameTe : c.name}`
+  }));
 
   const activeVillage = selectedLocation?.village || 'Hasanparthy';
   const activeDistrict = selectedLocation?.district || 'Hanumakonda';
@@ -60,7 +138,15 @@ export default function FindTractor({
       if (sf.includes('plough')) return combined.includes('plough') || combined.includes('tillage');
       if (sf.includes('rotavator')) return combined.includes('rotavator');
       if (sf.includes('cultivator')) return combined.includes('cultivator');
-      if (sf.includes('trailer')) return combined.includes('trailer');
+      if (sf.includes('trailer') || sf.includes('trolley')) return combined.includes('trailer') || combined.includes('trolley') || combined.includes('haulage');
+      if (sf.includes('heavy') || sf.includes('50')) {
+        const hp = parseInt(tractor.engineHp || '48', 10);
+        return hp >= 50 || combined.includes('heavy') || combined.includes('50') || combined.includes('55');
+      }
+      if (sf.includes('mini') || sf.includes('orchard')) {
+        const hp = parseInt(tractor.engineHp || '48', 10);
+        return hp < 45 || combined.includes('mini') || combined.includes('orchard') || combined.includes('compact');
+      }
 
       return combined.includes(sf);
     })();
@@ -116,7 +202,7 @@ export default function FindTractor({
         </div>
       )}
 
-      {/* Top Search & Filter Bar matching Screenshot 4 / 5 */}
+      {/* Top Search & Filter Bar */}
       <div className="marketplace-controls-wrap">
         {/* Search Input */}
         <div className="marketplace-search-box">
@@ -126,29 +212,111 @@ export default function FindTractor({
             className="marketplace-search-input"
             placeholder={
               isTe 
-                ? "గ్రామం ద్వారా వెతకండి (ఉదా: పరకాల, మేడారం, పస్రా)..." 
+                ? "గ్రామం ద్వారా వెతకండి (ఉదా: పరకాల, మేడారం, పస్రా) లేదా యంత్రం..." 
                 : "Search village (e.g. Parkal, Medaram, Pasra) or machine..."
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="marketplace-search-clear"
+              onClick={() => setSearchQuery('')}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Swiggy-Style "What's on your mind?" Machinery Visual Category Carousel */}
+      <section className="swiggy-categories-section page-anim">
+        <div className="swiggy-categories-header">
+          <div>
+            <h2 className="swiggy-categories-title">
+              {isTe ? 'మీకు ఏ వ్యవసాయ యంత్రం కావాలి?' : "What machinery are you looking for?"}
+            </h2>
+            <span className="swiggy-categories-sub">
+              {isTe 
+                ? 'తెలంగాణ రైతులకు అనుకూలమైన ట్రాక్టర్లు & ఉపకరణాలు' 
+                : 'Select machine type to filter nearby fleet instantly'}
+            </span>
+          </div>
+          {serviceFilter && serviceFilter !== 'All' && (
+            <button
+              type="button"
+              className="swiggy-reset-btn"
+              onClick={() => setServiceFilter('All')}
+              title={isTe ? 'అన్నీ చూపించు' : 'Show all machinery'}
+            >
+              ✕ {isTe ? 'అన్నీ చూపించు' : 'Clear filter'}
+            </button>
+          )}
         </div>
 
-        {/* Dropdown Filters (Machinery & Sorting) */}
-        <div className="marketplace-dropdowns-row">
-          <div className="marketplace-select-box">
-            <select
-              value={serviceFilter || 'All'}
-              onChange={(e) => setServiceFilter(e.target.value)}
-              className="marketplace-select-elem"
-            >
-              {servicesList.map((s) => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
-            </select>
-            <span className="marketplace-select-chevron">▾</span>
-          </div>
+        {/* Horizontal Scrollable Categories Track */}
+        <div className="swiggy-categories-track">
+          {machineryCategories.map((cat) => {
+            const isSelected = (serviceFilter || 'All').toLowerCase() === cat.id.toLowerCase();
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                className={`swiggy-cat-card ${isSelected ? 'active' : ''}`}
+                onClick={() => setServiceFilter(isSelected && cat.id !== 'All' ? 'All' : cat.id)}
+                title={isTe ? cat.nameTe : cat.name}
+              >
+                <div className="swiggy-cat-circle-wrap">
+                  <div className="swiggy-cat-circle">
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="swiggy-cat-img"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextSibling) {
+                          e.currentTarget.nextSibling.style.display = 'flex';
+                        }
+                      }}
+                    />
+                    <div className="swiggy-cat-fallback-emoji" style={{ display: 'none' }}>
+                      {cat.emoji}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <div className="swiggy-cat-check-badge">✓</div>
+                  )}
+                  {cat.badge && (
+                    <span className="swiggy-cat-pill-badge">{cat.badge}</span>
+                  )}
+                </div>
+                <span className="swiggy-cat-label">
+                  {isTe ? cat.nameTe : cat.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
+      {/* Results Header with Sorting Bar (Swiggy Style: Top X restaurants to explore) */}
+      <div className="marketplace-results-bar">
+        <div className="results-count-wrap">
+          <h3 className="results-count-title">
+            {isTe 
+              ? `${activeVillage} లో అందుబాటులో ఉన్న ${sortedTractors.length} యంత్రాలు` 
+              : `Top ${sortedTractors.length} machinery in ${activeVillage}`}
+          </h3>
+          {serviceFilter && serviceFilter !== 'All' && (
+            <span className="results-filter-pill">
+              Filter: {serviceFilter}
+            </span>
+          )}
+        </div>
+
+        <div className="results-sorting-wrap">
           <div className="marketplace-select-box">
             <select
               value={sortBy}
