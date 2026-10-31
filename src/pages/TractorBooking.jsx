@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { translations } from '../translations';
 import { ALL_LOCATIONS_LIST } from '../data/telanganaLocations';
+import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
 
 const TODAY_DATE = new Date().toISOString().split('T')[0];
 
@@ -153,8 +154,8 @@ export default function TractorBooking({
       {currentTractor && (
         <div className="selected-tractor-banner">
           <img
-            src={currentTractor.photo || '/tractor1.jpeg'}
-            alt={`${currentTractor.brand} ${currentTractor.model}`}
+            src={getAccurateTractorPhoto(currentTractor)}
+            alt={getTractorDisplayName(currentTractor)}
             className="selected-tractor-thumb"
             onError={(e) => {
               e.target.onerror = null;
@@ -162,7 +163,7 @@ export default function TractorBooking({
             }}
           />
           <div className="selected-tractor-details">
-            <h5>{currentTractor.brand} {currentTractor.model}</h5>
+            <h5>{getTractorDisplayName(currentTractor)}</h5>
             <p><strong>{t.ownerLabel}</strong> {currentTractor.owner} ({currentTractor.location})</p>
             <p><strong>{isTe ? 'రేటు:' : 'Rate:'}</strong> ₹{currentTractor.pricing} {t.perHour} • 📞 {currentTractor.mobile}</p>
           </div>

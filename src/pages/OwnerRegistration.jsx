@@ -71,11 +71,21 @@ export default function OwnerRegistration({
     priceHour: 900,
     priceAcre: 1800,
     implements: ['Ploughing', 'Rotavator', 'Trailer Services'],
-    selectedPhoto: '/tractor2.jpeg', // Swaraj Blue Tractor photo
-    photoName: 'Swaraj Blue Tractor'
+    selectedPhoto: '/tractor4.jpeg',
+    photoName: 'Swaraj 744 FE XT'
   });
 
-  const brandOptions = ['Mahindra', 'Swaraj', 'John Deere', 'Sonalika', 'Massey Ferguson'];
+  const brandOptions = [
+    'Mahindra',
+    'Swaraj',
+    'John Deere',
+    'Sonalika',
+    'Massey Ferguson',
+    'Eicher',
+    'New Holland',
+    'Farmtrac',
+    'Kubota'
+  ];
 
   const implementOptions = [
     { id: 'Ploughing', label: isTe ? 'దుక్కి దున్నడం' : 'Ploughing' },
@@ -89,13 +99,43 @@ export default function OwnerRegistration({
   ];
 
   const photoOptions = [
-    { id: 'Swaraj Blue Tractor', label: 'Swaraj Blue Tractor', src: '/tractor2.jpeg' },
-    { id: 'Mahindra 575 DI', label: 'Mahindra 575 DI', src: '/tractor1.jpeg' },
-    { id: 'John Deere 531', label: 'John Deere 531', src: '/tractor3.jpeg' }
+    { id: 'Mahindra 575 DI', label: 'Mahindra 575 DI (Red)', src: '/images/mahindra_575.jpg' },
+    { id: 'Mahindra 475 DI XP Plus', label: 'Mahindra 475 DI XP Plus (Red)', src: '/tractor1.jpeg' },
+    { id: 'Swaraj 744 FE XT', label: 'Swaraj 744 FE XT (Blue)', src: '/tractor4.jpeg' },
+    { id: 'John Deere 5310', label: 'John Deere 5310 (Green)', src: '/images/john_deere_5310.jpg' },
+    { id: 'John Deere 5075E', label: 'John Deere 5075E 4WD (Green)', src: '/tractor3.jpeg' },
+    { id: 'Massey Ferguson 241 DI', label: 'Massey Ferguson 241 DI (Red)', src: '/tractor5.jpeg' },
+    { id: 'Eicher 380 Super DI', label: 'Eicher 380 Super DI (Silver)', src: '/eicher_380_clean.jpg' },
+    { id: 'Sonalika DI 745', label: 'Sonalika DI 745 (Blue)', src: '/tractor6.jpeg' },
+    { id: 'Sonalika Tiger DI 55', label: 'Sonalika Tiger 55 (Blue)', src: '/sonalika_tiger_55.jpg' },
+    { id: 'Farmtrac 60 Powermaxx', label: 'Farmtrac 60 (Blue)', src: '/farmtrac_60.jpg' },
+    { id: 'New Holland 3630', label: 'New Holland 3630 (Blue)', src: '/new_holland_3630.jpg' },
+    { id: 'Kubota MU4501', label: 'Kubota MU4501 4WD (Orange)', src: '/tractor7.jpeg' }
   ];
 
   const handleInputChange = (field, val) => {
-    setFormData(prev => ({ ...prev, [field]: val }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: val };
+      // Auto-sync photo when brand changes if not manually set to a specific model
+      if (field === 'brand') {
+        const brandMatch = {
+          'Mahindra': { src: '/images/mahindra_575.jpg', name: 'Mahindra 575 DI' },
+          'Swaraj': { src: '/tractor4.jpeg', name: 'Swaraj 744 FE XT' },
+          'John Deere': { src: '/images/john_deere_5310.jpg', name: 'John Deere 5310' },
+          'Massey Ferguson': { src: '/tractor5.jpeg', name: 'Massey Ferguson 241 DI' },
+          'Eicher': { src: '/eicher_380_clean.jpg', name: 'Eicher 380 Super DI' },
+          'Sonalika': { src: '/tractor6.jpeg', name: 'Sonalika DI 745' },
+          'Farmtrac': { src: '/farmtrac_60.jpg', name: 'Farmtrac 60 Powermaxx' },
+          'New Holland': { src: '/new_holland_3630.jpg', name: 'New Holland 3630' },
+          'Kubota': { src: '/tractor7.jpeg', name: 'Kubota MU4501' }
+        }[val];
+        if (brandMatch) {
+          updated.selectedPhoto = brandMatch.src;
+          updated.photoName = brandMatch.name;
+        }
+      }
+      return updated;
+    });
     setErrorMsg('');
   };
 
@@ -135,8 +175,8 @@ export default function OwnerRegistration({
       priceHour: 900,
       priceAcre: 1800,
       implements: ['Ploughing', 'Rotavator', 'Trailer Services'],
-      selectedPhoto: '/tractor2.jpeg',
-      photoName: 'Swaraj Blue Tractor'
+      selectedPhoto: '/tractor4.jpeg',
+      photoName: 'Swaraj 744 FE XT'
     });
     setEnteredOtp('354498');
     setErrorMsg('');
@@ -193,12 +233,51 @@ export default function OwnerRegistration({
     if (e) e.preventDefault();
     setErrorMsg('');
 
+    // Prevent duplicated brand name in model
+    let cleanModel = (formData.modelSpecs || '').trim();
+    if (cleanModel.toLowerCase().startsWith(formData.brand.toLowerCase())) {
+      cleanModel = cleanModel.slice(formData.brand.length).trim();
+    }
+    const fullTractorTitle = cleanModel 
+      ? `${formData.brand} ${cleanModel}` 
+      : formData.brand;
+
+    // Pick accurate photo matching the model and brand
+    let resolvedPhoto = formData.selectedPhoto;
+    const lowerModel = (formData.modelSpecs || '').toLowerCase();
+    const lowerBrand = (formData.brand || '').toLowerCase();
+    if (lowerModel.includes('575') || (lowerBrand.includes('mahindra') && lowerModel.includes('sarpanch'))) {
+      resolvedPhoto = '/images/mahindra_575.jpg';
+    } else if (lowerModel.includes('475')) {
+      resolvedPhoto = '/tractor1.jpeg';
+    } else if (lowerModel.includes('744') || (lowerBrand.includes('swaraj') && lowerModel.includes('xt'))) {
+      resolvedPhoto = '/tractor4.jpeg';
+    } else if (lowerModel.includes('735')) {
+      resolvedPhoto = '/tractor8.jpg';
+    } else if (lowerModel.includes('5310')) {
+      resolvedPhoto = '/images/john_deere_5310.jpg';
+    } else if (lowerModel.includes('5075')) {
+      resolvedPhoto = '/tractor3.jpeg';
+    } else if (lowerModel.includes('380') || lowerBrand.includes('eicher')) {
+      resolvedPhoto = '/eicher_380_clean.jpg';
+    } else if (lowerModel.includes('farmtrac') || lowerModel.includes('60')) {
+      resolvedPhoto = '/farmtrac_60.jpg';
+    } else if (lowerModel.includes('3630') || lowerBrand.includes('new holland')) {
+      resolvedPhoto = '/new_holland_3630.jpg';
+    } else if (lowerModel.includes('tiger')) {
+      resolvedPhoto = '/sonalika_tiger_55.jpg';
+    } else if (lowerBrand.includes('kubota')) {
+      resolvedPhoto = '/tractor7.jpeg';
+    } else if (!resolvedPhoto || resolvedPhoto === '/tractor2.jpeg') {
+      resolvedPhoto = '/images/mahindra_575.jpg';
+    }
+
     const newOwnerRecord = {
       fullName: formData.fullName.trim(),
       owner: formData.fullName.trim(),
       mobile: formData.mobile,
       brand: formData.brand,
-      tractorModel: `${formData.brand} ${formData.modelSpecs}`,
+      tractorModel: fullTractorTitle,
       vehicleNumber: formData.rcNumber.toUpperCase(),
       pricing: Number(formData.priceHour) || 900,
       priceAcre: Number(formData.priceAcre) || 1800,
@@ -212,7 +291,7 @@ export default function OwnerRegistration({
       bankAccount: formData.bankAccount,
       ifscCode: formData.ifscCode,
       upiId: formData.upiId,
-      photo: formData.selectedPhoto || '/tractor2.jpeg',
+      photo: resolvedPhoto,
       isVerified: true,
       registeredAt: new Date().toISOString().split('T')[0]
     };
@@ -226,13 +305,13 @@ export default function OwnerRegistration({
       location: formData.mandalBase,
       district: formData.district,
       brand: formData.brand,
-      model: formData.modelSpecs,
+      model: cleanModel || formData.modelSpecs,
       equipment: formData.implements.join(', '),
       pricing: Number(formData.priceHour) || 900,
       priceAcre: Number(formData.priceAcre) || 1800,
       engineHp: formData.engineHp,
       availability: 'Available',
-      photo: formData.selectedPhoto || '/tractor2.jpeg',
+      photo: resolvedPhoto,
       rating: 4.9,
       jobsDone: 24,
       registeredAt: new Date().toLocaleDateString(),

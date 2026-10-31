@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import StatCard from '../components/StatCard';
 import { translations } from '../translations';
+import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
 
 export default function Dashboard({
   bookings = [],
@@ -274,13 +275,13 @@ export default function Dashboard({
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <img
-                            src={t.photo || '/tractor1.jpeg'}
-                            alt={t.model}
+                            src={getAccurateTractorPhoto(t)}
+                            alt={getTractorDisplayName(t)}
                             style={{ width: '45px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
                             onError={(e) => { e.target.src = '/tractor1.jpeg'; }}
                           />
                           <div>
-                            <strong>{t.brand} {t.model}</strong>
+                            <strong>{getTractorDisplayName(t)}</strong>
                             <br />
                             <small style={{ color: '#b45309' }}>★ {t.rating || 4.8}</small>
                           </div>

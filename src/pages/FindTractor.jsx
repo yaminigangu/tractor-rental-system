@@ -2,6 +2,113 @@ import { useState } from 'react';
 import WeatherBar from '../components/WeatherBar';
 import { translations } from '../translations';
 
+// Returns 100% accurate matching photo corresponding to the specific tractor model and brand
+export const getAccurateTractorPhoto = (tractor) => {
+  if (!tractor) return '/tractor1.jpeg';
+  const brand = (tractor.brand || '').toLowerCase();
+  const model = (tractor.model || tractor.tractorModel || '').toLowerCase();
+  const photo = tractor.photo || '';
+
+  // 1. Hand push corn seeder / planter
+  if (model.includes('seeder') || model.includes('planter') || brand.includes('kisan tools')) {
+    return '/corn_seeder.jpg';
+  }
+  // 2. Straw baler
+  if (model.includes('baler') || model.includes('baling')) {
+    return '/straw_baler.jpg';
+  }
+  // 3. Corn / combine harvester
+  if (model.includes('harvester') || model.includes('combine')) {
+    return '/corn_harvester.jpg';
+  }
+  // 4. Mahindra 575 DI (Must use 575 image, NOT the 475 photo)
+  if (model.includes('575') || (brand.includes('mahindra') && model.includes('sarpanch'))) {
+    return '/images/mahindra_575.jpg';
+  }
+  // 5. Mahindra 475 DI XP Plus (Use tractor1.jpeg which has the 475 badge)
+  if (model.includes('475') || (brand.includes('mahindra') && model.includes('bhoomiputra'))) {
+    return '/tractor1.jpeg';
+  }
+  // 6. Mahindra Arjun 605 DI (Trailer)
+  if (model.includes('605') || model.includes('arjun')) {
+    return '/tractor9.jpg';
+  }
+  // 7. Swaraj 744 FE XT
+  if (model.includes('744') || (brand.includes('swaraj') && model.includes('xt'))) {
+    return '/tractor4.jpeg';
+  }
+  // 8. Swaraj 735 FE
+  if (model.includes('735')) {
+    return '/tractor8.jpg';
+  }
+  // 9. John Deere 5310
+  if (model.includes('5310')) {
+    return '/images/john_deere_5310.jpg';
+  }
+  // 10. John Deere 5075E / 5050
+  if (model.includes('5075') || model.includes('5050')) {
+    return '/tractor3.jpeg';
+  }
+  // 11. Massey Ferguson 241 DI
+  if (model.includes('241') || (brand.includes('massey') && model.includes('maha shakti'))) {
+    return '/tractor5.jpeg';
+  }
+  // 12. Massey Ferguson 1035 DI
+  if (model.includes('1035')) {
+    return '/tractor14.jpg';
+  }
+  // 13. Sonalika DI 745
+  if (model.includes('745') || model.includes('sikander')) {
+    return '/tractor6.jpeg';
+  }
+  // 14. Sonalika Tiger 55
+  if (model.includes('tiger')) {
+    return '/sonalika_tiger_55.jpg';
+  }
+  // 15. Kubota MU4501
+  if (model.includes('kubota') || model.includes('mu4501')) {
+    return '/tractor7.jpeg';
+  }
+  // 16. Farmtrac 60
+  if (model.includes('farmtrac') || model.includes('60 powermaxx') || model.includes('60')) {
+    return '/farmtrac_60.jpg';
+  }
+  // 17. New Holland 3630
+  if (model.includes('new holland') || model.includes('3630')) {
+    return '/new_holland_3630.jpg';
+  }
+  // 18. Eicher 380 Super DI
+  if (model.includes('eicher') || model.includes('380')) {
+    return '/eicher_380_clean.jpg';
+  }
+
+  // Fallback to tractor.photo if provided, else default to tractor1
+  return photo || '/tractor1.jpeg';
+};
+
+// Formats tractor name cleanly without duplicating brand name
+export const getTractorDisplayName = (tractor) => {
+  if (!tractor) return '';
+  const brand = (tractor.brand || '').trim();
+  let model = (tractor.model || tractor.tractorModel || '').trim();
+  if (!brand) return model;
+  if (!model) return brand;
+  if (model.toLowerCase().startsWith(brand.toLowerCase())) {
+    return model;
+  }
+  return `${brand} ${model}`;
+};
+
+// Returns accurate horsepower label or manual specification
+export const getHpDisplay = (tractor) => {
+  if (tractor.engineHp) return `${tractor.engineHp} HP`;
+  const hpStr = (tractor.hp || '').toString();
+  if (hpStr.toLowerCase().includes('manual')) return 'Manual';
+  const match = hpStr.match(/(\d+)\s*HP/i) || (tractor.model || '').match(/(\d+)\s*HP/i);
+  if (match) return `${match[1]} HP`;
+  return '48 HP';
+};
+
 export default function FindTractor({
   tractors = [],
   setActivePage,
@@ -36,7 +143,7 @@ export default function FindTractor({
       id: 'Ploughing',
       name: 'Ploughing',
       nameTe: 'దుక్కి దున్నడం',
-      image: '/images/swaraj_blue.jpg',
+      image: '/images/mahindra_575.jpg',
       emoji: '🌱',
       badge: 'Popular'
     },
@@ -44,7 +151,7 @@ export default function FindTractor({
       id: 'Rotavator',
       name: 'Rotavator',
       nameTe: 'రొటవేటర్',
-      image: '/images/mahindra_575.jpg',
+      image: '/tractor4.jpeg',
       emoji: '🔄',
       badge: 'Top Pick'
     },
@@ -68,7 +175,7 @@ export default function FindTractor({
       id: 'Trailer Services',
       name: 'Trailer Trolley',
       nameTe: 'ట్రాలీ రవాణా',
-      image: '/tractor4.jpeg',
+      image: '/tractor9.jpg',
       emoji: '🚚',
       badge: 'Haulage'
     },
@@ -100,7 +207,7 @@ export default function FindTractor({
       id: 'Mini Tractor',
       name: 'Mini Orchard',
       nameTe: 'మినీ ట్రాక్టర్',
-      image: '/tractor5.jpeg',
+      image: '/tractor7.jpeg',
       emoji: '🚜',
       badge: 'Compact'
     }
@@ -340,12 +447,15 @@ export default function FindTractor({
           const reviewsCount = 24 + idx * 3;
           const distanceKm = tractor.distanceKm || (idx === 0 ? 1 : 2);
           const dispatchMins = idx === 0 ? 13 : 15;
-          const engineHp = tractor.engineHp || (tractor.model?.includes('575') ? '47' : '48');
           const priceAcre = tractor.priceAcre || (tractor.pricing * 2);
 
           const implementsList = tractor.equipment 
             ? tractor.equipment.split(',').map(s => s.trim()) 
             : ['Ploughing', 'Rotavator', 'Cultivator'];
+
+          const accuratePhoto = getAccurateTractorPhoto(tractor);
+          const displayName = getTractorDisplayName(tractor);
+          const hpLabel = getHpDisplay(tractor);
 
           return (
             <div key={tractor.id} className="marketplace-tractor-card">
@@ -358,8 +468,8 @@ export default function FindTractor({
               {/* Tractor Photo Container */}
               <div className="marketplace-image-wrapper">
                 <img
-                  src={tractor.photo || '/tractor1.jpeg'}
-                  alt={`${tractor.brand} ${tractor.model}`}
+                  src={accuratePhoto}
+                  alt={displayName}
                   className="marketplace-tractor-img"
                   onError={(e) => {
                     e.target.onerror = null;
@@ -377,10 +487,10 @@ export default function FindTractor({
                 {/* Title & HP Badge */}
                 <div className="marketplace-title-row">
                   <h3 className="marketplace-tractor-name">
-                    {tractor.brand} {tractor.model}
+                    {displayName}
                   </h3>
                   <span className="marketplace-hp-pill">
-                    {engineHp} HP
+                    {hpLabel}
                   </span>
                 </div>
 
