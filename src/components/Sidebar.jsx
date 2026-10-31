@@ -13,6 +13,8 @@ export default function Sidebar({
   onFarmerLogout,
   currentOwner,
   onOwnerLogout,
+  isAdminLoggedIn,
+  onAdminLogout,
   isInstalled = false,
   onInstallApp
 }) {
@@ -35,9 +37,11 @@ export default function Sidebar({
   const handleSignOut = () => {
     if (onFarmerLogout) onFarmerLogout();
     if (onOwnerLogout) onOwnerLogout();
+    if (onAdminLogout) onAdminLogout();
     try {
       localStorage.removeItem('agri_current_farmer');
       localStorage.removeItem('agri_current_owner');
+      sessionStorage.removeItem('agri_admin_logged_in');
     } catch (e) {
       console.warn(e);
     }
@@ -54,65 +58,95 @@ export default function Sidebar({
     return cleaned.split(' ')[0] || fallback;
   };
 
-  // Farmer display name (strictly ONE farmer icon rendered separately, label has NO emojis)
-  const farmerDisplayName = currentFarmer
-    ? `${getCleanName(currentFarmer.name, 'Farmer')} (Farmer)`
-    : (isTe ? 'రైతు లాగిన్' : 'Farmer Login');
+  // Build role-tailored navigation menu items:
+  // - Strictly 1 icon per menu item (NO duplicate emojis)
+  // - No redundant "Login Portals" links for already logged-in users
+  const menuItems = (() => {
+    const items = [
+      { 
+        id: 'home', 
+        label: isTe ? 'హోమ్' : 'Home', 
+        icon: '🏡' 
+      }
+    ];
 
-  // Owner display name (strictly ONE tractor icon rendered separately, label has NO emojis)
-  const ownerDisplayName = currentOwner
-    ? `${getCleanName(currentOwner.fullName, 'Owner')} (Owner)`
-    : (isTe ? 'ట్రాక్టర్ యజమాని లాగిన్ / నమోదు' : 'Tractor Owner Login / Register');
+    if (currentFarmer) {
+      items.push(
+        { 
+          id: 'find-tractor', 
+          label: isTe ? 'ట్రాక్టర్లను కనుగొనండి' : 'Find Tractor', 
+          icon: '🔍' 
+        },
+        { 
+          id: 'booking-form', 
+          label: isTe ? 'ట్రాక్టర్ బుకింగ్' : 'Booking Tractor', 
+          icon: '📋' 
+        },
+        { 
+          id: 'my-bookings', 
+          label: isTe ? 'నా బుకింగ్‌లు' : 'My Bookings', 
+          icon: '📄' 
+        }
+      );
+    } else if (currentOwner) {
+      items.push(
+        { 
+          id: 'owner-inbox', 
+          label: isTe ? 'యజమాని వర్క్ ఇన్‌బాక్స్' : 'Owner Work Inbox', 
+          icon: '📮', 
+          badge: pendingCount > 0 ? pendingCount : null 
+        },
+        { 
+          id: 'find-tractor', 
+          label: isTe ? 'ట్రాక్టర్ మార్కెట్‌ప్లేస్' : 'Explore Fleet', 
+          icon: '🚜' 
+        },
+        { 
+          id: 'my-bookings', 
+          label: isTe ? 'బుకింగ్ చరిత్ర' : 'Booking History', 
+          icon: '📄' 
+        },
+        { 
+          id: 'owner-registration', 
+          label: isTe ? 'యంత్రాల KYC వివరాలు' : 'Machinery KYC Specs', 
+          icon: '⚙️' 
+        }
+      );
+    } else if (isAdminLoggedIn) {
+      items.push(
+        { 
+          id: 'admin-dashboard', 
+          label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard', 
+          icon: '🛡️' 
+        },
+        { 
+          id: 'find-tractor', 
+          label: isTe ? 'అన్ని ట్రాక్టర్లు' : 'All Fleet', 
+          icon: '🚜' 
+        },
+        { 
+          id: 'my-bookings', 
+          label: isTe ? 'అన్ని బుకింగ్‌లు' : 'All Bookings', 
+          icon: '📄' 
+        }
+      );
+    } else {
+      items.push(
+        { 
+          id: 'find-tractor', 
+          label: isTe ? 'ట్రాక్టర్లను కనుగొనండి' : 'Find Tractor', 
+          icon: '🔍' 
+        },
+        { 
+          id: 'booking-form', 
+          label: isTe ? 'ట్రాక్టర్ బుకింగ్' : 'Booking Tractor', 
+          icon: '📋' 
+        }
+      );
+    }
 
-  // Strictly single icon per item: NO duplicate emojis in label!
-  const menuItems = [
-    { 
-      id: 'home', 
-      label: isTe ? 'హోమ్' : 'Home', 
-      icon: '🏡' 
-    },
-    { 
-      id: 'find-tractor', 
-      label: isTe ? 'ట్రాక్టర్లను కనుగొనండి' : 'Find Tractor', 
-      icon: '🔍' 
-    },
-    { 
-      id: 'booking-form', 
-      label: isTe ? 'ట్రాక్టర్ బుకింగ్' : 'Booking Tractor', 
-      icon: '📋' 
-    },
-    { 
-      id: 'portal-select', 
-      label: isTe ? 'లాగిన్ ఎంపిక' : 'Login Portals', 
-      icon: '🔐' 
-    },
-    { 
-      id: 'farmer-login', 
-      label: farmerDisplayName, 
-      icon: '👨‍🌾' 
-    },
-    { 
-      id: 'owner-registration', 
-      label: ownerDisplayName, 
-      icon: '🚜' 
-    },
-    { 
-      id: 'owner-inbox', 
-      label: isTe ? 'యజమాని వర్క్ ఇన్‌బాక్స్' : 'Owner Work Inbox', 
-      icon: '📮', 
-      badge: pendingCount > 0 ? pendingCount : null 
-    },
-    { 
-      id: 'my-bookings', 
-      label: isTe ? 'నా బుకింగ్' : 'My Booking', 
-      icon: '📄' 
-    },
-    { 
-      id: 'admin-dashboard', 
-      label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard', 
-      icon: '🛡️' 
-    },
-  ];
+    return items;
+  })();
 
   const villageName = selectedLocation
     ? (isTe ? (selectedLocation.villageTe || selectedLocation.village) : selectedLocation.village)
@@ -161,6 +195,38 @@ export default function Sidebar({
             );
           })}
         </nav>
+
+        {/* Logged-In User Profile Card & Sign Out in Sidebar */}
+        {(currentFarmer || currentOwner || isAdminLoggedIn) && (
+          <div className="sidebar-user-section">
+            <div className="sidebar-user-card">
+              <span className="sidebar-user-avatar">
+                {currentFarmer ? '👨‍🌾' : (currentOwner ? '🚜' : '🛡️')}
+              </span>
+              <div className="sidebar-user-details">
+                <strong className="sidebar-user-name">
+                  {currentFarmer ? currentFarmer.name : (currentOwner ? currentOwner.fullName : 'Admin')}
+                </strong>
+                <span className="sidebar-user-role">
+                  {currentFarmer 
+                    ? (isTe ? 'రైతు (లాగిన్ అయ్యారు)' : 'Farmer (Logged In)') 
+                    : (currentOwner 
+                        ? (isTe ? 'యజమాని (లాగిన్ అయ్యారు)' : 'Owner (Logged In)') 
+                        : (isTe ? 'అడ్మినిస్ట్రేటర్' : 'Administrator'))}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="sidebar-user-logout"
+                onClick={currentFarmer ? onFarmerLogout : (currentOwner ? onOwnerLogout : onAdminLogout || handleSignOut)}
+                title={isTe ? 'లాగ్అవుట్' : 'Logout'}
+                aria-label="Logout"
+              >
+                🚪
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* PWA Web App Install Widget in Sidebar */}
         {!isInstalled && onInstallApp && (

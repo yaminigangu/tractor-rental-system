@@ -12,7 +12,8 @@ export default function FindTractor({
   selectedLocation,
   weatherData,
   isLoadingWeather,
-  onOpenLocationPicker
+  onOpenLocationPicker,
+  isUserLoggedIn = false
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recommended');
@@ -104,6 +105,27 @@ export default function FindTractor({
       >
         ⚙️
       </button>
+
+      {/* Guest Mode Banner with return to Login Portal */}
+      {!isUserLoggedIn && (
+        <div className="guest-browse-banner">
+          <div className="guest-browse-info">
+            <span className="guest-browse-icon">🌱</span>
+            <span>
+              {isTe
+                ? 'మీరు అతిథిగా చూస్తున్నారు. ట్రాక్టర్లను బుక్ చేయడానికి లేదా యంత్రాలను నమోదు చేయడానికి సైన్ ఇన్ చేయండి.'
+                : 'Browsing as Guest. Sign in to book tractors or manage rental fleet.'}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="guest-signin-btn"
+            onClick={() => setActivePage('portal-select')}
+          >
+            {isTe ? 'సైన్-ఇన్ పోర్టల్ →' : 'Sign-In Portal →'}
+          </button>
+        </div>
+      )}
 
       {/* Top Search & Filter Bar matching Screenshot 4 / 5 */}
       <div className="marketplace-controls-wrap">

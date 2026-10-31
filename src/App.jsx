@@ -69,6 +69,13 @@ function App() {
     } catch {
       // ignore
     }
+    // If returning already logged-in farmer, go to find-tractor; if owner, go to owner-inbox
+    try {
+      if (localStorage.getItem('agri_current_farmer')) return 'find-tractor';
+      if (localStorage.getItem('agri_current_owner')) return 'owner-inbox';
+    } catch {
+      // ignore
+    }
     return 'portal-select'; // Opens dual login entry screen upon entering the web-app
   });
 
@@ -92,6 +99,18 @@ function App() {
     }
   });
 
+  const handleSetCurrentFarmer = (farmer) => {
+    setCurrentFarmer(farmer);
+    if (farmer) {
+      setCurrentOwner(null);
+      try {
+        localStorage.removeItem('agri_current_owner');
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+  };
+
   useEffect(() => {
     try {
       if (currentFarmer) {
@@ -113,6 +132,18 @@ function App() {
       return null;
     }
   });
+
+  const handleSetCurrentOwner = (owner) => {
+    setCurrentOwner(owner);
+    if (owner) {
+      setCurrentFarmer(null);
+      try {
+        localStorage.removeItem('agri_current_farmer');
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+  };
 
   useEffect(() => {
     try {
@@ -325,6 +356,7 @@ function App() {
             weatherData={weatherData}
             isLoadingWeather={isLoadingWeather}
             onOpenLocationPicker={() => setIsLocationModalOpen(true)}
+            isUserLoggedIn={isUserLoggedIn}
           />
         );
       case 'booking-form':
@@ -346,7 +378,7 @@ function App() {
         return (
           <FarmerLogin
             setActivePage={setActivePage}
-            setCurrentFarmer={setCurrentFarmer}
+            setCurrentFarmer={handleSetCurrentFarmer}
             setOnboardingMobile={setOnboardingMobile}
             language={language}
             selectedLocation={selectedLocation}
@@ -360,7 +392,7 @@ function App() {
             setActivePage={setActivePage}
             language={language}
             currentOwner={currentOwner}
-            setCurrentOwner={setCurrentOwner}
+            setCurrentOwner={handleSetCurrentOwner}
             selectedLocation={selectedLocation}
           />
         );
@@ -450,7 +482,14 @@ function App() {
 
   // Top Header and Nav bars appear ONLY after logging in as Farmer, Owner, or Admin
   const isUserLoggedIn = Boolean(currentFarmer || currentOwner || isAdminLoggedIn);
-  const isAuthPage = ['portal-select', 'farmer-login', 'owner-registration', 'owner-login', 'farmer-onboarding'].includes(activePage);
+  const isAuthPage = [
+    'portal-select',
+    'farmer-login',
+    'owner-registration',
+    'owner-login',
+    'farmer-onboarding',
+    'admin-login'
+  ].includes(activePage);
   const showTopHeader = isUserLoggedIn && !isAuthPage;
 
   return (
@@ -470,6 +509,8 @@ function App() {
           onFarmerLogout={handleFarmerLogout}
           currentOwner={currentOwner}
           onOwnerLogout={handleOwnerLogout}
+          isAdminLoggedIn={isAdminLoggedIn}
+          onAdminLogout={handleAdminLogout}
           isInstalled={pwa.isInstalled}
           onInstallApp={pwa.promptInstall}
         />
