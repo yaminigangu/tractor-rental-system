@@ -417,51 +417,92 @@ function App() {
     }
   };
 
+  // Logout handlers
+  const handleFarmerLogout = () => {
+    setCurrentFarmer(null);
+    try {
+      localStorage.removeItem('agri_current_farmer');
+    } catch (e) {
+      console.warn(e);
+    }
+    setActivePage('portal-select');
+  };
+
+  const handleOwnerLogout = () => {
+    setCurrentOwner(null);
+    try {
+      localStorage.removeItem('agri_current_owner');
+    } catch (e) {
+      console.warn(e);
+    }
+    setActivePage('portal-select');
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminLoggedIn(false);
+    try {
+      sessionStorage.removeItem('agri_admin_logged_in');
+    } catch (e) {
+      console.warn(e);
+    }
+    setActivePage('portal-select');
+  };
+
+  // Top Header and Nav bars appear ONLY after logging in as Farmer, Owner, or Admin
+  const isUserLoggedIn = Boolean(currentFarmer || currentOwner || isAdminLoggedIn);
+  const isAuthPage = ['portal-select', 'farmer-login', 'owner-registration', 'owner-login', 'farmer-onboarding'].includes(activePage);
+  const showTopHeader = isUserLoggedIn && !isAuthPage;
+
   return (
-    <div className="app-layout">
-      {/* Sidebar Navigation with strictly single icons */}
-      <Sidebar
-        activePage={activePage}
-        setActivePage={setActivePage}
-        pendingCount={pendingCount}
-        isMobileOpen={isMobileOpen}
-        closeMobileMenu={() => setIsMobileOpen(false)}
-        language={language}
-        setLanguage={setLanguage}
-        selectedLocation={selectedLocation}
-        currentFarmer={currentFarmer}
-        onFarmerLogout={() => setCurrentFarmer(null)}
-        currentOwner={currentOwner}
-        onOwnerLogout={() => setCurrentOwner(null)}
-        isInstalled={pwa.isInstalled}
-        onInstallApp={pwa.promptInstall}
-      />
-
-      {/* Main Content Area */}
-      <div className="main-content">
-        {/* Offline / Online Network Detection Status Bar */}
-        <OfflineNotificationBanner language={language} />
-
-        <Header
+    <div className={`app-layout ${!showTopHeader ? 'auth-mode' : ''}`}>
+      {/* Sidebar Navigation: Only shown after logging in */}
+      {showTopHeader && (
+        <Sidebar
           activePage={activePage}
           setActivePage={setActivePage}
-          toggleMobileMenu={() => setIsMobileOpen(prev => !prev)}
-          activeRole={activeRole}
-          setActiveRole={handleRoleChange}
+          pendingCount={pendingCount}
+          isMobileOpen={isMobileOpen}
+          closeMobileMenu={() => setIsMobileOpen(false)}
           language={language}
           setLanguage={setLanguage}
-          isAdminLoggedIn={isAdminLoggedIn}
-          onAdminLogout={() => setIsAdminLoggedIn(false)}
           selectedLocation={selectedLocation}
-          onOpenLocationPicker={() => setIsLocationModalOpen(true)}
           currentFarmer={currentFarmer}
-          onFarmerLogout={() => setCurrentFarmer(null)}
+          onFarmerLogout={handleFarmerLogout}
           currentOwner={currentOwner}
-          onOwnerLogout={() => setCurrentOwner(null)}
+          onOwnerLogout={handleOwnerLogout}
           isInstalled={pwa.isInstalled}
           onInstallApp={pwa.promptInstall}
         />
-        <main className="page-container">
+      )}
+
+      {/* Main Content Area */}
+      <div className={`main-content ${!showTopHeader ? 'full-width' : ''}`}>
+        {/* Offline / Online Network Detection Status Bar */}
+        <OfflineNotificationBanner language={language} />
+
+        {/* Top Header: Totally removed before login, shows again after farmer or owner login */}
+        {showTopHeader && (
+          <Header
+            activePage={activePage}
+            setActivePage={setActivePage}
+            toggleMobileMenu={() => setIsMobileOpen(prev => !prev)}
+            activeRole={activeRole}
+            setActiveRole={handleRoleChange}
+            language={language}
+            setLanguage={setLanguage}
+            isAdminLoggedIn={isAdminLoggedIn}
+            onAdminLogout={handleAdminLogout}
+            selectedLocation={selectedLocation}
+            onOpenLocationPicker={() => setIsLocationModalOpen(true)}
+            currentFarmer={currentFarmer}
+            onFarmerLogout={handleFarmerLogout}
+            currentOwner={currentOwner}
+            onOwnerLogout={handleOwnerLogout}
+            isInstalled={pwa.isInstalled}
+            onInstallApp={pwa.promptInstall}
+          />
+        )}
+        <main className={`page-container ${!showTopHeader ? 'auth-full-screen' : ''}`}>
           {renderPage()}
         </main>
       </div>
@@ -484,13 +525,15 @@ function App() {
         />
       )}
 
-      {/* Sticky Native-feel Mobile Bottom Navigation Bar */}
-      <MobileBottomNav
-        activePage={activePage}
-        setActivePage={setActivePage}
-        pendingCount={pendingCount}
-        language={language}
-      />
+      {/* Sticky Native-feel Mobile Bottom Navigation Bar: Only shown after logging in */}
+      {showTopHeader && (
+        <MobileBottomNav
+          activePage={activePage}
+          setActivePage={setActivePage}
+          pendingCount={pendingCount}
+          language={language}
+        />
+      )}
 
       {/* PWA App Install Banner & Guided Modal */}
       <PwaInstallPrompt language={language} pwa={pwa} />

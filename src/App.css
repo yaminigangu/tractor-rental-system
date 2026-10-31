@@ -10399,3 +10399,84 @@ html {
   border: 1px solid #bfdbfe;
   color: #1d4ed8;
 }
+
+
+/* Header Clean Logged-in User Badge & Logout Button */
+.header-logged-in-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #15803d;
+  box-shadow: 0 2px 5px rgba(22, 101, 52, 0.08);
+}
+
+.header-user-badge.owner-badge {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.header-user-badge.admin-badge {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.user-badge-avatar {
+  font-size: 15px;
+}
+
+.user-badge-name {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.user-badge-role {
+  font-size: 11px;
+  opacity: 0.8;
+  font-weight: 600;
+}
+
+.header-logout-btn {
+  background: #334155;
+  color: #ffffff;
+  border: none;
+  border-radius: 18px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.header-logout-btn:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+
+/* Auth & Full-Screen Layout When Top Header is Removed */
+.page-container.auth-full-screen {
+  padding: 0;
+  max-width: 100%;
+}
+
+.main-content.full-width {
+  width: 100%;
+}

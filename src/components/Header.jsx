@@ -136,67 +136,64 @@ export default function Header({
           <span className="lang-text-mobile">{language === 'en' ? 'తెలుగు' : 'EN'}</span>
         </button>
 
-        {/* Role Switcher */}
-        <div className="role-switcher" title={t.switchRole}>
-          <button
-            className={`role-btn ${activeRole === 'farmer' ? 'active' : ''}`}
-            onClick={() => setActiveRole('farmer')}
-            title={currentFarmer ? `Logged in as Farmer: ${currentFarmer.name}` : 'Click to Login as Farmer'}
-          >
-            {currentFarmer ? `👨‍🌾 ${currentFarmer.name.split(' ')[0]}` : t.roleFarmer}
-          </button>
-          <button
-            className={`role-btn ${activeRole === 'owner' ? 'active' : ''}`}
-            onClick={() => setActiveRole('owner')}
-            title={currentOwner ? `Logged in as Tractor Owner: ${currentOwner.fullName}` : 'Click to Login / Register as Tractor Owner'}
-          >
-            {currentOwner ? `🚜 ${currentOwner.fullName.split(' ')[0]} (Owner)` : t.roleOwner}
-          </button>
-          <button
-            className={`role-btn ${activeRole === 'admin' ? 'active' : ''}`}
-            onClick={() => setActiveRole('admin')}
-            title={isAdminLoggedIn ? 'Admin Authenticated' : 'Admin Login Required'}
-          >
-            {t.roleAdmin} {isAdminLoggedIn ? '🔓' : '🔒'}
-          </button>
-        </div>
-
-        {/* Farmer Logout Button */}
-        {activeRole === 'farmer' && currentFarmer && onFarmerLogout && (
-          <button
-            type="button"
-            className="btn btn-call"
-            style={{ background: '#4b5563', padding: '5px 8px', fontSize: '11px', color: '#fff' }}
-            onClick={onFarmerLogout}
-            title="Logout Farmer Profile"
-          >
-            🚪 {language === 'te' ? 'లాగ్అవుట్' : 'Logout'}
-          </button>
+        {/* Clean Logged-in User Badge & Logout Button */}
+        {currentFarmer && (
+          <div className="header-logged-in-user">
+            <div className="header-user-badge farmer-badge">
+              <span className="user-badge-avatar">👨‍🌾</span>
+              <span className="user-badge-name">{currentFarmer.name ? currentFarmer.name.split(' ')[0] : 'Farmer'}</span>
+              <span className="user-badge-role">({isTe ? 'రైతు' : 'Farmer'})</span>
+            </div>
+            {onFarmerLogout && (
+              <button
+                type="button"
+                className="header-logout-btn"
+                onClick={onFarmerLogout}
+                title={isTe ? "లాగ్అవుట్" : "Logout"}
+              >
+                🚪 {isTe ? 'లాగ్అవుట్' : 'Logout'}
+              </button>
+            )}
+          </div>
         )}
 
-        {/* Owner Logout Button */}
-        {activeRole === 'owner' && currentOwner && onOwnerLogout && (
-          <button
-            type="button"
-            className="btn btn-call"
-            style={{ background: '#4b5563', padding: '5px 8px', fontSize: '11px', color: '#fff' }}
-            onClick={onOwnerLogout}
-            title="Logout Tractor Owner Profile"
-          >
-            🚪 {language === 'te' ? 'లాగ్అవుట్' : 'Logout'}
-          </button>
+        {!currentFarmer && currentOwner && (
+          <div className="header-logged-in-user">
+            <div className="header-user-badge owner-badge">
+              <span className="user-badge-avatar">🚜</span>
+              <span className="user-badge-name">{currentOwner.fullName ? currentOwner.fullName.split(' ')[0] : 'Owner'}</span>
+              <span className="user-badge-role">({isTe ? 'యజమాని' : 'Owner'})</span>
+            </div>
+            {onOwnerLogout && (
+              <button
+                type="button"
+                className="header-logout-btn"
+                onClick={onOwnerLogout}
+                title={isTe ? "లాగ్అవుట్" : "Logout"}
+              >
+                🚪 {isTe ? 'లాగ్అవుట్' : 'Logout'}
+              </button>
+            )}
+          </div>
         )}
 
-        {/* Admin Logout Button */}
-        {activeRole === 'admin' && isAdminLoggedIn && onAdminLogout && (
-          <button
-            className="btn btn-call"
-            style={{ background: '#d32f2f', padding: '5px 10px', fontSize: '11px' }}
-            onClick={onAdminLogout}
-            title={t.adminLogoutBtn}
-          >
-            🚪 {language === 'te' ? 'లాగ్అవుట్' : 'Logout'}
-          </button>
+        {!currentFarmer && !currentOwner && isAdminLoggedIn && (
+          <div className="header-logged-in-user">
+            <div className="header-user-badge admin-badge">
+              <span className="user-badge-avatar">🛡️</span>
+              <span className="user-badge-name">Admin</span>
+            </div>
+            {onAdminLogout && (
+              <button
+                type="button"
+                className="header-logout-btn"
+                onClick={onAdminLogout}
+                title={isTe ? "లాగ్అవుట్" : "Logout"}
+              >
+                🚪 {isTe ? 'లాగ్అవుట్' : 'Logout'}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </header>
