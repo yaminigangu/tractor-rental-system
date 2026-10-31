@@ -130,6 +130,7 @@ export default function FindTractor({
   const [onlyLocalFleet, setOnlyLocalFleet] = useState(false);
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [listSuccessToast, setListSuccessToast] = useState('');
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -559,32 +560,6 @@ export default function FindTractor({
               </div>
             </div>
           </form>
-
-          {/* JFarm Services Trust & Hotline Footer Strip */}
-          <div className="jfarm-trust-strip">
-            <div className="jfarm-trust-item">
-              <span className="jfarm-trust-icon">📞</span>
-              <span>
-                <strong>{isTe ? 'టోల్-ఫ్రీ సహాయం:' : 'Toll-Free Helpline:'}</strong>{' '}
-                <a href="tel:18004251122" className="jfarm-helpline-link">1800-425-1122</a>
-              </span>
-            </div>
-            <div className="jfarm-trust-dot">•</div>
-            <div className="jfarm-trust-item">
-              <span className="jfarm-trust-icon">⚡</span>
-              <span>{isTe ? '~15 నిమిషాల వేగవంతమైన రాక' : '~15 Mins Quick Dispatch Guarantee'}</span>
-            </div>
-            <div className="jfarm-trust-dot">•</div>
-            <div className="jfarm-trust-item">
-              <span className="jfarm-trust-icon">🛡️</span>
-              <span>{isTe ? '100% ధృవీకరించబడిన యజమానులు' : '100% KYC & RC Verified Owners'}</span>
-            </div>
-            <div className="jfarm-trust-dot">•</div>
-            <div className="jfarm-trust-item">
-              <span className="jfarm-trust-icon">🤝</span>
-              <span>{isTe ? '0% కమీషన్ • రైతు నుండి రైతుకు' : '0% Commission • Farmer-to-Farmer'}</span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -788,70 +763,179 @@ export default function FindTractor({
         })}
       </div>
 
-      {/* AgriRent Machinery Owner & Renter Hub Section */}
-      <section className="jfarm-renter-hub-card page-anim">
-        <div className="jfarm-renter-hub-content">
-          <div className="jfarm-renter-badge-row">
-            <span className="jfarm-renter-kicker">
-              🚜 {isTe ? 'అగ్రిరెంట్ యంత్రాల యజమానుల నెట్‌వర్క్' : 'AgriRent Machinery Owner & Renter Network'}
+      {/* AgriRent Trust & Guarantee Footer Section with Privacy Policy & Rural Support */}
+      <footer className="agrirent-app-footer page-anim">
+        {/* Trust Badges Strip (Second Uploaded Photo Reference) */}
+        <div className="agrirent-footer-trust-strip">
+          <div className="footer-trust-item">
+            <span className="footer-trust-icon">📞</span>
+            <span>
+              <strong>{isTe ? 'టోల్-ఫ్రీ సహాయం:' : 'Toll-Free Helpline:'}</strong>{' '}
+              <a href="tel:18004251122" className="footer-helpline-link">1800-425-1122</a>
             </span>
-            <span className="jfarm-renter-pill">0% Platform Fee • 100% Direct</span>
           </div>
-
-          <h2 className="jfarm-renter-heading">
-            {isTe
-              ? 'మీ ట్రాక్టర్ లేదా హార్వెస్టర్‌తో నెలకు ₹40,000 - ₹80,000 అద్దె ఆదాయం పొందండి'
-              : 'Monetize Your Idle Machinery • Earn Guaranteed Rental Income'}
-          </h2>
-
-          <p className="jfarm-renter-subheading">
-            {isTe
-              ? 'అగ్రిరెంట్ వేదిక ద్వారా ట్రాక్టర్లు, రొటవేటర్లు, హార్వెస్టర్ల యజమానులు నేరుగా స్థానిక గ్రామాల రైతులతో అనుసంధానం కావచ్చు. 0% కమీషన్, ఉచిత నమోదు మరియు నేరుగా చెల్లింపులు.'
-              : 'AgriRent connects tractor, rotavator, and harvester owners directly with verified farmers across 33 Telangana districts. Zero brokerage, instant WhatsApp work orders, and 100% direct payments.'}
-          </p>
-
-          <div className="jfarm-renter-highlights">
-            <div className="renter-highlight-item">
-              <span className="highlight-icon">💰</span>
-              <div>
-                <strong>{isTe ? '0% కమీషన్ ఫీజు' : '0% Commission Fee'}</strong>
-                <p>{isTe ? 'మీ కష్టార్జితం మొత్తం మీకే చేరుతుంది' : 'Retain 100% of your hourly & per-acre earnings'}</p>
-              </div>
-            </div>
-            <div className="renter-highlight-item">
-              <span className="highlight-icon">⚡</span>
-              <div>
-                <strong>{isTe ? 'గ్రామాల నుండి నేరుగా ఆర్డర్లు' : 'Direct Village Orders'}</strong>
-                <p>{isTe ? 'రైతుల నుండి నేరుగా కాల్స్ & వాట్సాప్ సందేశాలు' : 'Direct phone & WhatsApp calls from farmers in nearby mandals'}</p>
-              </div>
-            </div>
-            <div className="renter-highlight-item">
-              <span className="highlight-icon">🛡️</span>
-              <div>
-                <strong>{isTe ? 'ధృవీకరించబడిన నెట్‌వర్క్' : '100% RC & KYC Verified'}</strong>
-                <p>{isTe ? 'పారదర్శకమైన మరియు సురక్షితమైన వ్యవసాయ సేవలు' : 'Trusted rural community with transparent ratings'}</p>
-              </div>
-            </div>
+          <div className="footer-trust-dot">•</div>
+          <div className="footer-trust-item">
+            <span className="footer-trust-icon">⚡</span>
+            <span>{isTe ? '~15 నిమిషాల వేగవంతమైన రాక' : '~15 Mins Quick Dispatch Guarantee'}</span>
+          </div>
+          <div className="footer-trust-dot">•</div>
+          <div className="footer-trust-item">
+            <span className="footer-trust-icon">🛡️</span>
+            <span>{isTe ? '100% ధృవీకరించబడిన యజమానులు' : '100% KYC & RC Verified Owners'}</span>
+          </div>
+          <div className="footer-trust-dot">•</div>
+          <div className="footer-trust-item">
+            <span className="footer-trust-icon">🤝</span>
+            <span>{isTe ? '0% కమీషన్ • రైతు నుండి రైతుకు' : '0% Commission • Farmer-to-Farmer'}</span>
           </div>
         </div>
 
-        <div className="jfarm-renter-hub-actions">
-          <button
-            type="button"
-            className="btn-jfarm-renter-primary"
-            onClick={() => setIsListModalOpen(true)}
-          >
-            <span>{isTe ? 'యంత్రం నమోదు చేయండి 🚜' : 'List Machinery as Renter 🚜'}</span>
-          </button>
-          <button
-            type="button"
-            className="btn-jfarm-renter-secondary"
-            onClick={() => setActivePage('owner-inbox')}
-          >
-            <span>{isTe ? 'వర్క్ ఇన్‌బాక్స్ చూడండి 📬' : 'Owner Work Inbox 📬'}</span>
-          </button>
+        {/* Footer Main Area Styled Like a Privacy Policy & Legal Section */}
+        <div className="agrirent-footer-body">
+          <div className="agrirent-footer-main">
+            {/* Column 1: Brand & Mission */}
+            <div className="agrirent-footer-col brand-col">
+              <div className="footer-brand-header">
+                <span className="footer-brand-logo">🌾</span>
+                <div>
+                  <h3 className="footer-brand-title">AgriRent</h3>
+                  <span className="footer-brand-sub">FARM MACHINERY PLATFORM</span>
+                </div>
+              </div>
+              <p className="footer-brand-desc">
+                {isTe
+                  ? 'తెలంగాణలోని 33 జిల్లాల్లో రైతుల కోసం ప్రత్యేకంగా రూపొందించబడిన రైతు-నుండి-రైతు వ్యవసాయ యంత్రాల అద్దె వేదిక. మధ్యవర్తులు మరియు కమీషన్ లేని పారదర్శక సేవలు.'
+                  : 'Direct Farmer-to-Farmer agricultural machinery rental platform across all 33 Telangana districts. Verified tractors, implements, and harvesters with zero platform fee and transparent rates.'}
+              </p>
+              <div className="footer-district-badges">
+                <span className="footer-district-pill">🌾 33 Telangana Districts</span>
+                <span className="footer-district-pill">⚡ 0% Brokerage Guarantee</span>
+              </div>
+            </div>
+
+            {/* Column 2: Privacy Policy & Farmer Protection (Highlighted Section) */}
+            <div className="agrirent-footer-col privacy-col">
+              <h4 className="footer-col-title">
+                <span className="footer-title-icon">🔒</span>
+                {isTe ? 'గోప్యతా విధానం & డేటా రక్షణ' : 'Privacy Policy & Protection'}
+              </h4>
+              <div className="footer-privacy-box">
+                <p className="footer-privacy-summary">
+                  {isTe
+                    ? 'రైతులు మరియు వాహన యజమానుల వ్యక్తిగత వివరాలు, ఫోన్ నంబర్లు మరియు ఆర్సీ పత్రాలు 100% ఎన్‌క్రిప్ట్ చేయబడ్డాయి. మూడవ పక్షాలకు ఎలాంటి డేటా అమ్మబడదు.'
+                    : 'Farmer and machinery owner phone numbers, field locations, and RC documents are end-to-end encrypted. We strictly never sell or share farmer data with 3rd-party advertisers.'}
+                </p>
+                <ul className="footer-policy-bullets">
+                  <li>✓ {isTe ? 'ప్రత్యక్ష నగదు లేదా UPI చెల్లింపులు' : '100% Direct Cash or UPI Settlements'}</li>
+                  <li>✓ {isTe ? 'ఆర్సీ & ఆధార్ భద్రతా ధృవీకరణ' : 'RTA-Verified Machinery RC & Driver KYC'}</li>
+                  <li>✓ {isTe ? 'సురక్షిత స్థాన పరిధి (15 కి.మీ)' : 'Strict 15 km Radius Proximity Matching'}</li>
+                </ul>
+                <button
+                  type="button"
+                  className="footer-privacy-modal-btn"
+                  onClick={() => setIsPrivacyModalOpen(true)}
+                >
+                  <span>{isTe ? 'పూర్తి గోప్యతా విధానం చదవండి →' : 'Read Full Privacy Policy →'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Column 3: Terms of Rental & Operating Rules */}
+            <div className="agrirent-footer-col terms-col">
+              <h4 className="footer-col-title">
+                <span className="footer-title-icon">📜</span>
+                {isTe ? 'అద్దె నిబంధనలు & మార్గదర్శకాలు' : 'Rental Terms & Rules'}
+              </h4>
+              <ul className="footer-links-list">
+                <li>
+                  <button type="button" className="footer-link-btn" onClick={() => setIsPrivacyModalOpen(true)}>
+                    {isTe ? 'రైతు సమాచార రక్షణ నిబంధనలు' : 'Farmer Data Privacy & Terms'}
+                  </button>
+                </li>
+                <li>
+                  <span className="footer-static-link">
+                    {isTe ? 'పారదర్శక గంట & ఎకరా రేట్లు' : 'Transparent Hourly & Per-Acre Rates'}
+                  </span>
+                </li>
+                <li>
+                  <span className="footer-static-link">
+                    {isTe ? 'డిస్పాచ్‌కు ముందు ఉచిత రద్దు' : 'Free Cancellation Prior to Dispatch'}
+                  </span>
+                </li>
+                <li>
+                  <span className="footer-static-link">
+                    {isTe ? 'ఇంధనం & డ్రైవర్ ముందస్తు ఒప్పందం' : 'Pre-Agreed Diesel & Driver Norms'}
+                  </span>
+                </li>
+                <li>
+                  <span className="footer-static-link">
+                    {isTe ? 'గ్రామ వివాద పరిష్కార విభాగం' : 'Village Grievance Redressal'}
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 4: Support & Mandals */}
+            <div className="agrirent-footer-col contact-col">
+              <h4 className="footer-col-title">
+                <span className="footer-title-icon">📞</span>
+                {isTe ? 'హెల్ప్‌లైన్ & కేంద్రం' : 'Helpline & Office'}
+              </h4>
+              <div className="footer-contact-details">
+                <div className="footer-contact-row">
+                  <span className="contact-icon">📞</span>
+                  <div>
+                    <span className="contact-label">{isTe ? 'టోల్-ఫ్రీ కిసాన్ డెస్క్:' : 'Toll-Free Kisan Desk:'}</span>
+                    <a href="tel:18004251122" className="contact-val highlight">1800-425-1122</a>
+                  </div>
+                </div>
+                <div className="footer-contact-row">
+                  <span className="contact-icon">🏢</span>
+                  <div>
+                    <span className="contact-label">{isTe ? 'హసన్‌పర్తి మండల కేంద్రం:' : 'Hasanparthy Mandal Desk:'}</span>
+                    <a href="tel:08702577788" className="contact-val">0870-2577788</a>
+                  </div>
+                </div>
+                <div className="footer-contact-row">
+                  <span className="contact-icon">💬</span>
+                  <div>
+                    <span className="contact-label">{isTe ? 'కిసాన్ వాట్సాప్ సేవలు:' : 'WhatsApp Support:'}</span>
+                    <span className="contact-val">+91 9032004060</span>
+                  </div>
+                </div>
+                <div className="footer-contact-row">
+                  <span className="contact-icon">⏰</span>
+                  <div>
+                    <span className="contact-label">{isTe ? 'పనివేళలు:' : 'Operating Hours:'}</span>
+                    <span className="contact-val">5:00 AM – 9:00 PM (All 7 Days)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Legal Copyright Row */}
+          <div className="agrirent-footer-bottom">
+            <div className="footer-copyright-text">
+              © 2026 AgriRent Technologies Pvt Ltd. All rights reserved. • Built for Telangana Farmers
+            </div>
+            <div className="footer-bottom-links">
+              <button type="button" className="bottom-link-item" onClick={() => setIsPrivacyModalOpen(true)}>
+                Privacy Policy
+              </button>
+              <span className="bottom-divider">•</span>
+              <button type="button" className="bottom-link-item" onClick={() => setIsPrivacyModalOpen(true)}>
+                Terms of Service
+              </button>
+              <span className="bottom-divider">•</span>
+              <span className="bottom-link-item">Kisan Grievance Cell</span>
+              <span className="bottom-divider">•</span>
+              <span className="bottom-link-item">Telangana 33 Mandals</span>
+            </div>
+          </div>
         </div>
-      </section>
+      </footer>
 
       {/* Celebratory Toast When Machinery Is Successfully Listed */}
       {listSuccessToast && (
@@ -1029,6 +1113,84 @@ export default function FindTractor({
                 <span>{isTe ? 'యంత్రాన్ని ఫ్లీట్‌లో ప్రచురించండి 🚀' : 'Publish Machinery to AgriRent Fleet 🚀'}</span>
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Privacy Policy Modal */}
+      {isPrivacyModalOpen && (
+        <div className="privacy-modal-overlay" onClick={() => setIsPrivacyModalOpen(false)}>
+          <div className="privacy-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="privacy-modal-header">
+              <div className="privacy-header-left">
+                <div className="privacy-header-icon">🔒</div>
+                <div>
+                  <h3 className="privacy-modal-title">
+                    {isTe ? 'అగ్రిరెంట్ గోప్యతా విధానం & రైతు భద్రత' : 'AgriRent Privacy Policy & Farmer Protection'}
+                  </h3>
+                  <p className="privacy-modal-sub">
+                    {isTe
+                      ? 'తెలంగాణ వ్యవసాయ విభాగ మార్గదర్శకాల ప్రకారం భద్రపరచబడింది • అక్టోబర్ 2026'
+                      : 'Telangana Agricultural Mechanization Standards Compliant • October 2026'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="privacy-modal-close"
+                onClick={() => setIsPrivacyModalOpen(false)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="privacy-modal-body">
+              <section className="privacy-section">
+                <h4>1. Information We Collect</h4>
+                <p>
+                  AgriRent collects minimal operational information needed for machine dispatch: farmer contact number, field location (village/mandal), required acreage/hours, and machinery registration (RC certificate and owner KYC for tractor owners).
+                </p>
+              </section>
+
+              <section className="privacy-section">
+                <h4>2. Zero Third-Party Advertising & Data Sales</h4>
+                <p>
+                  We maintain a strict <strong>Zero Third-Party Advertising & Data Sales</strong> commitment. Your phone number is only shared directly with the verified tractor owner or farmer when a booking is confirmed, solely to coordinate work in the field.
+                </p>
+              </section>
+
+              <section className="privacy-section">
+                <h4>3. Geolocation & Dispatch Privacy</h4>
+                <p>
+                  Village base coordinates are used strictly to calculate dispatch distances within a 15 km radius, ensuring the quickest arrival (~15 mins) and fair travel estimation. We never track background location when the app is inactive.
+                </p>
+              </section>
+
+              <section className="privacy-section">
+                <h4>4. Direct Payments & Financial Security</h4>
+                <p>
+                  AgriRent operates with <strong>0% platform commission</strong>. All payments (UPI, PhonePe, Google Pay, or Cash on Delivery) are settled directly between farmer and machinery owner. AgriRent never asks for or stores debit card numbers, UPI PINs, or bank account credentials.
+                </p>
+              </section>
+
+              <section className="privacy-section">
+                <h4>5. Machine Verification & Grievance Redressal</h4>
+                <p>
+                  All tractors, rotavators, and harvesters undergo RC verification to prevent disputes. For any grievance regarding delayed arrival, incorrect equipment, or billing, call our Toll-Free Kisan Helpline at <strong>1800-425-1122</strong> or contact the Hasanparthy Mandal Mechanization desk.
+                </p>
+              </section>
+            </div>
+
+            <div className="privacy-modal-footer">
+              <button
+                type="button"
+                className="btn-privacy-accept"
+                onClick={() => setIsPrivacyModalOpen(false)}
+              >
+                {isTe ? 'అర్థమైంది & మూసివేయండి' : 'Understood & Close'}
+              </button>
+            </div>
           </div>
         </div>
       )}
