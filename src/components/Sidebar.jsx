@@ -16,7 +16,8 @@ export default function Sidebar({
   isAdminLoggedIn,
   onAdminLogout,
   isInstalled = false,
-  onInstallApp
+  onInstallApp,
+  onShowLoader
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -237,6 +238,23 @@ export default function Sidebar({
               </button>
             </div>
           </div>
+        )}
+
+        {/* Replay GSAP Tractor Loading Screen Animation */}
+        {onShowLoader && (
+          <button
+            type="button"
+            className="sidebar-replay-loader-btn"
+            onClick={() => {
+              closeMobileMenu();
+              onShowLoader();
+            }}
+            title={isTe ? 'ట్రాక్టర్ యానిమేషన్ చూడండి' : 'View Tractor GSAP Animation'}
+          >
+            <span className="replay-icon">🚜</span>
+            <span className="replay-text">{isTe ? 'ట్రాక్టర్ యానిమేషన్' : 'Tractor Loader Animation'}</span>
+            <span className="replay-badge">GSAP</span>
+          </button>
         )}
 
         {/* PWA Web App Install Widget in Sidebar */}

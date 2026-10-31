@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import gsap from 'gsap';
 import WeatherBar from '../components/WeatherBar';
 import { translations } from '../translations';
 
@@ -279,6 +280,37 @@ export default function FindTractor({
     return (a.distanceKm || 1) - (b.distanceKm || 1);
   });
 
+  const containerRef = useRef(null);
+
+  // GSAP Entrance Animations on Mount
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline();
+      tl.from('.jfarm-badge-pill', { opacity: 0, y: -12, duration: 0.35, ease: 'power2.out' })
+        .from('.jfarm-portal-switch', { opacity: 0, y: -10, duration: 0.35, ease: 'power2.out' }, '-=0.2')
+        .from('.jfarm-hero-title', { opacity: 0, y: 22, duration: 0.45, ease: 'power3.out' }, '-=0.2')
+        .from('.jfarm-hero-subtitle', { opacity: 0, y: 16, duration: 0.4, ease: 'power3.out' }, '-=0.25')
+        .from('.jfarm-tab-pill', { opacity: 0, scale: 0.85, y: 12, stagger: 0.03, duration: 0.32, ease: 'back.out(2)' }, '-=0.2')
+        .from('.jfarm-search-card', { opacity: 0, y: 22, duration: 0.45, ease: 'power2.out' }, '-=0.15')
+        .from('.swiggy-cat-card', { opacity: 0, scale: 0.75, y: 18, stagger: 0.035, duration: 0.38, ease: 'back.out(1.6)' }, '-=0.2');
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  // GSAP Stagger Animation for Tractor Fleet Cards when filters/search update
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const cards = containerRef.current.querySelectorAll('.marketplace-tractor-card');
+    if (cards.length > 0) {
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: 24, scale: 0.98 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.35, stagger: 0.035, ease: 'power2.out' }
+      );
+    }
+  }, [serviceFilter, searchQuery, sortBy, selectedLocation]);
+
   const handleBookTractor = (tractor) => {
     if (setSelectedTractor) {
       setSelectedTractor(tractor);
@@ -295,7 +327,7 @@ export default function FindTractor({
   };
 
   return (
-    <div className="find-tractor-page page-anim">
+    <div ref={containerRef} className="find-tractor-page full-bleed-workspace page-anim">
       {/* Guest Mode Banner with return to Login Portal */}
       {!isUserLoggedIn && (
         <div className="guest-browse-banner">
@@ -317,13 +349,36 @@ export default function FindTractor({
         </div>
       )}
 
-      {/* JFarm Services Desktop Hero Banner & QuickRide-style Quick Search Bar (1140px-1200px Desktop Workspace) */}
+      {/* JFarm Services Desktop Hero Banner & QuickRide-style Quick Search Bar (Edge-to-Edge Full Workspace) */}
       <section className="jfarm-hero-section page-anim">
         <div className="jfarm-hero-header">
-          <div className="jfarm-badge-pill">
-            <span className="jfarm-badge-dot">●</span>
-            <span>{isTe ? 'తెలంగాణ వ్యవసాయ యంత్రీకరణ వేదిక' : 'Telangana Farm Machinery Rental Platform'}</span>
+          <div className="jfarm-header-top-row">
+            <div className="jfarm-badge-pill">
+              <span className="jfarm-badge-dot">●</span>
+              <span>{isTe ? 'తెలంగాణ వ్యవసాయ యంత్రీకరణ వేదిక' : 'Telangana Farm Machinery Rental Platform'}</span>
+            </div>
+
+            {/* JFarm Services Hirer vs Renter Mode Switch (Reference: jfarmservices.in/renter.php) */}
+            <div className="jfarm-portal-switch" role="tablist">
+              <button
+                type="button"
+                className="jfarm-switch-pill active"
+                title={isTe ? 'రైతు అద్దె వేదిక' : 'Hire Machinery (Farmer)'}
+              >
+                <span>🌾 {isTe ? 'రైతు అద్దె వేదిక' : 'Hire Machinery'}</span>
+              </button>
+              <button
+                type="button"
+                className="jfarm-switch-pill"
+                onClick={() => setActivePage('owner-registration')}
+                title={isTe ? 'యంత్రాల యజమాని పోర్టల్' : 'List Machinery (Renter Hub)'}
+              >
+                <span>🚜 {isTe ? 'యంత్ర యజమానుల కేంద్రం' : 'List Machinery (Renter Hub)'}</span>
+                <span className="jfarm-zero-badge">0% Fee</span>
+              </button>
+            </div>
           </div>
+
           <h1 className="jfarm-hero-title">
             {isTe ? 'ఉత్తమ యంత్రం. ఉత్తమ ధర.' : 'Best Machinery. Best Fare.'}
           </h1>
@@ -692,6 +747,71 @@ export default function FindTractor({
           );
         })}
       </div>
+
+      {/* JFarm Services Renter & Machinery Owner Hub Section (Direct Reference to https://www.jfarmservices.in/renter.php) */}
+      <section className="jfarm-renter-hub-card page-anim">
+        <div className="jfarm-renter-hub-content">
+          <div className="jfarm-renter-badge-row">
+            <span className="jfarm-renter-kicker">
+              🚜 {isTe ? 'TAFE / అగ్రిరెంట్ యంత్రాల యజమానుల నెట్‌వర్క్' : 'JFarm Machinery Renter & Owner Network'}
+            </span>
+            <span className="jfarm-renter-pill">0% Platform Fee • 100% Direct</span>
+          </div>
+
+          <h2 className="jfarm-renter-heading">
+            {isTe
+              ? 'మీ ట్రాక్టర్ లేదా హార్వెస్టర్‌తో నెలకు ₹40,000 - ₹80,000 అద్దె ఆదాయం పొందండి'
+              : 'Monetize Your Idle Machinery • Earn Guaranteed Rental Income'}
+          </h2>
+
+          <p className="jfarm-renter-subheading">
+            {isTe
+              ? 'తెలంగాణలోని 33 జిల్లాల్లో సమీప గ్రామాల రైతులతో నేరుగా అనుసంధానం అవ్వండి. 0% కమీషన్, ఉచిత నమోదు మరియు నేరుగా రైతు నుండి యజమానికి చెల్లింపులు.'
+              : 'Tafe JFarm Services & AgriRent model connects tractor, rotavator, and harvester owners directly with neighborhood farmers across 33 Telangana districts. Zero brokerage, instant WhatsApp work orders, and direct payments.'}
+          </p>
+
+          <div className="jfarm-renter-highlights">
+            <div className="renter-highlight-item">
+              <span className="highlight-icon">💰</span>
+              <div>
+                <strong>{isTe ? '0% కమీషన్ ఫీజు' : '0% Commission Fee'}</strong>
+                <p>{isTe ? 'మీ కష్టార్జితం మొత్తం మీకే చేరుతుంది' : 'Retain 100% of your hourly & per-acre earnings'}</p>
+              </div>
+            </div>
+            <div className="renter-highlight-item">
+              <span className="highlight-icon">⚡</span>
+              <div>
+                <strong>{isTe ? 'గ్రామాల నుండి నేరుగా ఆర్డర్లు' : 'Direct Village Orders'}</strong>
+                <p>{isTe ? 'రైతుల నుండి నేరుగా కాల్స్ & వాట్సాప్ సందేశాలు' : 'Direct phone & WhatsApp calls from farmers in nearby mandals'}</p>
+              </div>
+            </div>
+            <div className="renter-highlight-item">
+              <span className="highlight-icon">🛡️</span>
+              <div>
+                <strong>{isTe ? 'ధృవీకరించబడిన నెట్‌వర్క్' : '100% RC & KYC Verified'}</strong>
+                <p>{isTe ? 'పారదర్శకమైన మరియు సురక్షితమైన వ్యవసాయ సేవలు' : 'Trusted rural community with transparent ratings'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="jfarm-renter-hub-actions">
+          <button
+            type="button"
+            className="btn-jfarm-renter-primary"
+            onClick={() => setActivePage('owner-registration')}
+          >
+            <span>{isTe ? 'యంత్రం నమోదు చేయండి 🚜' : 'List Machinery as Renter 🚜'}</span>
+          </button>
+          <button
+            type="button"
+            className="btn-jfarm-renter-secondary"
+            onClick={() => setActivePage('owner-inbox')}
+          >
+            <span>{isTe ? 'వర్క్ ఇన్‌బాక్స్ చూడండి 📬' : 'Owner Work Inbox 📬'}</span>
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

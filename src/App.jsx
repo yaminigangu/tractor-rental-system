@@ -7,6 +7,7 @@ import LocationModal from './components/LocationModal';
 import MobileBottomNav from './components/MobileBottomNav';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import OfflineNotificationBanner from './components/OfflineNotificationBanner';
+import TractorLoadingScreen from './components/TractorLoadingScreen';
 import Home from './pages/Home';
 import FindTractor from './pages/FindTractor';
 import TractorBooking from './pages/TractorBooking';
@@ -88,6 +89,9 @@ function App() {
 
   // PWA Installation Hook
   const pwa = usePwaInstall();
+
+  // GSAP Tractor Loading Screen State with Emojis & Line Art
+  const [isLoadingApp, setIsLoadingApp] = useState(true);
 
   // Active Logged-in Farmer State with LocalStorage
   const [currentFarmer, setCurrentFarmer] = useState(() => {
@@ -513,6 +517,7 @@ function App() {
           onAdminLogout={handleAdminLogout}
           isInstalled={pwa.isInstalled}
           onInstallApp={pwa.promptInstall}
+          onShowLoader={() => setIsLoadingApp(true)}
         />
       )}
 
@@ -578,6 +583,14 @@ function App() {
 
       {/* PWA App Install Banner & Guided Modal */}
       <PwaInstallPrompt language={language} pwa={pwa} />
+
+      {/* GSAP Tractor Loading Screen with Emojis & Line Art */}
+      {isLoadingApp && (
+        <TractorLoadingScreen
+          language={language}
+          onComplete={() => setIsLoadingApp(false)}
+        />
+      )}
     </div>
   );
 }
