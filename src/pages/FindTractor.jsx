@@ -763,34 +763,8 @@ export default function FindTractor({
         })}
       </div>
 
-      {/* AgriRent Trust & Guarantee Footer Section with Privacy Policy & Rural Support */}
+      {/* AgriRent Privacy Policy & Rural Platform Footer */}
       <footer className="agrirent-app-footer page-anim">
-        {/* Trust Badges Strip (Second Uploaded Photo Reference) */}
-        <div className="agrirent-footer-trust-strip">
-          <div className="footer-trust-item">
-            <span className="footer-trust-icon">📞</span>
-            <span>
-              <strong>{isTe ? 'టోల్-ఫ్రీ సహాయం:' : 'Toll-Free Helpline:'}</strong>{' '}
-              <a href="tel:18004251122" className="footer-helpline-link">1800-425-1122</a>
-            </span>
-          </div>
-          <div className="footer-trust-dot">•</div>
-          <div className="footer-trust-item">
-            <span className="footer-trust-icon">⚡</span>
-            <span>{isTe ? '~15 నిమిషాల వేగవంతమైన రాక' : '~15 Mins Quick Dispatch Guarantee'}</span>
-          </div>
-          <div className="footer-trust-dot">•</div>
-          <div className="footer-trust-item">
-            <span className="footer-trust-icon">🛡️</span>
-            <span>{isTe ? '100% ధృవీకరించబడిన యజమానులు' : '100% KYC & RC Verified Owners'}</span>
-          </div>
-          <div className="footer-trust-dot">•</div>
-          <div className="footer-trust-item">
-            <span className="footer-trust-icon">🤝</span>
-            <span>{isTe ? '0% కమీషన్ • రైతు నుండి రైతుకు' : '0% Commission • Farmer-to-Farmer'}</span>
-          </div>
-        </div>
-
         {/* Footer Main Area Styled Like a Privacy Policy & Legal Section */}
         <div className="agrirent-footer-body">
           <div className="agrirent-footer-main">

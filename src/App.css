@@ -11767,61 +11767,12 @@ html {
 
 /* --------------------------------------------------------
    AgriRent Rural Platform Footer & Privacy Policy Section
-   (Includes Photo 2 Trust Badges Strip & Farmer Protection Policy)
    -------------------------------------------------------- */
 .agrirent-app-footer {
   width: 100%;
-  margin-top: 42px;
+  margin-top: 36px;
   margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   box-sizing: border-box;
-}
-
-/* Trust Badges Strip (Photo 2 Reference) */
-.agrirent-footer-trust-strip {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 16px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: 16px;
-  flex-wrap: wrap;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
-  font-size: 13px;
-  color: #334155;
-  font-weight: 600;
-}
-
-.footer-trust-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.footer-trust-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
-.footer-helpline-link {
-  color: #15803d;
-  font-weight: 800;
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-
-.footer-helpline-link:hover {
-  color: #166534;
-  text-decoration: underline;
-}
-
-.footer-trust-dot {
-  color: #cbd5e1;
-  font-size: 13px;
 }
 
 /* Footer Main Body - Slate & Emerald Theme */
@@ -11856,12 +11807,6 @@ html {
   .agrirent-footer-main {
     grid-template-columns: 1fr;
     gap: 24px;
-  }
-  .agrirent-footer-trust-strip {
-    justify-content: flex-start;
-    padding: 14px 16px;
-    gap: 12px;
-    font-size: 12px;
   }
 }
 
