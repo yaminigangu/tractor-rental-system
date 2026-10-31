@@ -477,27 +477,35 @@ export default function OwnerRegistration({
             </div>
           )}
 
-          {/* Segmented Switcher Pill Bar (4-Step KYC Authentication vs Returning Owner Login) */}
-          <div className="portal-tabs-pill" style={{ marginBottom: '16px' }}>
+          {/* Segmented Switcher Pill Bar (4-Step KYC Registration vs Returning Owner Login) */}
+          <div className="portal-tabs-pill" role="tablist" style={{ marginBottom: '16px' }}>
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'kyc'}
               className={`portal-tab-btn ${activeTab === 'kyc' ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('kyc');
                 setErrorMsg('');
               }}
+              title={isTe ? '4-దశల KYC ధృవీకరణ' : '4-Step KYC Registration'}
             >
-              ⚡ {isTe ? '4-దశల KYC ధృవీకరణ' : '4-Step KYC Authentication'}
+              <span className="portal-tab-icon">⚡</span>
+              <span className="portal-tab-text">{isTe ? '4-దశల KYC ధృవీకరణ' : '4-Step KYC Registration'}</span>
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'login'}
               className={`portal-tab-btn ${activeTab === 'login' ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('login');
                 setErrorMsg('');
               }}
+              title={isTe ? 'వాహన యజమాని లాగిన్' : 'Returning Owner Login'}
             >
-              🔑 {isTe ? 'వాహన యజమాని లాగిన్' : 'Returning Vehicle Owner Login'}
+              <span className="portal-tab-icon">🔑</span>
+              <span className="portal-tab-text">{isTe ? 'వాహన యజమాని లాగిన్' : 'Returning Owner Login'}</span>
             </button>
           </div>
 

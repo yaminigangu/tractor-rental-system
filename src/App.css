@@ -4052,26 +4052,50 @@ html {
 /* Segmented Pill Tabs (Exact Match to Screenshot) */
 .portal-tabs-pill {
   width: 100%;
+  max-width: 100%;
   display: flex;
   background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 4px;
-  gap: 4px;
+  gap: 6px;
   margin-bottom: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .portal-tab-btn {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   background: transparent;
   border: none;
   border-radius: 10px;
-  padding: 10px 8px;
-  font-size: 13px;
+  padding: 9px 8px;
+  font-size: 12px;
   font-weight: 700;
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.portal-tab-btn .portal-tab-icon {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.portal-tab-btn .portal-tab-text {
+  flex: 1;
+  min-width: 0;
   text-align: center;
 }
 
@@ -4079,6 +4103,12 @@ html {
   background: #ffffff;
   color: #0284c7;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-weight: 800;
+}
+
+.portal-tab-btn:hover:not(.active) {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.65);
 }
 
 /* 4-Step Circle Progress Indicators (Matches Screenshot) */
@@ -5485,6 +5515,13 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+
+.signin-top-nav:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28), 0 0 0 1.5px rgba(34, 197, 94, 0.35);
+  border-color: rgba(187, 247, 208, 0.95);
 }
 
 .signin-card-container {
@@ -5507,6 +5544,32 @@ html {
   box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.15) !important;
   position: relative;
   box-sizing: border-box;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease !important;
+}
+
+.signin-main-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 28px;
+  right: 28px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0) 0%, rgba(34, 197, 94, 0.75) 50%, rgba(34, 197, 94, 0) 100%);
+  opacity: 0.5;
+  transition: opacity 0.35s ease, height 0.35s ease;
+  pointer-events: none;
+}
+
+.signin-main-card:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 0 34px 75px -12px rgba(0, 0, 0, 0.45), 0 16px 36px rgba(20, 83, 45, 0.25), 0 0 0 2px rgba(34, 197, 94, 0.45) !important;
+  border-color: rgba(187, 247, 208, 0.95) !important;
+}
+
+.signin-main-card:hover::before {
+  opacity: 1;
+  height: 3.5px;
 }
 
 .signin-safety-footer {
@@ -5543,6 +5606,13 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+
+.signin-top-nav:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28), 0 0 0 1.5px rgba(34, 197, 94, 0.35);
+  border-color: rgba(187, 247, 208, 0.95);
 }
 
 .signin-nav-left {
@@ -5648,6 +5718,7 @@ html {
   box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.15);
   position: relative;
   box-sizing: border-box;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease;
 }
 
 .signin-gear-btn {
@@ -7179,6 +7250,13 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+
+.signin-top-nav:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28), 0 0 0 1.5px rgba(34, 197, 94, 0.35);
+  border-color: rgba(187, 247, 208, 0.95);
 }
 
 .signin-card-container {
@@ -7201,6 +7279,32 @@ html {
   box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.15) !important;
   position: relative;
   box-sizing: border-box;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease !important;
+}
+
+.signin-main-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 28px;
+  right: 28px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0) 0%, rgba(34, 197, 94, 0.75) 50%, rgba(34, 197, 94, 0) 100%);
+  opacity: 0.5;
+  transition: opacity 0.35s ease, height 0.35s ease;
+  pointer-events: none;
+}
+
+.signin-main-card:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 0 34px 75px -12px rgba(0, 0, 0, 0.45), 0 16px 36px rgba(20, 83, 45, 0.25), 0 0 0 2px rgba(34, 197, 94, 0.45) !important;
+  border-color: rgba(187, 247, 208, 0.95) !important;
+}
+
+.signin-main-card:hover::before {
+  opacity: 1;
+  height: 3.5px;
 }
 
 .signin-safety-footer {
@@ -7237,6 +7341,13 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+
+.signin-top-nav:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28), 0 0 0 1.5px rgba(34, 197, 94, 0.35);
+  border-color: rgba(187, 247, 208, 0.95);
 }
 
 .signin-nav-left {
@@ -7342,6 +7453,7 @@ html {
   box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.15);
   position: relative;
   box-sizing: border-box;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease;
 }
 
 .signin-gear-btn {
