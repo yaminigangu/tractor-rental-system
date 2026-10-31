@@ -11004,3 +11004,635 @@ html {
   background: #cbd5e1;
   color: #0f172a;
 }
+
+/* ========================================================
+   DESKTOP & LAPTOP WORKSPACE (1140px - 1200px)
+   JFarm Services & QuickRide Modern Tractor Rental Web-App
+   Resolutions: 1920x1080, 1366x768, and Laptop Displays
+   ======================================================== */
+
+/* Central content container & workspace spanning 1140px to 1200px wide */
+.find-tractor-page {
+  width: 100% !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  padding: 24px 20px 100px 20px !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 1024px) {
+  .page-container {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    padding: 24px 24px 80px 24px !important;
+  }
+}
+
+/* --------------------------------------------------------
+   JFarm Services Hero Banner & QuickRide Quick Search Card
+   -------------------------------------------------------- */
+.jfarm-hero-section {
+  width: 100%;
+  margin-bottom: 28px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px -5px rgba(20, 83, 45, 0.18), 0 4px 12px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #0d3b19 0%, #14532d 45%, #15803d 100%);
+  color: #ffffff;
+  position: relative;
+  animation: jfarmFadeIn 0.4s ease-out;
+}
+
+@keyframes jfarmFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.jfarm-hero-header {
+  padding: 32px 32px 24px 32px;
+  position: relative;
+}
+
+.jfarm-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #fef08a;
+  margin-bottom: 14px;
+}
+
+.jfarm-badge-dot {
+  color: #4ade80;
+  font-size: 11px;
+  animation: pulseDot 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.jfarm-hero-title {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  margin: 0 0 10px 0;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.jfarm-hero-subtitle {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #dcfce7;
+  max-width: 820px;
+  margin: 0 0 24px 0;
+  font-weight: 400;
+}
+
+/* QuickRide Style Horizontal Tab Pills (AIRPORT | RENTAL | OUTSTATION | LOCAL) */
+.jfarm-quick-tabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.jfarm-tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 22px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(6px);
+}
+
+.jfarm-tab-pill:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: #ffffff;
+  transform: translateY(-2px);
+}
+
+.jfarm-tab-pill.active {
+  background: #ffffff;
+  color: #14532d;
+  border-color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  transform: translateY(-2px);
+}
+
+.jfarm-tab-pill.active .jfarm-tab-text {
+  color: #14532d;
+}
+
+.jfarm-tab-icon {
+  font-size: 14px;
+}
+
+.jfarm-tab-text {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* --------------------------------------------------------
+   QuickRide Horizontal Search Card Form (Desktop 1140-1200px)
+   -------------------------------------------------------- */
+.jfarm-search-card {
+  background: #ffffff;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 22px 28px 18px 28px;
+  color: #0f172a;
+}
+
+.jfarm-search-form {
+  display: grid;
+  grid-template-columns: 1.4fr 1.3fr 1.8fr 1fr auto;
+  gap: 14px;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 1080px) {
+  .jfarm-search-form {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .jfarm-search-cta-btn {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 680px) {
+  .jfarm-search-form {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .jfarm-search-cta-btn {
+    grid-column: span 1;
+  }
+}
+
+.jfarm-search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.jfarm-field-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #64748b;
+  display: block;
+}
+
+.jfarm-field-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 10px 14px;
+  min-height: 46px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.jfarm-field-value:hover {
+  background: #f1f5f9;
+  border-color: #10b981;
+}
+
+.jfarm-location-text {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.jfarm-change-link {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #15803d;
+  flex-shrink: 0;
+}
+
+.jfarm-field-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0 12px;
+  min-height: 46px;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.jfarm-field-select-wrap:focus-within {
+  border-color: #10b981;
+  background: #ffffff;
+}
+
+.jfarm-field-select {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  appearance: none;
+  cursor: pointer;
+  padding: 12px 18px 12px 6px;
+}
+
+.jfarm-select-chevron {
+  position: absolute;
+  right: 14px;
+  pointer-events: none;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.jfarm-field-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0 12px;
+  min-height: 46px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.jfarm-field-input-wrap:focus-within {
+  border-color: #10b981;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.jfarm-field-icon {
+  font-size: 15px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.jfarm-field-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  padding: 12px 28px 12px 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.jfarm-clear-btn {
+  position: absolute;
+  right: 10px;
+  background: #e2e8f0;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  color: #475569;
+}
+
+.jfarm-clear-btn:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+.jfarm-search-cta-btn {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 14px;
+  padding: 0 24px;
+  height: 46px;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 6px 18px rgba(22, 101, 52, 0.28);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.jfarm-search-cta-btn:hover {
+  background: linear-gradient(135deg, #166534 0%, #14532d 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(22, 101, 52, 0.35);
+}
+
+.jfarm-search-cta-btn:active {
+  transform: translateY(0);
+}
+
+/* JFarm Services Trust Strip */
+.jfarm-trust-strip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.jfarm-trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jfarm-trust-icon {
+  font-size: 14px;
+}
+
+.jfarm-helpline-link {
+  color: #15803d;
+  font-weight: 800;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.jfarm-helpline-link:hover {
+  text-decoration: underline;
+  color: #0f5132;
+}
+
+.jfarm-trust-dot {
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+/* --------------------------------------------------------
+   Responsive Desktop 3-Column Marketplace Cards Grid
+   (1920x1080 and 1366x768 Workspace Alignment)
+   -------------------------------------------------------- */
+.marketplace-cards-container {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 24px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 1100px) {
+  .marketplace-cards-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 20px !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .marketplace-cards-container {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+/* Card Visual Improvements & Micro-Animations */
+.marketplace-tractor-card {
+  background: #ffffff !important;
+  border-radius: 20px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
+  position: relative !important;
+}
+
+.marketplace-tractor-card:hover {
+  transform: translateY(-6px) !important;
+  box-shadow: 0 16px 36px -4px rgba(22, 101, 52, 0.14), 0 6px 16px rgba(0, 0, 0, 0.06) !important;
+  border-color: #86efac !important;
+}
+
+.marketplace-image-wrapper {
+  position: relative !important;
+  width: 100% !important;
+  height: 220px !important;
+  background: #f1f5f9 !important;
+  overflow: hidden !important;
+}
+
+.marketplace-tractor-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+.marketplace-tractor-card:hover .marketplace-tractor-img {
+  transform: scale(1.05) !important;
+}
+
+.marketplace-dispatch-banner {
+  background: linear-gradient(90deg, #ecfdf5 0%, #f0fdf4 100%) !important;
+  border-bottom: 1px solid #dcfce7 !important;
+  color: #166534 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  padding: 8px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+.dispatch-bolt {
+  color: #eab308 !important;
+  font-size: 13px !important;
+  display: inline-block !important;
+  animation: boltPulse 2s infinite ease-in-out !important;
+}
+
+@keyframes boltPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(234, 179, 8, 0.4)); }
+  50% { transform: scale(1.18); filter: drop-shadow(0 0 6px rgba(234, 179, 8, 0.8)); }
+}
+
+.marketplace-rating-tag {
+  position: absolute !important;
+  bottom: 10px !important;
+  right: 12px !important;
+  background: rgba(15, 23, 42, 0.88) !important;
+  backdrop-filter: blur(8px) !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  padding: 4px 11px !important;
+  border-radius: 20px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.marketplace-card-content {
+  padding: 16px 18px 18px 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+}
+
+.marketplace-title-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.marketplace-tractor-name {
+  font-size: 17.5px !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+  line-height: 1.25 !important;
+  margin: 0 !important;
+}
+
+.marketplace-hp-pill {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  padding: 3px 9px !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+  white-space: nowrap !important;
+}
+
+.marketplace-owner-row {
+  font-size: 13px !important;
+  color: #475569 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 12px !important;
+}
+
+.marketplace-suitable-section {
+  margin-bottom: 16px !important;
+  flex: 1 !important;
+}
+
+.marketplace-green-tag {
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  color: #047857 !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  padding: 3px 10px !important;
+  border-radius: 8px !important;
+  transition: all 0.15s ease !important;
+}
+
+.marketplace-green-tag:hover {
+  background: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+}
+
+.marketplace-price-action-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding-top: 14px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  margin-top: auto !important;
+}
+
+.marketplace-price-main {
+  font-size: 21px !important;
+  font-weight: 900 !important;
+  color: #166534 !important;
+}
+
+.marketplace-book-btn {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 10px 18px !important;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px rgba(22, 101, 52, 0.28) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.marketplace-book-btn:hover {
+  background: linear-gradient(135deg, #166534 0%, #14532d 100%) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 8px 20px rgba(22, 101, 52, 0.38) !important;
+}
+
+.marketplace-book-btn:active {
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Category Circle Float on Hover */
+.swiggy-cat-card:hover .swiggy-cat-circle {
+  transform: translateY(-4px) scale(1.04);
+  box-shadow: 0 8px 20px rgba(22, 101, 52, 0.18);
+  border-color: #15803d;
+}
+
+.swiggy-cat-card {
+  transition: transform 0.2s ease;
+}
+
+.swiggy-cat-card:hover {
+  transform: translateY(-2px);
+}
+

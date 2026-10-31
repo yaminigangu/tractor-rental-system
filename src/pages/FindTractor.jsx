@@ -286,6 +286,14 @@ export default function FindTractor({
     setActivePage('booking-form');
   };
 
+  const handleSearchSubmit = (e) => {
+    if (e) e.preventDefault();
+    const resultsEl = document.getElementById('fleet-results');
+    if (resultsEl) {
+      resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <div className="find-tractor-page page-anim">
       {/* Guest Mode Banner with return to Login Portal */}
@@ -309,33 +317,181 @@ export default function FindTractor({
         </div>
       )}
 
-      {/* Top Search & Filter Bar */}
-      <div className="marketplace-controls-wrap">
-        {/* Search Input */}
-        <div className="marketplace-search-box">
-          <span className="marketplace-search-icon">🔍</span>
-          <input
-            type="text"
-            className="marketplace-search-input"
-            placeholder={
-              isTe 
-                ? "గ్రామం ద్వారా వెతకండి (ఉదా: పరకాల, మేడారం, పస్రా) లేదా యంత్రం..." 
-                : "Search village (e.g. Parkal, Medaram, Pasra) or machine..."
-            }
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              className="marketplace-search-clear"
-              onClick={() => setSearchQuery('')}
-            >
-              ✕
-            </button>
-          )}
+      {/* JFarm Services Desktop Hero Banner & QuickRide-style Quick Search Bar (1140px-1200px Desktop Workspace) */}
+      <section className="jfarm-hero-section page-anim">
+        <div className="jfarm-hero-header">
+          <div className="jfarm-badge-pill">
+            <span className="jfarm-badge-dot">●</span>
+            <span>{isTe ? 'తెలంగాణ వ్యవసాయ యంత్రీకరణ వేదిక' : 'Telangana Farm Machinery Rental Platform'}</span>
+          </div>
+          <h1 className="jfarm-hero-title">
+            {isTe ? 'ఉత్తమ యంత్రం. ఉత్తమ ధర.' : 'Best Machinery. Best Fare.'}
+          </h1>
+          <p className="jfarm-hero-subtitle">
+            {isTe
+              ? 'తెలంగాణలోని 33 జిల్లాల్లో సమీప ట్రాక్టర్లు, రొటవేటర్లు, హార్వెస్టర్లను నేరుగా యజమానుల నుండి అద్దెకు తీసుకోండి • 0% కమీషన్'
+              : 'Direct Farmer-to-Farmer (F2F) tractor and equipment rental across Telangana. Transparent rates with instant village dispatch.'}
+          </p>
+
+          {/* Quick Category Toggle Pills (QuickRide Style: AIRPORT | RENTAL | OUTSTATION | LOCAL) */}
+          <div className="jfarm-quick-tabs" role="tablist">
+            {[
+              { id: 'All', label: isTe ? 'అన్నీ' : 'ALL FLEET', icon: '🚜' },
+              { id: 'Ploughing', label: isTe ? 'దుక్కి' : 'PLOUGHING', icon: '🌱' },
+              { id: 'Rotavator', label: isTe ? 'రొటవేటర్' : 'ROTAVATOR', icon: '🔄' },
+              { id: 'Cultivator', label: isTe ? 'కల్టివేటర్' : 'CULTIVATOR', icon: '🌾' },
+              { id: 'Corn Harvester', label: isTe ? 'హార్వెస్టర్' : 'HARVESTER', icon: '🌽' },
+              { id: 'Straw Baler', label: isTe ? 'బెయిలర్' : 'STRAW BALER', icon: '📦' },
+              { id: 'Corn Seeder', label: isTe ? 'సీడర్' : 'SEED PLANTER', icon: '🌱' },
+              { id: 'Trailer Services', label: isTe ? 'ట్రాలీ' : 'TRAILER', icon: '🚚' }
+            ].map((tab) => {
+              const isActive = (serviceFilter || 'All').toLowerCase() === tab.id.toLowerCase();
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`jfarm-tab-pill ${isActive ? 'active' : ''}`}
+                  onClick={() => setServiceFilter(tab.id)}
+                >
+                  <span className="jfarm-tab-icon">{tab.icon}</span>
+                  <span className="jfarm-tab-text">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+
+        {/* QuickRide Desktop Search Toolbar (Horizontal across 1140px-1200px) */}
+        <div className="jfarm-search-card">
+          <form className="jfarm-search-form" onSubmit={handleSearchSubmit}>
+            {/* Field 1: Location */}
+            <div
+              className="jfarm-search-field field-location"
+              onClick={onOpenLocationPicker}
+              role="button"
+              tabIndex={0}
+            >
+              <span className="jfarm-field-label">
+                {isTe ? 'గ్రామం / లొకేషన్' : 'VILLAGE / BASE'}
+              </span>
+              <div className="jfarm-field-value">
+                <span className="jfarm-field-icon">📍</span>
+                <span className="jfarm-location-text">
+                  {selectedLocation ? `${activeVillage}, ${activeDistrict}` : (isTe ? 'హసన్‌పర్తి, హనుమకొండ' : 'Hasanparthy, Hanumakonda')}
+                </span>
+                <span className="jfarm-change-link">{isTe ? 'మార్చండి ▾' : 'Change ▾'}</span>
+              </div>
+            </div>
+
+            {/* Field 2: Equipment Implement */}
+            <div className="jfarm-search-field field-implement">
+              <label htmlFor="jfarm-implement-select" className="jfarm-field-label">
+                {isTe ? 'యంత్ర రకం' : 'IMPLEMENT TYPE'}
+              </label>
+              <div className="jfarm-field-select-wrap">
+                <span className="jfarm-field-icon">🚜</span>
+                <select
+                  id="jfarm-implement-select"
+                  className="jfarm-field-select"
+                  value={serviceFilter}
+                  onChange={(e) => setServiceFilter(e.target.value)}
+                >
+                  <option value="All">{isTe ? 'అన్ని యంత్రాలు (All)' : 'All Machinery'}</option>
+                  <option value="Ploughing">🌱 {isTe ? 'దుక్కి దున్నడం (Ploughing)' : 'Ploughing'}</option>
+                  <option value="Rotavator">🔄 {isTe ? 'రొటవేటర్ (Rotavator)' : 'Rotavator'}</option>
+                  <option value="Cultivator">🌾 {isTe ? 'కల్టివేటర్ (Cultivator)' : 'Cultivator'}</option>
+                  <option value="Corn Harvester">🌽 {isTe ? 'మొక్కజొన్న కోత (Harvester)' : 'Corn Harvester'}</option>
+                  <option value="Straw Baler">📦 {isTe ? 'గడ్డి బెయిలర్ (Straw Baler)' : 'Straw Baler'}</option>
+                  <option value="Corn Seeder">🌱 {isTe ? 'విత్తన యంత్రం (Seed Planter)' : 'Seed Planter'}</option>
+                  <option value="Trailer Services">🚚 {isTe ? 'ట్రాలీ రవాణా (Trailer)' : 'Trailer Trolley'}</option>
+                  <option value="Heavy 50+ HP">⚡ {isTe ? '50+ HP హెవీ ట్రాక్టర్' : '50+ HP Heavy Duty'}</option>
+                </select>
+                <span className="jfarm-select-chevron">▾</span>
+              </div>
+            </div>
+
+            {/* Field 3: Search keyword */}
+            <div className="jfarm-search-field field-search">
+              <label htmlFor="jfarm-search-input" className="jfarm-field-label">
+                {isTe ? 'శోధన' : 'SEARCH MODEL / VILLAGE'}
+              </label>
+              <div className="jfarm-field-input-wrap">
+                <span className="jfarm-field-icon">🔍</span>
+                <input
+                  id="jfarm-search-input"
+                  type="text"
+                  className="jfarm-field-input"
+                  placeholder={isTe ? "ఉదా: మహీంద్రా, స్వరాజ్, రొటవేటర్..." : "e.g. Mahindra, Swaraj, 575..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="jfarm-clear-btn"
+                    onClick={() => setSearchQuery('')}
+                    title="Clear"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Field 4: Sorting */}
+            <div className="jfarm-search-field field-sort">
+              <label htmlFor="jfarm-sort-select" className="jfarm-field-label">
+                {isTe ? 'క్రమబద్ధీకరించు' : 'SORT BY'}
+              </label>
+              <div className="jfarm-field-select-wrap">
+                <select
+                  id="jfarm-sort-select"
+                  className="jfarm-field-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="recommended">⭐ {isTe ? 'సిఫార్సు' : 'Recommended'}</option>
+                  <option value="price-low">📉 {isTe ? 'ధర: తక్కువ నుండి ఎక్కువ' : 'Price: Low to High'}</option>
+                  <option value="price-high">📈 {isTe ? 'ధర: ఎక్కువ నుండి తక్కువ' : 'Price: High to Low'}</option>
+                  <option value="rating">🏆 {isTe ? 'రేటింగ్: ఉత్తమం' : 'Top Rating'}</option>
+                </select>
+                <span className="jfarm-select-chevron">▾</span>
+              </div>
+            </div>
+
+            {/* CTA Button */}
+            <button type="submit" className="jfarm-search-cta-btn">
+              <span>{isTe ? 'యంత్రాలు వెతకండి 🚜' : 'SEARCH MACHINERY 🚜'}</span>
+            </button>
+          </form>
+
+          {/* JFarm Services Trust & Hotline Footer Strip */}
+          <div className="jfarm-trust-strip">
+            <div className="jfarm-trust-item">
+              <span className="jfarm-trust-icon">📞</span>
+              <span>
+                <strong>{isTe ? 'టోల్-ఫ్రీ సహాయం:' : 'Toll-Free Helpline:'}</strong>{' '}
+                <a href="tel:18004251122" className="jfarm-helpline-link">1800-425-1122</a>
+              </span>
+            </div>
+            <div className="jfarm-trust-dot">•</div>
+            <div className="jfarm-trust-item">
+              <span className="jfarm-trust-icon">⚡</span>
+              <span>{isTe ? '~15 నిమిషాల వేగవంతమైన రాక' : '~15 Mins Quick Dispatch Guarantee'}</span>
+            </div>
+            <div className="jfarm-trust-dot">•</div>
+            <div className="jfarm-trust-item">
+              <span className="jfarm-trust-icon">🛡️</span>
+              <span>{isTe ? '100% ధృవీకరించబడిన యజమానులు' : '100% KYC & RC Verified Owners'}</span>
+            </div>
+            <div className="jfarm-trust-dot">•</div>
+            <div className="jfarm-trust-item">
+              <span className="jfarm-trust-icon">🤝</span>
+              <span>{isTe ? '0% కమీషన్ • రైతు నుండి రైతుకు' : '0% Commission • Farmer-to-Farmer'}</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Swiggy-Style "What's on your mind?" Machinery Visual Category Carousel */}
       <section className="swiggy-categories-section page-anim">
@@ -409,7 +565,7 @@ export default function FindTractor({
       </section>
 
       {/* Results Header with Sorting Bar (Swiggy Style: Top X restaurants to explore) */}
-      <div className="marketplace-results-bar">
+      <div id="fleet-results" className="marketplace-results-bar">
         <div className="results-count-wrap">
           <h3 className="results-count-title">
             {isTe 
