@@ -523,9 +523,9 @@ export default function FindTractor({
             </div>
           </div>
 
-          {/* GSAP Animated Video Showcase: Tractor along with Farmer */}
+          {/* GSAP Animated Video Showcase: Tractor along with Farmer (Changes with category selection) */}
           <div className="jfarm-hero-anim-col">
-            <TractorFarmerScene language={language} />
+            <TractorFarmerScene language={language} activeService={serviceFilter} />
           </div>
         </div>
 

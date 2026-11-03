@@ -1,10 +1,109 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 
-export default function TractorFarmerScene({ language = 'en' }) {
-  const isTe = language === 'te';
+// Machinery configurations with Telugu and English titles
+const MACHINERY_CONFIGS = {
+  plough: {
+    id: 'plough',
+    icon: '🌱',
+    labelEn: 'Ploughing Active',
+    labelTe: 'దుక్కి దున్నడం',
+    titleEn: 'Mahindra 575 DI + 3-Disc Furrow Plough',
+    titleTe: 'మహీంద్రా 575 DI + 3-డిస్క్ నాగలి దుక్కి',
+    furrowColor: '#78350f',
+    sproutIcon: '🌱'
+  },
+  rotavator: {
+    id: 'rotavator',
+    icon: '🔄',
+    labelEn: 'Rotavator Active',
+    labelTe: 'రొటవేటర్ సేద్యం',
+    titleEn: 'Swaraj 744 FE + Heavy-Duty Rotary Tiller (Rotavator)',
+    titleTe: 'స్వరాజ్ 744 FE + హెవీ రొటవేటర్',
+    furrowColor: '#92400e',
+    sproutIcon: '🌾'
+  },
+  cultivator: {
+    id: 'cultivator',
+    icon: '🌾',
+    labelEn: 'Cultivator Active',
+    labelTe: 'కల్టివేటర్ సేద్యం',
+    titleEn: 'Farmtrac 60 Powermaxx + 9-Tyne Spring Cultivator',
+    titleTe: 'ఫార్మ్‌ట్రాక్ 60 + 9-టైన్ స్ప్రింగ్ కల్టివేటర్',
+    furrowColor: '#78350f',
+    sproutIcon: '🌿'
+  },
+  harvester: {
+    id: 'harvester',
+    icon: '🌽',
+    labelEn: 'Harvester Active',
+    labelTe: 'కోత యంత్రం',
+    titleEn: 'Kartar 4000 Maize & Paddy Combine Harvester • 101 HP',
+    titleTe: 'కర్తార్ 4000 కంబైన్ హార్వెస్టర్ (మొక్కజొన్న/వరి)',
+    furrowColor: '#ca8a04',
+    sproutIcon: '🌽'
+  },
+  baler: {
+    id: 'baler',
+    icon: '📦',
+    labelEn: 'Straw Baler Active',
+    labelTe: 'గడ్డి బెయిలర్',
+    titleEn: 'John Deere 5050D + Round Straw Baler',
+    titleTe: 'జాన్ డీర్ 5050D + రౌండ్ గడ్డి బెయిలర్',
+    furrowColor: '#eab308',
+    sproutIcon: '📦'
+  },
+  seeder: {
+    id: 'seeder',
+    icon: '🌱',
+    labelEn: 'Seed Planter Active',
+    labelTe: 'విత్తన నాటే యంత్రం',
+    titleEn: 'Mahindra 475 DI + Precision Seed & Fertilizer Planter',
+    titleTe: 'మహీంద్రా 475 DI + విత్తన సీడర్ డ్రిల్',
+    furrowColor: '#65a30d',
+    sproutIcon: '🌱'
+  },
+  trailer: {
+    id: 'trailer',
+    icon: '🚚',
+    labelEn: 'Trailer Trolley Active',
+    labelTe: 'ట్రాలీ రవాణా',
+    titleEn: 'Sonalika DI 745 + 4-Ton Hydraulic Tipping Trolley',
+    titleTe: 'సోనాలికా DI 745 + 4-టన్ హైడ్రాలిక్ ట్రాలీ',
+    furrowColor: '#78350f',
+    sproutIcon: '🌾'
+  },
+  all: {
+    id: 'all',
+    icon: '🚜',
+    labelEn: 'All Fleet Drive',
+    labelTe: 'అన్ని ట్రాక్టర్లు',
+    titleEn: 'Mahindra 575 DI Sarpanch • 47 HP Tractor Fleet',
+    titleTe: 'మహీంద్రా 575 DI సర్పంచ్ • 47 HP ఫ్లీట్',
+    furrowColor: '#78350f',
+    sproutIcon: '🌱'
+  }
+};
 
-  // Refs for GSAP animation targets
+function normalizeServiceMode(service) {
+  if (!service) return 'all';
+  const s = service.toLowerCase();
+  if (s.includes('plough') || s.includes('దుక్కి')) return 'plough';
+  if (s.includes('rotavat') || s.includes('రొటవేటర్')) return 'rotavator';
+  if (s.includes('cultivat') || s.includes('కల్టివేటర్')) return 'cultivator';
+  if (s.includes('harvest') || s.includes('కోత')) return 'harvester';
+  if (s.includes('baler') || s.includes('straw') || s.includes('బెయిలర్')) return 'baler';
+  if (s.includes('seeder') || s.includes('plant') || s.includes('విత్తన')) return 'seeder';
+  if (s.includes('trailer') || s.includes('trolley') || s.includes('ట్రాలీ')) return 'trailer';
+  return 'all';
+}
+
+export default function TractorFarmerScene({ language = 'en', activeService = 'All' }) {
+  const isTe = language === 'te';
+  const mode = normalizeServiceMode(activeService);
+  const currentConfig = MACHINERY_CONFIGS[mode] || MACHINERY_CONFIGS.all;
+
+  // Master Scene Refs
   const sceneWrapperRef = useRef(null);
   const tractorChassisRef = useRef(null);
   const farmerRef = useRef(null);
@@ -17,85 +116,262 @@ export default function TractorFarmerScene({ language = 'en' }) {
   const dustContainerRef = useRef(null);
   const sunRaysRef = useRef(null);
 
+  // Implement Specific Refs
+  const ploughRef = useRef(null);
+  const ploughDiscsRef = useRef(null);
+  const rotavatorBodyRef = useRef(null);
+  const rotavatorBladesRef = useRef(null);
+  const cultivatorTinesRef = useRef(null);
+  const harvesterReelRef = useRef(null);
+  const harvesterCropsRef = useRef(null);
+  const balerWheelRef = useRef(null);
+  const balerPickupRef = useRef(null);
+  const strawBaleRef = useRef(null);
+  const seederWheelRef = useRef(null);
+  const trailerChassisRef = useRef(null);
+  const trailerWheel1Ref = useRef(null);
+  const trailerWheel2Ref = useRef(null);
+
   // Player controls
   const [isPlaying, setIsPlaying] = useState(true);
   const [speedMultiplier, setSpeedMultiplier] = useState(1); // 1 = normal, 2 = turbo
 
   useEffect(() => {
-    // Master GSAP Context
+    // Master GSAP Context for the active machinery mode
     const ctx = gsap.context(() => {
-      // 1. Continuous Wheel Spin (Front & Big Rear Wheel)
-      const wheelTween = gsap.to([frontWheelRef.current, rearWheelRef.current], {
-        rotation: 360,
-        duration: 1.1 / speedMultiplier,
-        repeat: -1,
-        ease: 'none',
-        transformOrigin: '50% 50%'
-      });
+      // 1. Wheel Spin Tweens
+      const wheelsToSpin = [frontWheelRef.current, rearWheelRef.current];
+      if (trailerWheel1Ref.current) wheelsToSpin.push(trailerWheel1Ref.current);
+      if (trailerWheel2Ref.current) wheelsToSpin.push(trailerWheel2Ref.current);
+      if (balerWheelRef.current) wheelsToSpin.push(balerWheelRef.current);
 
-      // 2. Tractor Suspension Engine Chug & Terrain Vibration
-      const chassisTween = gsap.to(tractorChassisRef.current, {
-        y: -4,
-        rotation: 0.9,
-        duration: 0.32 / speedMultiplier,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-        transformOrigin: 'bottom center'
-      });
+      const activeWheels = wheelsToSpin.filter(Boolean);
+      let wheelTween = null;
+      if (activeWheels.length > 0) {
+        wheelTween = gsap.to(activeWheels, {
+          rotation: 360,
+          duration: 1.1 / speedMultiplier,
+          repeat: -1,
+          ease: 'none',
+          transformOrigin: '50% 50%'
+        });
+      }
+
+      // 2. Tractor Suspension Engine Chug & Vibration
+      let chassisTween = null;
+      if (tractorChassisRef.current) {
+        chassisTween = gsap.to(tractorChassisRef.current, {
+          y: -3.5,
+          rotation: 0.8,
+          duration: 0.32 / speedMultiplier,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          transformOrigin: 'bottom center'
+        });
+      }
 
       // 3. Farmer Sitting & Bobbing with Driver Seat Spring
-      const farmerTween = gsap.to(farmerRef.current, {
-        y: -3,
-        rotation: -0.6,
-        duration: 0.32 / speedMultiplier,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-        transformOrigin: 'bottom center'
-      });
+      let farmerTween = null;
+      if (farmerRef.current) {
+        farmerTween = gsap.to(farmerRef.current, {
+          y: -3,
+          rotation: -0.6,
+          duration: 0.32 / speedMultiplier,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          transformOrigin: 'bottom center'
+        });
+      }
 
       // 4. Farmer Hands & Steering Wheel Realistic Micro-Adjustment
-      const steerTween = gsap.to(steeringRef.current, {
-        rotation: 10,
-        duration: 0.75 / speedMultiplier,
-        repeat: -1,
-        yoyo: true,
-        ease: 'power1.inOut',
-        transformOrigin: '40% 60%'
-      });
+      let steerTween = null;
+      if (steeringRef.current) {
+        steerTween = gsap.to(steeringRef.current, {
+          rotation: 10,
+          duration: 0.75 / speedMultiplier,
+          repeat: -1,
+          yoyo: true,
+          ease: 'power1.inOut',
+          transformOrigin: '40% 60%'
+        });
+      }
 
-      // 5. Traditional Turban (Rumal) Flapping in the Wind
-      const turbanTween = gsap.to(turbanTailRef.current, {
-        rotation: -14,
-        scaleX: 1.12,
-        duration: 0.28 / speedMultiplier,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-        transformOrigin: 'left center'
-      });
+      // 5. Traditional Saffron Turban Flapping in the Wind
+      let turbanTween = null;
+      if (turbanTailRef.current) {
+        turbanTween = gsap.to(turbanTailRef.current, {
+          rotation: -14,
+          scaleX: 1.12,
+          duration: 0.28 / speedMultiplier,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          transformOrigin: 'left center'
+        });
+      }
 
       // 6. Infinite Farmland Soil & Furrow Scrolling
-      const groundTween = gsap.to(groundTrackRef.current, {
-        x: -96,
-        duration: 0.9 / speedMultiplier,
-        repeat: -1,
-        ease: 'none'
-      });
+      let groundTween = null;
+      if (groundTrackRef.current) {
+        groundTween = gsap.to(groundTrackRef.current, {
+          x: -96,
+          duration: 0.9 / speedMultiplier,
+          repeat: -1,
+          ease: 'none'
+        });
+      }
 
       // 7. Golden Telangana Sun Rays Gentle Pulse
-      gsap.to(sunRaysRef.current, {
-        scale: 1.08,
-        opacity: 0.85,
-        duration: 2.2,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-        transformOrigin: 'center center'
-      });
+      if (sunRaysRef.current) {
+        gsap.to(sunRaysRef.current, {
+          scale: 1.08,
+          opacity: 0.85,
+          duration: 2.2,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          transformOrigin: 'center center'
+        });
+      }
 
-      // 8. Continuous Diesel Exhaust Smoke Puffs
+      // ==========================================
+      // MODE-SPECIFIC GSAP TWEENS
+      // ==========================================
+
+      // Mode: Ploughing (Disc plough vibration & turning discs)
+      if (mode === 'plough') {
+        if (ploughRef.current) {
+          gsap.to(ploughRef.current, {
+            y: 2,
+            rotation: 1,
+            duration: 0.28 / speedMultiplier,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+            transformOrigin: 'right top'
+          });
+        }
+        if (ploughDiscsRef.current) {
+          gsap.to(ploughDiscsRef.current, {
+            rotation: 360,
+            duration: 1.5 / speedMultiplier,
+            repeat: -1,
+            ease: 'none',
+            transformOrigin: 'center center'
+          });
+        }
+      }
+
+      // Mode: Rotavator (Rapid spinning rotary tiller blades)
+      if (mode === 'rotavator') {
+        if (rotavatorBladesRef.current) {
+          gsap.to(rotavatorBladesRef.current, {
+            rotation: 360,
+            duration: 0.22 / speedMultiplier,
+            repeat: -1,
+            ease: 'none',
+            transformOrigin: '24px 136px'
+          });
+        }
+        if (rotavatorBodyRef.current) {
+          gsap.to(rotavatorBodyRef.current, {
+            y: 1.5,
+            duration: 0.16 / speedMultiplier,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut'
+          });
+        }
+      }
+
+      // Mode: Cultivator (High-frequency spring tine tension bounce)
+      if (mode === 'cultivator' && cultivatorTinesRef.current) {
+        gsap.to(cultivatorTinesRef.current, {
+          x: 2,
+          y: -2,
+          rotation: -1.5,
+          duration: 0.18 / speedMultiplier,
+          repeat: -1,
+          yoyo: true,
+          ease: 'power1.inOut',
+          transformOrigin: 'top center'
+        });
+      }
+
+      // Mode: Combine Harvester (Rotating reel & golden crop feed)
+      if (mode === 'harvester') {
+        if (harvesterReelRef.current) {
+          gsap.to(harvesterReelRef.current, {
+            rotation: 360,
+            duration: 1.1 / speedMultiplier,
+            repeat: -1,
+            ease: 'none',
+            transformOrigin: '312px 124px'
+          });
+        }
+        if (harvesterCropsRef.current) {
+          gsap.to(harvesterCropsRef.current, {
+            x: -45,
+            duration: 0.9 / speedMultiplier,
+            repeat: -1,
+            ease: 'none'
+          });
+        }
+      }
+
+      // Mode: Straw Baler (Pickup rotation & straw bale rolling)
+      if (mode === 'baler') {
+        if (balerPickupRef.current) {
+          gsap.to(balerPickupRef.current, {
+            rotation: 360,
+            duration: 0.55 / speedMultiplier,
+            repeat: -1,
+            ease: 'none',
+            transformOrigin: '26px 138px'
+          });
+        }
+        if (strawBaleRef.current) {
+          gsap.to(strawBaleRef.current, {
+            y: -3,
+            rotation: -5,
+            duration: 0.35 / speedMultiplier,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+            transformOrigin: '-48px 138px'
+          });
+        }
+      }
+
+      // Mode: Seed Planter (Metering press wheel spin)
+      if (mode === 'seeder' && seederWheelRef.current) {
+        gsap.to(seederWheelRef.current, {
+          rotation: 360,
+          duration: 0.85 / speedMultiplier,
+          repeat: -1,
+          ease: 'none',
+          transformOrigin: '-10px 140px'
+        });
+      }
+
+      // Mode: Trailer Trolley (Chassis sway)
+      if (mode === 'trailer' && trailerChassisRef.current) {
+        gsap.to(trailerChassisRef.current, {
+          y: -3,
+          rotation: 0.7,
+          duration: 0.36 / speedMultiplier,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          transformOrigin: 'right bottom'
+        });
+      }
+
+      // ==========================================
+      // Continuous Exhaust Smoke Emitter
+      // ==========================================
       const smokeInterval = setInterval(() => {
         if (!smokeContainerRef.current || !isPlaying) return;
         const puff = document.createElement('div');
@@ -125,7 +401,9 @@ export default function TractorFarmerScene({ language = 'en' }) {
         );
       }, 260 / speedMultiplier);
 
-      // 9. Red Mud / Soil Dust Kicked up by Rear Giant Tire
+      // ==========================================
+      // Soil Dust Particles Kicked Up by Tires
+      // ==========================================
       const dustInterval = setInterval(() => {
         if (!dustContainerRef.current || !isPlaying) return;
         const dust = document.createElement('div');
@@ -154,14 +432,14 @@ export default function TractorFarmerScene({ language = 'en' }) {
         );
       }, 200 / speedMultiplier);
 
-      // Manage playback pause/resume
+      // Pause/Resume handling
       if (!isPlaying) {
-        wheelTween.pause();
-        chassisTween.pause();
-        farmerTween.pause();
-        steerTween.pause();
-        turbanTween.pause();
-        groundTween.pause();
+        if (wheelTween) wheelTween.pause();
+        if (chassisTween) chassisTween.pause();
+        if (farmerTween) farmerTween.pause();
+        if (steerTween) steerTween.pause();
+        if (turbanTween) turbanTween.pause();
+        if (groundTween) groundTween.pause();
       }
 
       return () => {
@@ -171,19 +449,19 @@ export default function TractorFarmerScene({ language = 'en' }) {
     }, sceneWrapperRef);
 
     return () => ctx.revert();
-  }, [isPlaying, speedMultiplier]);
+  }, [mode, isPlaying, speedMultiplier]);
 
   const togglePlay = () => setIsPlaying(prev => !prev);
   const toggleSpeed = () => setSpeedMultiplier(prev => (prev === 1 ? 1.75 : 1));
 
   return (
     <div className="tractor-video-card" ref={sceneWrapperRef}>
-      {/* Top Video Header HUD Bar */}
+      {/* Top Video Header HUD Bar - User requested removal of LIVE AGRI-DRIVE heading */}
       <div className="video-card-top-bar">
-        <div className="video-live-indicator">
-          <span className={`live-pulse-dot ${isPlaying ? 'active' : ''}`} />
-          <span className="live-tag-text">
-            {isTe ? 'లైవ్ అగ్రి-డ్రైవ్' : 'LIVE AGRI-DRIVE'} • GSAP 60FPS
+        <div className="video-category-tag">
+          <span className="category-tag-icon">{currentConfig.icon}</span>
+          <span className="category-tag-text">
+            {isTe ? currentConfig.labelTe : currentConfig.labelEn}
           </span>
         </div>
 
@@ -224,18 +502,22 @@ export default function TractorFarmerScene({ language = 'en' }) {
           </div>
         </div>
 
-        {/* Layer 2: Animated SVG Scene (Tractor + Farmer) */}
+        {/* Layer 2: Animated SVG Scene */}
         <div className="scene-stage-actors">
           {/* Exhaust Smoke Puffs Container */}
-          <div className="scene-smoke-emitter" ref={smokeContainerRef} />
+          <div
+            className="scene-smoke-emitter"
+            ref={smokeContainerRef}
+            style={{ left: mode === 'harvester' ? '38%' : '68%' }}
+          />
 
           {/* Wheel Dust Particles Container */}
           <div className="scene-dust-emitter" ref={dustContainerRef} />
 
-          {/* SVG Tractor + Farmer Model */}
+          {/* SVG Vehicle and Agricultural Implement */}
           <svg
             className="scene-tractor-svg"
-            viewBox="0 0 340 190"
+            viewBox="-55 0 405 190"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
@@ -250,6 +532,14 @@ export default function TractorFarmerScene({ language = 'en' }) {
               {/* Metallic Grille & Engine Block */}
               <linearGradient id="metalEngineGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#64748b" />
+                <stop offset="100%" stopColor="#334155" />
+              </linearGradient>
+
+              {/* Concave Disc Plough Polished Steel */}
+              <linearGradient id="ploughSteelGradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#f8fafc" />
+                <stop offset="40%" stopColor="#cbd5e1" />
+                <stop offset="80%" stopColor="#64748b" />
                 <stop offset="100%" stopColor="#334155" />
               </linearGradient>
 
@@ -273,176 +563,455 @@ export default function TractorFarmerScene({ language = 'en' }) {
                 <stop offset="60%" stopColor="#fde047" stopOpacity="0.25" />
                 <stop offset="100%" stopColor="#fde047" stopOpacity="0" />
               </linearGradient>
+
+              {/* Combine Harvester Glass Cab */}
+              <linearGradient id="harvesterGlass" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#bae6fd" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.5" />
+              </linearGradient>
+
+              {/* Kartar Harvester Green */}
+              <linearGradient id="kartarGreen" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#22c55e" />
+                <stop offset="60%" stopColor="#16a34a" />
+                <stop offset="100%" stopColor="#15803d" />
+              </linearGradient>
             </defs>
 
-            {/* Headlight Forward Beam Cone */}
-            <polygon
-              points="285,118 340,105 340,150 285,125"
-              fill="url(#headlightBeamGradient)"
-              className="headlight-beam"
-            />
-
-            {/* Tractor Body & Chassis (Bounces with Engine Chug) */}
-            <g id="tractorChassis" ref={tractorChassisRef}>
-              {/* Heavy Chassis Frame */}
-              <rect x="75" y="112" width="195" height="18" rx="4" fill="url(#metalEngineGradient)" />
-
-              {/* Engine Hood / Bonnet */}
-              <path
-                d="M175 92 L280 92 C285 92 288 95 288 100 L288 126 C288 128 286 130 284 130 L175 130 Z"
-                fill="url(#tractorRedGradient)"
-              />
-
-              {/* Chrome Grille and Front Emblem */}
-              <rect x="282" y="98" width="5" height="28" rx="2" fill="#cbd5e1" />
-              <line x1="284" y1="102" x2="284" y2="122" stroke="#475569" strokeWidth="2" strokeDasharray="2 2" />
-
-              {/* Headlight Lamp */}
-              <circle cx="282" cy="120" r="5" fill="#fef08a" stroke="#ca8a04" strokeWidth="1.5" />
-
-              {/* Rear Fender / Wheel Arch (Covers giant rear tire) */}
-              <path
-                d="M60 115 C60 70 120 70 140 115 L124 118 C110 85 85 85 76 118 Z"
-                fill="url(#tractorRedGradient)"
-              />
-
-              {/* Driver Platform & Spring Footrest */}
-              <rect x="110" y="125" width="60" height="7" rx="2" fill="#334155" />
-              <rect x="135" y="132" width="22" height="4" rx="1" fill="#64748b" />
-
-              {/* Driver Seat Bracket & Suspension Spring */}
-              <line x1="102" y1="125" x2="102" y2="108" stroke="#1e293b" strokeWidth="5" strokeLinecap="round" />
-              <path d="M92 108 L114 108 C116 108 118 106 118 104 L118 90 C118 88 115 86 112 86 L108 86 C105 86 102 89 102 92 Z" fill="#0f172a" />
-
-              {/* Exhaust Pipe & Chimney Stack */}
-              <g id="exhaustStack">
-                <rect x="238" y="52" width="7" height="42" rx="2" fill="#1e293b" />
-                <path d="M236 52 L247 52 L245 47 L238 47 Z" fill="#475569" />
-                {/* Exhaust rain flap */}
-                <ellipse cx="241" cy="46" rx="5" ry="2" fill="#64748b" />
-              </g>
-
-              {/* Steering Column & Wheel */}
-              <g id="steeringAssembly" ref={steeringRef}>
-                <line x1="152" y1="110" x2="168" y2="88" stroke="#0f172a" strokeWidth="4.5" strokeLinecap="round" />
-                <ellipse cx="170" cy="86" rx="9" ry="3.5" fill="#1e293b" stroke="#64748b" strokeWidth="1.5" transform="rotate(-30 170 86)" />
-              </g>
-            </g>
-
-            {/* ========================================================
-                FARMER CHARACTER (Animated Indian Farmer in Turban)
-               ======================================================== */}
-            <g id="farmerDriver" ref={farmerRef}>
-              {/* Farmer Body (White Kurta Attire) */}
-              <path
-                d="M112 104 C112 85 125 78 138 78 C148 78 156 86 156 104 L148 120 L118 120 Z"
-                fill="#f8fafc"
-                stroke="#cbd5e1"
-                strokeWidth="1.2"
-              />
-              {/* Kurta Collar button line */}
-              <line x1="138" y1="78" x2="140" y2="98" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="3 3" />
-
-              {/* Farmer Arms Extending to Steering Wheel */}
-              <path
-                d="M138 88 L160 92 L168 87"
-                stroke="#f8fafc"
-                strokeWidth="7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {/* Farmer Hands on Wheel */}
-              <circle cx="168" cy="87" r="4.5" fill="#f59e0b" />
-
-              {/* Farmer Neck & Face */}
-              <circle cx="140" cy="65" r="11" fill="#f59e0b" />
-              {/* Friendly Mustache */}
-              <path d="M137 68 C140 70 144 70 147 67" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" />
-              {/* Eye */}
-              <circle cx="144" cy="62" r="1.5" fill="#0f172a" />
-              {/* Smile Line */}
-              <path d="M140 71 Q143 74 146 71" stroke="#b45309" strokeWidth="1" fill="none" />
-
-              {/* Saffron / Festive Telangana Turban (Paga / Rumal) */}
-              <g id="turbanHead">
-                {/* Main Turban Wrap Bulbs */}
-                <ellipse cx="140" cy="56" rx="14" ry="9" fill="#f97316" />
-                <ellipse cx="142" cy="53" rx="12" ry="7" fill="#fb923c" />
-                <ellipse cx="136" cy="55" rx="8" ry="7" fill="#ea580c" />
-                {/* Front Jewel / Golden Band */}
-                <path d="M132 58 Q142 61 150 56" stroke="#fbbf24" strokeWidth="2" fill="none" />
-
-                {/* Free Turban Tail (Flaps in the wind with GSAP) */}
+            {/* ==========================================================
+                BRANCH 1: FULL COMBINE HARVESTER (When Harvester selected)
+               ========================================================== */}
+            {mode === 'harvester' ? (
+              <g id="combineHarvesterGroup">
+                {/* Main Combine Thresher Body */}
                 <path
-                  id="turbanTail"
-                  ref={turbanTailRef}
-                  d="M128 56 Q116 54 110 60 Q118 64 126 62 Z"
-                  fill="#ea580c"
+                  d="M70 70 L235 70 L260 95 L260 134 L60 134 L60 90 Z"
+                  fill="url(#kartarGreen)"
+                  stroke="#14532d"
+                  strokeWidth="2"
                 />
+
+                {/* Yellow Decal Stripe & Kartar Badge */}
+                <path d="M70 95 L255 95 L255 102 L70 102 Z" fill="#eab308" />
+                <text x="115" y="88" fill="#ffffff" fontSize="9" fontWeight="900" letterSpacing="1">
+                  KARTAR 4000
+                </text>
+
+                {/* Exhaust Chimney */}
+                <rect x="95" y="44" width="6" height="28" rx="2" fill="#1e293b" />
+                <ellipse cx="98" cy="43" rx="4" ry="2" fill="#475569" />
+
+                {/* Overhead Unloading Auger Pipe */}
+                <g id="unloadingAuger">
+                  <path d="M160 55 L45 35 L45 42 L160 62 Z" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5" />
+                  <polygon points="45,35 32,48 38,50 48,42" fill="#1e293b" />
+                  <circle cx="160" cy="58" r="7" fill="#ca8a04" />
+                </g>
+
+                {/* High Panoramic Glass Driver Cab */}
+                <path
+                  d="M195 50 L255 50 L265 95 L195 95 Z"
+                  fill="url(#harvesterGlass)"
+                  stroke="#0284c7"
+                  strokeWidth="2"
+                />
+                <rect x="190" y="45" width="75" height="7" rx="3" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" />
+
+                {/* Farmer Driver Seated Inside High Cab */}
+                <g transform="translate(68, -12)">
+                  <circle cx="140" cy="67" r="10" fill="#f59e0b" />
+                  <ellipse cx="140" cy="58" rx="13" ry="8" fill="#f97316" />
+                  <path d="M128 58 Q118 56 112 61" stroke="#ea580c" strokeWidth="3" fill="none" />
+                  <path d="M136 78 C136 68 152 68 152 78 L152 94 L132 94 Z" fill="#f8fafc" />
+                  <ellipse cx="162" cy="76" rx="8" ry="3" fill="#1e293b" transform="rotate(-25 162 76)" />
+                  <line x1="150" y1="84" x2="162" y2="76" stroke="#0f172a" strokeWidth="3" />
+                </g>
+
+                {/* Feeder House Tilted Down to Header */}
+                <polygon points="255,105 296,128 296,138 255,124" fill="#15803d" stroke="#14532d" strokeWidth="1.5" />
+
+                {/* Combine Drive Wheels */}
+                {/* Front Giant Traction Drive Wheel at (225, 132) */}
+                <g ref={frontWheelRef} style={{ transformOrigin: '225px 132px' }}>
+                  <circle cx="225" cy="132" r="32" fill="url(#tireRubberGradient)" />
+                  <circle cx="225" cy="132" r="28" stroke="#475569" strokeWidth="5" strokeDasharray="10 6" fill="none" />
+                  <circle cx="225" cy="132" r="18" fill="url(#goldenRimGradient)" stroke="#854d0e" strokeWidth="1.5" />
+                  <circle cx="225" cy="132" r="6" fill="#1e293b" />
+                </g>
+                {/* Rear Guide Wheel at (95, 138) */}
+                <g ref={rearWheelRef} style={{ transformOrigin: '95px 138px' }}>
+                  <circle cx="95" cy="138" r="21" fill="url(#tireRubberGradient)" />
+                  <circle cx="95" cy="138" r="19" stroke="#334155" strokeWidth="3" strokeDasharray="6 4" fill="none" />
+                  <circle cx="95" cy="138" r="11" fill="url(#goldenRimGradient)" stroke="#78350f" strokeWidth="1.5" />
+                  <circle cx="95" cy="138" r="4" fill="#1e293b" />
+                </g>
+
+                {/* Yellow Crop Divider Snouts (Gatherers) */}
+                <polygon points="292,138 335,142 338,146 290,146" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5" />
+                <polygon points="296,132 328,138 328,142 296,138" fill="#facc15" />
+
+                {/* Massive Front Rotating Cutterbar Reel */}
+                <g id="harvesterReel" ref={harvesterReelRef} style={{ transformOrigin: '312px 124px' }}>
+                  <circle cx="312" cy="124" r="4" fill="#1e293b" />
+                  {[0, 72, 144, 216, 288].map((angle, idx) => {
+                    const rad = (angle * Math.PI) / 180;
+                    const x = 312 + Math.cos(rad) * 20;
+                    const y = 124 + Math.sin(rad) * 20;
+                    return (
+                      <g key={idx}>
+                        <line x1="312" y1="124" x2={x} y2={y} stroke="#ca8a04" strokeWidth="2" />
+                        <circle cx={x} cy={y} r="3" fill="#eab308" stroke="#ca8a04" strokeWidth="1" />
+                        <line x1={x} y1={y} x2={x + 4} y2={y + 5} stroke="#1e293b" strokeWidth="1.5" />
+                      </g>
+                    );
+                  })}
+                  <circle cx="312" cy="124" r="16" stroke="#ca8a04" strokeWidth="1.2" strokeDasharray="4 4" fill="none" />
+                </g>
+
+                {/* Golden Crop Stalks sliding into cutter */}
+                <g ref={harvesterCropsRef}>
+                  <text x="326" y="146" fontSize="14">🌽</text>
+                  <text x="342" y="146" fontSize="14">🌾</text>
+                </g>
               </g>
-            </g>
+            ) : (
+              /* ==========================================================
+                  BRANCH 2: TRACTOR + ACTIVE IMPLEMENT ATTACHMENT
+                 ========================================================== */
+              <g id="tractorWithImplement">
+                {/* ----------------------------------------------------
+                    ACTIVE IMPLEMENT ATTACHED BEHIND TRACTOR (x: -55 to 75)
+                   ---------------------------------------------------- */}
 
-            {/* ========================================================
-                WHEELS (Spin Continuously via GSAP)
-               ======================================================== */}
-            {/* Front Wheel (Smaller) - Center at (252, 134) */}
-            <g id="frontWheel" ref={frontWheelRef} style={{ transformOrigin: '252px 134px' }}>
-              {/* Outer Rubber Tire */}
-              <circle cx="252" cy="134" r="23" fill="url(#tireRubberGradient)" />
-              {/* Tire Tread Ribs */}
-              <circle cx="252" cy="134" r="21" stroke="#334155" strokeWidth="3" strokeDasharray="6 4" fill="none" />
-              {/* Golden Wheel Hub */}
-              <circle cx="252" cy="134" r="12" fill="url(#goldenRimGradient)" stroke="#78350f" strokeWidth="1.5" />
-              {/* Center Axle Nut */}
-              <circle cx="252" cy="134" r="4.5" fill="#1e293b" />
-              <line x1="252" y1="123" x2="252" y2="145" stroke="#78350f" strokeWidth="2" />
-              <line x1="241" y1="134" x2="263" y2="134" stroke="#78350f" strokeWidth="2" />
-            </g>
+                {/* Mode 1: PLOUGHING (3-Disc Mouldboard Plough) */}
+                {mode === 'plough' && (
+                  <g id="ploughImplement" ref={ploughRef}>
+                    <path d="M75 116 L52 118 L46 126 L75 126" fill="#334155" stroke="#1e293b" strokeWidth="2" />
+                    <line x1="75" y1="110" x2="52" y2="118" stroke="#64748b" strokeWidth="3" />
+                    <path d="M52 118 L-8 140" stroke="#b91c1c" strokeWidth="7" strokeLinecap="round" />
+                    <line x1="44" y1="123" x2="44" y2="142" stroke="#1e293b" strokeWidth="4.5" />
+                    <line x1="24" y1="129" x2="24" y2="145" stroke="#1e293b" strokeWidth="4.5" />
+                    <line x1="4" y1="135" x2="4" y2="148" stroke="#1e293b" strokeWidth="4.5" />
 
-            {/* Rear Giant Agricultural Wheel - Center at (94, 122) */}
-            <g id="rearWheel" ref={rearWheelRef} style={{ transformOrigin: '94px 122px' }}>
-              {/* Outer Chunky Mud Tire */}
-              <circle cx="94" cy="122" r="46" fill="url(#tireRubberGradient)" />
-              {/* Deep Agricultural Chevron Tread Lugs */}
-              <circle cx="94" cy="122" r="42" stroke="#475569" strokeWidth="6" strokeDasharray="12 7" fill="none" />
-              {/* Rim Lip */}
-              <circle cx="94" cy="122" r="33" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
-              {/* Heavy Duty Red / Gold Wheel Disc */}
-              <circle cx="94" cy="122" r="27" fill="url(#goldenRimGradient)" stroke="#854d0e" strokeWidth="2" />
-              {/* 6 Wheel Hub Bolt Nuts */}
-              <circle cx="94" cy="122" r="9" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
-              <circle cx="94" cy="108" r="2" fill="#0f172a" />
-              <circle cx="106" cy="115" r="2" fill="#0f172a" />
-              <circle cx="106" cy="129" r="2" fill="#0f172a" />
-              <circle cx="94" cy="136" r="2" fill="#0f172a" />
-              <circle cx="82" cy="129" r="2" fill="#0f172a" />
-              <circle cx="82" cy="115" r="2" fill="#0f172a" />
-            </g>
+                    <g ref={ploughDiscsRef}>
+                      <g transform="translate(44, 142) rotate(-22)">
+                        <ellipse cx="0" cy="0" rx="13" ry="16" fill="url(#ploughSteelGradient)" stroke="#0f172a" strokeWidth="1.8" />
+                        <circle cx="0" cy="0" r="4" fill="#334155" stroke="#cbd5e1" strokeWidth="1" />
+                        <path d="M-6 -10 A 10 13 0 0 1 -6 10" stroke="#f8fafc" strokeWidth="1.5" strokeOpacity="0.7" fill="none" />
+                      </g>
+                      <g transform="translate(24, 145) rotate(-22)">
+                        <ellipse cx="0" cy="0" rx="13" ry="16" fill="url(#ploughSteelGradient)" stroke="#0f172a" strokeWidth="1.8" />
+                        <circle cx="0" cy="0" r="4" fill="#334155" stroke="#cbd5e1" strokeWidth="1" />
+                        <path d="M-6 -10 A 10 13 0 0 1 -6 10" stroke="#f8fafc" strokeWidth="1.5" strokeOpacity="0.7" fill="none" />
+                      </g>
+                      <g transform="translate(4, 148) rotate(-22)">
+                        <ellipse cx="0" cy="0" rx="13" ry="16" fill="url(#ploughSteelGradient)" stroke="#0f172a" strokeWidth="1.8" />
+                        <circle cx="0" cy="0" r="4" fill="#334155" stroke="#cbd5e1" strokeWidth="1" />
+                        <path d="M-6 -10 A 10 13 0 0 1 -6 10" stroke="#f8fafc" strokeWidth="1.5" strokeOpacity="0.7" fill="none" />
+                      </g>
+                    </g>
+
+                    {/* Freshly turned soil clods */}
+                    <path d="M42 144 Q38 138 32 141 Q28 147 38 149 Z" fill="#78350f" />
+                    <path d="M22 147 Q18 141 12 144 Q8 150 18 152 Z" fill="#78350f" />
+                    <path d="M2 150 Q-2 144 -8 147 Q-12 153 -2 155 Z" fill="#78350f" />
+                  </g>
+                )}
+
+                {/* Mode 2: ROTAVATOR (Rotary Tiller) */}
+                {mode === 'rotavator' && (
+                  <g id="rotavatorImplement">
+                    <line x1="75" y1="122" x2="48" y2="124" stroke="#1e293b" strokeWidth="4.5" strokeDasharray="4 2" />
+                    <path d="M75 116 L48 116 L48 126" stroke="#475569" strokeWidth="3" fill="none" />
+
+                    <g ref={rotavatorBodyRef}>
+                      <rect x="42" y="112" width="14" height="15" rx="3" fill="#1e293b" stroke="#64748b" strokeWidth="1.5" />
+                      <circle cx="49" cy="119" r="3.5" fill="#eab308" />
+                      <path d="M52 120 C42 110 6 110 0 126 L52 126 Z" fill="#2563eb" stroke="#1d4ed8" strokeWidth="2" />
+                      <line x1="6" y1="121" x2="48" y2="121" stroke="#ffffff" strokeWidth="1.5" strokeOpacity="0.8" />
+                      <path d="M0 126 L-14 142 L-9 144 L4 126 Z" fill="#1d4ed8" stroke="#1e40af" strokeWidth="1" />
+                      <path d="M48 126 L48 144 L36 146" stroke="#1e293b" strokeWidth="3" fill="none" strokeLinecap="round" />
+                    </g>
+
+                    <g ref={rotavatorBladesRef} style={{ transformOrigin: '24px 136px' }}>
+                      <circle cx="24" cy="136" r="4.5" fill="#0f172a" />
+                      <path d="M24 136 L24 122 L17 122" stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                      <path d="M24 136 L38 136 L38 129" stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                      <path d="M24 136 L24 150 L31 150" stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                      <path d="M24 136 L10 136 L10 143" stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                    </g>
+
+                    {/* Fine pulverized soil spray */}
+                    <circle cx="-16" cy="140" r="2.5" fill="#854d0e" />
+                    <circle cx="-22" cy="143" r="2" fill="#a16207" />
+                    <circle cx="-18" cy="146" r="3" fill="#78350f" />
+                  </g>
+                )}
+
+                {/* Mode 3: CULTIVATOR (Spring Tiller) */}
+                {mode === 'cultivator' && (
+                  <g id="cultivatorImplement">
+                    <line x1="75" y1="114" x2="52" y2="114" stroke="#334155" strokeWidth="3.5" />
+                    <line x1="75" y1="124" x2="52" y2="120" stroke="#334155" strokeWidth="3.5" />
+                    <rect x="0" y="116" width="54" height="6" rx="2" fill="#dc2626" stroke="#991b1b" strokeWidth="1.5" />
+                    <rect x="6" y="110" width="42" height="5" rx="1.5" fill="#dc2626" stroke="#991b1b" strokeWidth="1" />
+
+                    <g transform="translate(-10, 138)">
+                      <circle cx="0" cy="0" r="11" fill="url(#tireRubberGradient)" />
+                      <circle cx="0" cy="0" r="6" fill="#cbd5e1" stroke="#475569" strokeWidth="1" />
+                      <line x1="0" y1="-16" x2="0" y2="0" stroke="#334155" strokeWidth="2.5" />
+                    </g>
+
+                    <g ref={cultivatorTinesRef}>
+                      {[46, 32, 18, 4].map((posX, i) => (
+                        <g key={i} transform={`translate(${posX}, 122)`}>
+                          <circle cx="0" cy="4" r="4.5" fill="none" stroke="#eab308" strokeWidth="2" strokeDasharray="3 1" />
+                          <path d="M0 8 C1 16 -6 22 -7 26" stroke="#1e293b" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+                          <polygon points="-7,26 -11,28 -7,22 -3,28" fill="#e2e8f0" stroke="#475569" strokeWidth="0.8" />
+                        </g>
+                      ))}
+                    </g>
+                  </g>
+                )}
+
+                {/* Mode 4: STRAW BALER (Round Straw Baler) */}
+                {mode === 'baler' && (
+                  <g id="balerImplement">
+                    <line x1="75" y1="124" x2="32" y2="128" stroke="#334155" strokeWidth="5" />
+                    <ellipse cx="2" cy="116" rx="34" ry="26" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
+                    <path d="M-8 92 C-14 104 -14 128 -8 140" stroke="#ca8a04" strokeWidth="2" fill="none" />
+                    <rect x="-28" y="106" width="18" height="20" rx="2" fill="#15803d" />
+                    <text x="-25" y="119" fill="#ffffff" fontSize="7" fontWeight="900">BALER</text>
+
+                    <g ref={balerWheelRef} style={{ transformOrigin: '4px 138px' }}>
+                      <circle cx="4" cy="138" r="15" fill="url(#tireRubberGradient)" />
+                      <circle cx="4" cy="138" r="8" fill="#eab308" stroke="#78350f" strokeWidth="1.2" />
+                      <circle cx="4" cy="138" r="3" fill="#1e293b" />
+                    </g>
+
+                    <g ref={balerPickupRef} style={{ transformOrigin: '26px 138px' }}>
+                      <circle cx="26" cy="138" r="7" fill="#1e293b" stroke="#ca8a04" strokeWidth="1.5" />
+                      <line x1="26" y1="131" x2="26" y2="145" stroke="#eab308" strokeWidth="2" />
+                      <line x1="19" y1="138" x2="33" y2="138" stroke="#eab308" strokeWidth="2" />
+                    </g>
+
+                    <g ref={strawBaleRef} style={{ transformOrigin: '-48px 138px' }}>
+                      <ellipse cx="-48" cy="138" rx="14" ry="14" fill="#fef08a" stroke="#ca8a04" strokeWidth="1.8" />
+                      <circle cx="-48" cy="138" r="9" stroke="#eab308" strokeWidth="1.2" fill="none" />
+                      <circle cx="-48" cy="138" r="4" stroke="#ca8a04" strokeWidth="1.2" fill="none" />
+                      <line x1="-59" y1="134" x2="-37" y2="134" stroke="#2563eb" strokeWidth="1.5" />
+                      <line x1="-59" y1="142" x2="-37" y2="142" stroke="#2563eb" strokeWidth="1.5" />
+                    </g>
+                  </g>
+                )}
+
+                {/* Mode 5: SEED PLANTER (Precision Seed Drill) */}
+                {mode === 'seeder' && (
+                  <g id="seederImplement">
+                    <line x1="75" y1="120" x2="48" y2="120" stroke="#334155" strokeWidth="4" />
+                    <line x1="75" y1="126" x2="48" y2="126" stroke="#334155" strokeWidth="4" />
+                    <rect x="0" y="118" width="52" height="6" rx="2" fill="#1e293b" />
+
+                    <rect x="26" y="98" width="22" height="18" rx="2" fill="#22c55e" stroke="#15803d" strokeWidth="1.5" />
+                    <rect x="28" y="95" width="18" height="4" rx="1" fill="#cbd5e1" />
+                    <text x="29" y="110" fill="#ffffff" fontSize="6.5" fontWeight="800">SEED</text>
+
+                    <rect x="4" y="98" width="18" height="18" rx="2" fill="#3b82f6" stroke="#1d4ed8" strokeWidth="1.5" />
+                    <rect x="6" y="95" width="14" height="4" rx="1" fill="#cbd5e1" />
+                    <text x="6.5" y="110" fill="#ffffff" fontSize="6.5" fontWeight="800">FERT</text>
+
+                    <path d="M38 116 Q34 130 32 144" stroke="#94a3b8" strokeWidth="3" fill="none" strokeDasharray="2 1" />
+                    <path d="M26 116 Q22 130 18 144" stroke="#94a3b8" strokeWidth="3" fill="none" strokeDasharray="2 1" />
+                    <path d="M12 116 Q8 130 4 144" stroke="#94a3b8" strokeWidth="3" fill="none" strokeDasharray="2 1" />
+
+                    <ellipse cx="32" cy="144" rx="6" ry="8" fill="#475569" stroke="#cbd5e1" strokeWidth="1" />
+                    <ellipse cx="18" cy="144" rx="6" ry="8" fill="#475569" stroke="#cbd5e1" strokeWidth="1" />
+                    <ellipse cx="4" cy="144" rx="6" ry="8" fill="#475569" stroke="#cbd5e1" strokeWidth="1" />
+
+                    <g ref={seederWheelRef} style={{ transformOrigin: '-10px 140px' }}>
+                      <circle cx="-10" cy="140" r="11" fill="url(#tireRubberGradient)" />
+                      <circle cx="-10" cy="140" r="5" fill="#e2e8f0" stroke="#334155" strokeWidth="1" />
+                    </g>
+
+                    <circle cx="31" cy="147" r="1.8" fill="#facc15" />
+                    <circle cx="17" cy="147" r="1.8" fill="#facc15" />
+                    <circle cx="3" cy="147" r="1.8" fill="#facc15" />
+                  </g>
+                )}
+
+                {/* Mode 6: TRAILER (Haulage Trolley with Produce Bags) */}
+                {mode === 'trailer' && (
+                  <g id="trailerImplement" ref={trailerChassisRef}>
+                    <polygon points="75,124 45,122 45,127 75,127" fill="#334155" />
+                    <circle cx="72" cy="125" r="3" fill="#cbd5e1" />
+                    <rect x="-52" y="104" width="96" height="26" rx="2" fill="#b91c1c" stroke="#7f1d1d" strokeWidth="2" />
+                    
+                    <line x1="-34" y1="104" x2="-34" y2="130" stroke="#7f1d1d" strokeWidth="2" />
+                    <line x1="-16" y1="104" x2="-16" y2="130" stroke="#7f1d1d" strokeWidth="2" />
+                    <line x1="2" y1="104" x2="2" y2="130" stroke="#7f1d1d" strokeWidth="2" />
+                    <line x1="20" y1="104" x2="20" y2="130" stroke="#7f1d1d" strokeWidth="2" />
+
+                    <rect x="-51" y="125" width="94" height="4" fill="#fef08a" />
+                    <line x1="-40" y1="125" x2="-36" y2="129" stroke="#b91c1c" strokeWidth="2" />
+                    <line x1="-20" y1="125" x2="-16" y2="129" stroke="#b91c1c" strokeWidth="2" />
+                    <line x1="0" y1="125" x2="4" y2="129" stroke="#b91c1c" strokeWidth="2" />
+                    <line x1="20" y1="125" x2="24" y2="129" stroke="#b91c1c" strokeWidth="2" />
+
+                    {/* Stacked Produce Bags */}
+                    <ellipse cx="-38" cy="98" rx="13" ry="8" fill="#d97706" stroke="#92400e" strokeWidth="1" />
+                    <ellipse cx="-16" cy="97" rx="14" ry="8" fill="#b45309" stroke="#78350f" strokeWidth="1" />
+                    <ellipse cx="8" cy="97" rx="14" ry="8" fill="#d97706" stroke="#92400e" strokeWidth="1" />
+                    <ellipse cx="28" cy="98" rx="13" ry="8" fill="#b45309" stroke="#78350f" strokeWidth="1" />
+                    <ellipse cx="-26" cy="88" rx="13" ry="7" fill="#f59e0b" stroke="#b45309" strokeWidth="1" />
+                    <ellipse cx="-4" cy="87" rx="14" ry="7" fill="#d97706" stroke="#92400e" strokeWidth="1" />
+                    <ellipse cx="18" cy="88" rx="13" ry="7" fill="#f59e0b" stroke="#b45309" strokeWidth="1" />
+                    <line x1="-48" y1="104" x2="-14" y2="82" stroke="#451a03" strokeWidth="1.2" />
+                    <line x1="-14" y1="82" x2="18" y2="104" stroke="#451a03" strokeWidth="1.2" />
+                    <line x1="18" y1="82" x2="42" y2="104" stroke="#451a03" strokeWidth="1.2" />
+
+                    {/* Dual Trailer Wheels */}
+                    <g ref={trailerWheel1Ref} style={{ transformOrigin: '-24px 136px' }}>
+                      <circle cx="-24" cy="136" r="17" fill="url(#tireRubberGradient)" />
+                      <circle cx="-24" cy="136" r="14" stroke="#334155" strokeWidth="2.5" strokeDasharray="5 3" fill="none" />
+                      <circle cx="-24" cy="136" r="9" fill="url(#goldenRimGradient)" stroke="#78350f" strokeWidth="1.2" />
+                      <circle cx="-24" cy="136" r="3.5" fill="#1e293b" />
+                    </g>
+                    <g ref={trailerWheel2Ref} style={{ transformOrigin: '18px 136px' }}>
+                      <circle cx="18" cy="136" r="17" fill="url(#tireRubberGradient)" />
+                      <circle cx="18" cy="136" r="14" stroke="#334155" strokeWidth="2.5" strokeDasharray="5 3" fill="none" />
+                      <circle cx="18" cy="136" r="9" fill="url(#goldenRimGradient)" stroke="#78350f" strokeWidth="1.2" />
+                      <circle cx="18" cy="136" r="3.5" fill="#1e293b" />
+                    </g>
+                  </g>
+                )}
+
+                {/* ----------------------------------------------------
+                    TRACTOR CHASSIS & ENGINE
+                   ---------------------------------------------------- */}
+                <polygon
+                  points="285,118 340,105 340,150 285,125"
+                  fill="url(#headlightBeamGradient)"
+                  className="headlight-beam"
+                />
+
+                <g id="tractorChassis" ref={tractorChassisRef}>
+                  <rect x="75" y="112" width="195" height="18" rx="4" fill="url(#metalEngineGradient)" />
+                  <path
+                    d="M175 92 L280 92 C285 92 288 95 288 100 L288 126 C288 128 286 130 284 130 L175 130 Z"
+                    fill="url(#tractorRedGradient)"
+                  />
+                  <rect x="282" y="98" width="5" height="28" rx="2" fill="#cbd5e1" />
+                  <line x1="284" y1="102" x2="284" y2="122" stroke="#475569" strokeWidth="2" strokeDasharray="2 2" />
+                  <circle cx="282" cy="120" r="5" fill="#fef08a" stroke="#ca8a04" strokeWidth="1.5" />
+                  <path
+                    d="M60 115 C60 70 120 70 140 115 L124 118 C110 85 85 85 76 118 Z"
+                    fill="url(#tractorRedGradient)"
+                  />
+                  <rect x="110" y="125" width="60" height="7" rx="2" fill="#334155" />
+                  <rect x="135" y="132" width="22" height="4" rx="1" fill="#64748b" />
+                  <line x1="102" y1="125" x2="102" y2="108" stroke="#1e293b" strokeWidth="5" strokeLinecap="round" />
+                  <path d="M92 108 L114 108 C116 108 118 106 118 104 L118 90 C118 88 115 86 112 86 L108 86 C105 86 102 89 102 92 Z" fill="#0f172a" />
+
+                  {/* Exhaust Pipe */}
+                  <g id="exhaustStack">
+                    <rect x="238" y="52" width="7" height="42" rx="2" fill="#1e293b" />
+                    <path d="M236 52 L247 52 L245 47 L238 47 Z" fill="#475569" />
+                    <ellipse cx="241" cy="46" rx="5" ry="2" fill="#64748b" />
+                  </g>
+
+                  {/* Steering */}
+                  <g id="steeringAssembly" ref={steeringRef}>
+                    <line x1="152" y1="110" x2="168" y2="88" stroke="#0f172a" strokeWidth="4.5" strokeLinecap="round" />
+                    <ellipse cx="170" cy="86" rx="9" ry="3.5" fill="#1e293b" stroke="#64748b" strokeWidth="1.5" transform="rotate(-30 170 86)" />
+                  </g>
+                </g>
+
+                {/* ----------------------------------------------------
+                    FARMER CHARACTER
+                   ---------------------------------------------------- */}
+                <g id="farmerDriver" ref={farmerRef}>
+                  <path
+                    d="M112 104 C112 85 125 78 138 78 C148 78 156 86 156 104 L148 120 L118 120 Z"
+                    fill="#f8fafc"
+                    stroke="#cbd5e1"
+                    strokeWidth="1.2"
+                  />
+                  <line x1="138" y1="78" x2="140" y2="98" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="3 3" />
+                  <path
+                    d="M138 88 L160 92 L168 87"
+                    stroke="#f8fafc"
+                    strokeWidth="7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="168" cy="87" r="4.5" fill="#f59e0b" />
+                  <circle cx="140" cy="65" r="11" fill="#f59e0b" />
+                  <path d="M137 68 C140 70 144 70 147 67" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" />
+                  <circle cx="144" cy="62" r="1.5" fill="#0f172a" />
+                  <path d="M140 71 Q143 74 146 71" stroke="#b45309" strokeWidth="1" fill="none" />
+
+                  <g id="turbanHead">
+                    <ellipse cx="140" cy="56" rx="14" ry="9" fill="#f97316" />
+                    <ellipse cx="142" cy="53" rx="12" ry="7" fill="#fb923c" />
+                    <ellipse cx="136" cy="55" rx="8" ry="7" fill="#ea580c" />
+                    <path d="M132 58 Q142 61 150 56" stroke="#fbbf24" strokeWidth="2" fill="none" />
+                    <path
+                      id="turbanTail"
+                      ref={turbanTailRef}
+                      d="M128 56 Q116 54 110 60 Q118 64 126 62 Z"
+                      fill="#ea580c"
+                    />
+                  </g>
+                </g>
+
+                {/* ----------------------------------------------------
+                    TRACTOR WHEELS
+                   ---------------------------------------------------- */}
+                <g id="frontWheel" ref={frontWheelRef} style={{ transformOrigin: '252px 134px' }}>
+                  <circle cx="252" cy="134" r="23" fill="url(#tireRubberGradient)" />
+                  <circle cx="252" cy="134" r="21" stroke="#334155" strokeWidth="3" strokeDasharray="6 4" fill="none" />
+                  <circle cx="252" cy="134" r="12" fill="url(#goldenRimGradient)" stroke="#78350f" strokeWidth="1.5" />
+                  <circle cx="252" cy="134" r="4.5" fill="#1e293b" />
+                  <line x1="252" y1="123" x2="252" y2="145" stroke="#78350f" strokeWidth="2" />
+                  <line x1="241" y1="134" x2="263" y2="134" stroke="#78350f" strokeWidth="2" />
+                </g>
+
+                <g id="rearWheel" ref={rearWheelRef} style={{ transformOrigin: '94px 122px' }}>
+                  <circle cx="94" cy="122" r="46" fill="url(#tireRubberGradient)" />
+                  <circle cx="94" cy="122" r="42" stroke="#475569" strokeWidth="6" strokeDasharray="12 7" fill="none" />
+                  <circle cx="94" cy="122" r="33" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
+                  <circle cx="94" cy="122" r="27" fill="url(#goldenRimGradient)" stroke="#854d0e" strokeWidth="2" />
+                  <circle cx="94" cy="122" r="9" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
+                  <circle cx="94" cy="108" r="2" fill="#0f172a" />
+                  <circle cx="106" cy="115" r="2" fill="#0f172a" />
+                  <circle cx="106" cy="129" r="2" fill="#0f172a" />
+                  <circle cx="94" cy="136" r="2" fill="#0f172a" />
+                  <circle cx="82" cy="129" r="2" fill="#0f172a" />
+                  <circle cx="82" cy="115" r="2" fill="#0f172a" />
+                </g>
+              </g>
+            )}
           </svg>
         </div>
 
         {/* Layer 3: Moving Farmland Soil & Furrow Tracks */}
         <div className="scene-ground-container">
           <div className="scene-ground-track" ref={groundTrackRef}>
-            {/* Repeated furrow soil lines and crop marks */}
             {[...Array(20)].map((_, i) => (
               <span key={i} className="ground-furrow-pattern">
                 <span className="soil-track-bar" />
-                <span className="soil-sprout-mark">🌱</span>
+                <span className="soil-sprout-mark">{currentConfig.sproutIcon}</span>
               </span>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Bottom Video Telemetry Footer */}
+      {/* Bottom Video Telemetry Footer - Removed 15 mins quick dispatch as requested */}
       <div className="video-card-bottom-bar">
         <div className="video-spec-badge">
           <span className="spec-dot">●</span>
-          <span>Mahindra 575 DI Sarpanch • 47 HP</span>
-        </div>
-        <div className="video-spec-badge secondary">
-          <span>⚡ ~15 Mins Quick Village Dispatch</span>
+          <span>{isTe ? currentConfig.titleTe : currentConfig.titleEn}</span>
         </div>
       </div>
     </div>
