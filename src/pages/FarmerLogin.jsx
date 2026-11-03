@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { translations } from '../translations';
-import { saveRegisteredFarmer, findFarmerByMobile } from '../data/userData';
+import { saveRegisteredFarmer, findFarmerByMobile, findOwnerByMobile } from '../data/userData';
 
 export default function FarmerLogin({
   setActivePage,
@@ -26,6 +26,7 @@ export default function FarmerLogin({
   const [loginOtpSent, setLoginOtpSent] = useState(false);
   const [loginOtp, setLoginOtp] = useState('874885');
   const [loginMatchedFarmer, setLoginMatchedFarmer] = useState(null);
+  const [matchedOwnerHint, setMatchedOwnerHint] = useState(null);
   const [loginError, setLoginError] = useState('');
   const [loginNotice, setLoginNotice] = useState('');
 
@@ -101,6 +102,19 @@ export default function FarmerLogin({
     const matched = findFarmerByMobile(phone);
 
     if (!matched) {
+      // Check if registered as a Vehicle Owner
+      const matchedOwner = findOwnerByMobile(phone);
+      if (matchedOwner) {
+        setMatchedOwnerHint(matchedOwner);
+        setLoginError(
+          isTe
+            ? `ఈ మొబైల్ నంబర్ (+91 ${phone}) వాహన యజమానిగా (${matchedOwner.fullName || matchedOwner.owner}) నమోదు చేయబడింది!`
+            : `Mobile number +91 ${phone} is registered as a Vehicle Owner (${matchedOwner.fullName || matchedOwner.owner}) on AgriRent!`
+        );
+        return;
+      }
+
+      setMatchedOwnerHint(null);
       // User is NOT registered yet!
       setLoginError(
         isTe
@@ -109,6 +123,8 @@ export default function FarmerLogin({
       );
       return;
     }
+
+    setMatchedOwnerHint(null);
 
     // User is registered: send secure OTP
     setLoginMatchedFarmer(matched);
@@ -193,12 +209,25 @@ export default function FarmerLogin({
       return;
     }
 
+    // Pre-save into AgriRent database immediately so switching tabs or checking database finds this number
+    const newFarmer = {
+      name: regFullName.trim(),
+      mobile: phone,
+      village: regVillage.trim() || defaultVillage,
+      district: selectedLocation?.district || 'Hanamkonda',
+      landArea: parseFloat(regLandArea) || 3.0,
+      crops: ['Paddy', 'Cotton'],
+      isVerified: true,
+      registeredAt: new Date().toISOString().split('T')[0]
+    };
+    saveRegisteredFarmer(newFarmer);
+
     setRegOtpSent(true);
     setRegOtp('874885');
     setRegNotice(
       isTe
-        ? `✓ +91 ${maskPhone(phone)} కి ధృవీకరణ OTP పంపబడింది!`
-        : `✓ Verification OTP sent to +91 ${maskPhone(phone)}!`
+        ? `✓ +91 ${maskPhone(phone)} ఖాతా వివరాలు నమోదు చేయబడ్డాయి! ధృవీకరణ OTP: 874885`
+        : `✓ Account registered for +91 ${maskPhone(phone)}! Click 'Verify & Complete Account' below to finalize session.`
     );
   };
 
@@ -366,14 +395,34 @@ export default function FarmerLogin({
                 {loginError && (
                   <div className="signin-error-box" style={{ marginBottom: '14px' }}>
                     ⚠️ {loginError}
-                    {!loginOtpSent && cleanPhone(loginPhone).length === 10 && (
-                      <button
-                        type="button"
-                        className="signin-inline-action-btn"
-                        onClick={() => handleSwitchToRegister(loginPhone)}
-                      >
-                        📝 {isTe ? 'మొదటిసారి రైతుగా నమోదు చేసుకోండి →' : 'Register as First-Time Farmer →'}
-                      </button>
+                    {matchedOwnerHint ? (
+                      <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className="signin-inline-action-btn"
+                          onClick={() => setActivePage('owner-login')}
+                        >
+                          🚜 {isTe ? 'వాహన యజమాని పోర్టల్‌కి వెళ్లండి →' : 'Switch to Vehicle Owner Portal →'}
+                        </button>
+                        <button
+                          type="button"
+                          className="signin-inline-action-btn"
+                          style={{ background: '#e8f5e9', color: '#1b5e20', borderColor: '#a5d6a7' }}
+                          onClick={() => handleSwitchToRegister(loginPhone)}
+                        >
+                          📝 {isTe ? 'రైతుగా కూడా నమోదు చేయండి →' : 'Register as Farmer Too →'}
+                        </button>
+                      </div>
+                    ) : (
+                      !loginOtpSent && cleanPhone(loginPhone).length === 10 && (
+                        <button
+                          type="button"
+                          className="signin-inline-action-btn"
+                          onClick={() => handleSwitchToRegister(loginPhone)}
+                        >
+                          📝 {isTe ? 'మొదటిసారి రైతుగా నమోదు చేసుకోండి →' : 'Register as First-Time Farmer →'}
+                        </button>
+                      )
                     )}
                   </div>
                 )}

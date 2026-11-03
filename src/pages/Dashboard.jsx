@@ -2,6 +2,7 @@ import { useState } from 'react';
 import StatCard from '../components/StatCard';
 import { translations } from '../translations';
 import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
+import { getRegisteredFarmers, getRegisteredOwners, deleteRegisteredFarmer, deleteRegisteredOwner } from '../data/userData';
 
 export default function Dashboard({
   bookings = [],
@@ -13,7 +14,12 @@ export default function Dashboard({
   language = 'en'
 }) {
   const [statusFilter, setStatusFilter] = useState('All');
-  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings' or 'fleet'
+  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings', 'fleet', or 'database'
+  const [farmersList, setFarmersList] = useState(() => getRegisteredFarmers());
+  const [ownersList, setOwnersList] = useState(() => getRegisteredOwners());
+  const [dbSearch, setDbSearch] = useState('');
+  const [dbSubTab, setDbSubTab] = useState('farmers'); // 'farmers' or 'owners'
+  const [dbNotice, setDbNotice] = useState('');
 
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -101,6 +107,16 @@ export default function Dashboard({
           >
             🚜 {isTe ? 'ట్రాక్టర్ పరికరాల నిర్వహణ' : 'Manage Fleet Machinery'} ({tractors.length})
           </button>
+          <button
+            className={`filter-pill ${activeTab === 'database' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('database');
+              setFarmersList(getRegisteredFarmers());
+              setOwnersList(getRegisteredOwners());
+            }}
+          >
+            👥 {isTe ? 'వినియోగదారుల డేటాబేస్' : 'Registered Users Database'} ({farmersList.length + ownersList.length})
+          </button>
         </div>
 
         {onLogout && (
@@ -115,7 +131,7 @@ export default function Dashboard({
         )}
       </div>
 
-      {activeTab === 'bookings' ? (
+      {activeTab === 'bookings' && (
         <div>
           {/* Status Filter for Bookings */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
@@ -249,7 +265,9 @@ export default function Dashboard({
             </div>
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'fleet' && (
         <div>
           {/* Fleet Machinery Management */}
           <h4 style={{ color: 'var(--primary-900)', marginBottom: '14px' }}>
@@ -324,6 +342,285 @@ export default function Dashboard({
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ====================================================
+          TAB 3: REGISTERED USERS DATABASE INSPECTOR
+         ==================================================== */}
+      {activeTab === 'database' && (
+        <div className="page-anim">
+          {/* Header & Controls Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              <h4 style={{ color: 'var(--primary-900)', margin: '0 0 4px 0' }}>
+                {isTe ? 'అగ్రిరెంట్ వినియోగదారుల డేటాబేస్ (LocalStorage)' : 'AgriRent Registered Users Database'}
+              </h4>
+              <small style={{ color: 'var(--text-muted)' }}>
+                {isTe
+                  ? 'బ్రౌజర్ LocalStorage లో సేవ్ చేయబడిన రైతులు మరియు వాహన యజమానుల ప్రత్యక్ష రికార్డులు.'
+                  : 'Live client-side records stored in browser LocalStorage (`agri_registered_farmers` & `agri_registered_owners`).'}
+              </small>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="btn btn-secondary"
+                style={{ fontSize: '13px', padding: '6px 12px' }}
+                onClick={() => {
+                  setFarmersList(getRegisteredFarmers());
+                  setOwnersList(getRegisteredOwners());
+                  setDbNotice(isTe ? '✓ డేటాబేస్ రిఫ్రెష్ చేయబడింది!' : '✓ Database refreshed from storage!');
+                  setTimeout(() => setDbNotice(''), 3000);
+                }}
+              >
+                🔄 {isTe ? 'రిఫ్రెష్' : 'Refresh'}
+              </button>
+              <button
+                className="btn btn-secondary"
+                style={{ fontSize: '13px', padding: '6px 12px' }}
+                onClick={() => {
+                  const dump = {
+                    farmers: getRegisteredFarmers(),
+                    owners: getRegisteredOwners(),
+                    exportedAt: new Date().toISOString()
+                  };
+                  navigator.clipboard?.writeText(JSON.stringify(dump, null, 2));
+                  setDbNotice(isTe ? '✓ డేటాబేస్ JSON కాపీ చేయబడింది!' : '✓ Full Database JSON copied to clipboard!');
+                  setTimeout(() => setDbNotice(''), 3000);
+                }}
+              >
+                📋 {isTe ? 'JSON కాపీ చేయండి' : 'Copy JSON'}
+              </button>
+            </div>
+          </div>
+
+          {dbNotice && (
+            <div style={{ padding: '8px 14px', background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: '8px', color: '#1b5e20', fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>
+              {dbNotice}
+            </div>
+          )}
+
+          {/* Quick Search Tool */}
+          <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '18px' }}>🔍</span>
+            <input
+              type="text"
+              placeholder={isTe ? "మొబైల్ నంబర్ లేదా పేరుతో శోధించండి (ఉదా: 1234567890, Kondal, Ramesh)..." : "Search database by phone number or name (e.g. 1234567890, Kondal, Ramesh)..."}
+              value={dbSearch}
+              onChange={(e) => setDbSearch(e.target.value)}
+              style={{ flex: 1, minWidth: '240px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px' }}
+            />
+            {dbSearch && (
+              <button
+                className="btn"
+                style={{ padding: '4px 10px', fontSize: '12px', background: '#64748b', color: '#fff' }}
+                onClick={() => setDbSearch('')}
+              >
+                ✕ {isTe ? 'క్లియర్' : 'Clear'}
+              </button>
+            )}
+          </div>
+
+          {/* Sub-tabs: Farmers vs Owners */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <button
+              className={`role-btn ${dbSubTab === 'farmers' ? 'active' : ''}`}
+              onClick={() => setDbSubTab('farmers')}
+              style={{ fontSize: '13px', padding: '7px 16px' }}
+            >
+              🌾 {isTe ? 'రైతులు' : 'Registered Farmers'} ({farmersList.length})
+            </button>
+            <button
+              className={`role-btn ${dbSubTab === 'owners' ? 'active' : ''}`}
+              onClick={() => setDbSubTab('owners')}
+              style={{ fontSize: '13px', padding: '7px 16px' }}
+            >
+              🚜 {isTe ? 'వాహన యజమానులు' : 'Registered Vehicle Owners'} ({ownersList.length})
+            </button>
+          </div>
+
+          {/* Table 1: Farmers */}
+          {dbSubTab === 'farmers' && (
+            <div className="table-card">
+              <div className="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>{isTe ? 'రైతు పేరు' : 'Farmer Name'}</th>
+                      <th>{isTe ? 'మొబైల్ నంబర్' : 'Mobile Number'}</th>
+                      <th>{isTe ? 'గ్రామం & జిల్లా' : 'Village & District'}</th>
+                      <th>{isTe ? 'భూమి (ఎకరాలు)' : 'Land Area'}</th>
+                      <th>{isTe ? 'స్థితి' : 'Status'}</th>
+                      <th>{isTe ? 'నమోదు తేదీ' : 'Registered At'}</th>
+                      <th>{isTe ? 'చర్య' : 'Action'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {farmersList
+                      .filter(f => {
+                        if (!dbSearch) return true;
+                        const q = dbSearch.toLowerCase();
+                        return (
+                          (f.name || '').toLowerCase().includes(q) ||
+                          (f.mobile || '').includes(q) ||
+                          (f.village || '').toLowerCase().includes(q)
+                        );
+                      })
+                      .map((f, idx) => (
+                        <tr key={f.mobile || idx} style={dbSearch && (f.mobile || '').includes(dbSearch) ? { background: '#fef3c7' } : {}}>
+                          <td><strong>{idx + 1}</strong></td>
+                          <td>
+                            <strong>{f.name || 'Unnamed Farmer'}</strong>
+                          </td>
+                          <td>
+                            <strong style={{ color: 'var(--primary-700)', fontFamily: 'monospace', fontSize: '14px' }}>
+                              +91 {f.mobile}
+                            </strong>
+                          </td>
+                          <td>
+                            {f.village || 'N/A'}{f.district ? `, ${f.district}` : ''}
+                          </td>
+                          <td>
+                            {f.landArea ? `${f.landArea} ${isTe ? 'ఎకరాలు' : 'Acres'}` : 'N/A'}
+                          </td>
+                          <td>
+                            <span className="badge bg-success" style={{ fontSize: '11px' }}>
+                              ✓ {f.isVerified ? 'Verified' : 'Active'}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {f.registeredAt || 'Seed Data'}
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-call"
+                              style={{ background: '#d32f2f', padding: '4px 8px', fontSize: '11px' }}
+                              onClick={() => {
+                                if (window.confirm(isTe ? `రైతు ${f.name} (+91 ${f.mobile}) ఖాతాను శాశ్వతంగా తొలగించాలా?` : `Permanently delete farmer ${f.name} (+91 ${f.mobile})?`)) {
+                                  deleteRegisteredFarmer(f.mobile);
+                                  setFarmersList(getRegisteredFarmers());
+                                  setDbNotice(isTe ? `రైతు ${f.name} తొలగించబడ్డారు.` : `Farmer ${f.name} deleted.`);
+                                  setTimeout(() => setDbNotice(''), 3000);
+                                }
+                              }}
+                            >
+                              🗑️ {isTe ? 'తొలగించు' : 'Delete'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    {farmersList.filter(f => {
+                      if (!dbSearch) return true;
+                      const q = dbSearch.toLowerCase();
+                      return (
+                        (f.name || '').toLowerCase().includes(q) ||
+                        (f.mobile || '').includes(q) ||
+                        (f.village || '').toLowerCase().includes(q)
+                      );
+                    }).length === 0 && (
+                      <tr>
+                        <td colSpan="8" className="text-center" style={{ padding: '30px' }}>
+                          {isTe ? `"${dbSearch}" తో సరిపోలే రైతులు ఎవరూ లేరు.` : `No registered farmers match "${dbSearch}".`}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Table 2: Owners */}
+          {dbSubTab === 'owners' && (
+            <div className="table-card">
+              <div className="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>{isTe ? 'యజమాని పేరు' : 'Owner / Captain'}</th>
+                      <th>{isTe ? 'మొబైల్ నంబర్' : 'Mobile Number'}</th>
+                      <th>{isTe ? 'వాహనం & మోడల్' : 'Vehicle & Model'}</th>
+                      <th>{isTe ? 'RC నంబర్' : 'RC Number'}</th>
+                      <th>{isTe ? 'గ్రామం' : 'Village'}</th>
+                      <th>{isTe ? 'ధర / గంటకు' : 'Hourly Rate'}</th>
+                      <th>{isTe ? 'చర్య' : 'Action'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ownersList
+                      .filter(o => {
+                        if (!dbSearch) return true;
+                        const q = dbSearch.toLowerCase();
+                        return (
+                          (o.fullName || o.owner || '').toLowerCase().includes(q) ||
+                          (o.mobile || '').includes(q) ||
+                          (o.tractorModel || o.vehicleType || '').toLowerCase().includes(q) ||
+                          (o.rcNumber || o.vehicleNumber || '').toLowerCase().includes(q)
+                        );
+                      })
+                      .map((o, idx) => (
+                        <tr key={o.mobile || idx} style={dbSearch && (o.mobile || '').includes(dbSearch) ? { background: '#fef3c7' } : {}}>
+                          <td><strong>{idx + 1}</strong></td>
+                          <td>
+                            <strong>{o.fullName || o.owner || 'Unnamed Owner'}</strong>
+                          </td>
+                          <td>
+                            <strong style={{ color: 'var(--primary-700)', fontFamily: 'monospace', fontSize: '14px' }}>
+                              +91 {o.mobile}
+                            </strong>
+                          </td>
+                          <td>
+                            <strong>{o.tractorModel || o.vehicleType || 'Tractor'}</strong>
+                          </td>
+                          <td>
+                            <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                              {o.rcNumber || o.vehicleNumber || 'TS 04 AB 1234'}
+                            </code>
+                          </td>
+                          <td>{o.village || 'N/A'}</td>
+                          <td><strong>₹{o.pricing || 1200}</strong> / hr</td>
+                          <td>
+                            <button
+                              className="btn btn-call"
+                              style={{ background: '#d32f2f', padding: '4px 8px', fontSize: '11px' }}
+                              onClick={() => {
+                                if (window.confirm(isTe ? `యజమాని ${o.fullName || o.owner} (+91 ${o.mobile}) ఖాతాను శాశ్వతంగా తొలగించాలా?` : `Permanently delete vehicle owner ${o.fullName || o.owner} (+91 ${o.mobile})?`)) {
+                                  deleteRegisteredOwner(o.mobile);
+                                  setOwnersList(getRegisteredOwners());
+                                  setDbNotice(isTe ? `యజమాని ఖాతా తొలగించబడింది.` : `Owner account deleted.`);
+                                  setTimeout(() => setDbNotice(''), 3000);
+                                }
+                              }}
+                            >
+                              🗑️ {isTe ? 'తొలగించు' : 'Delete'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    {ownersList.filter(o => {
+                      if (!dbSearch) return true;
+                      const q = dbSearch.toLowerCase();
+                      return (
+                        (o.fullName || o.owner || '').toLowerCase().includes(q) ||
+                        (o.mobile || '').includes(q) ||
+                        (o.tractorModel || o.vehicleType || '').toLowerCase().includes(q) ||
+                        (o.rcNumber || o.vehicleNumber || '').toLowerCase().includes(q)
+                      );
+                    }).length === 0 && (
+                      <tr>
+                        <td colSpan="8" className="text-center" style={{ padding: '30px' }}>
+                          {isTe ? `"${dbSearch}" తో సరిపోలే యజమానులు ఎవరూ లేరు.` : `No registered vehicle owners match "${dbSearch}".`}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
