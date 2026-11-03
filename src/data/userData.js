@@ -253,3 +253,69 @@ export function saveRegisteredOwner(newOwner) {
   }
   return updated;
 }
+
+// Permanently delete a registered farmer by mobile or name
+export function deleteRegisteredFarmer(identifier) {
+  if (!identifier) return [];
+  const normPhone = normalizePhone(identifier);
+  const clean = String(identifier).trim().toLowerCase();
+  const farmers = getRegisteredFarmers();
+  const updated = farmers.filter(f => {
+    const fPhone = normalizePhone(f.mobile);
+    const fName = String(f.name || '').trim().toLowerCase();
+    const isMatch = (normPhone && fPhone === normPhone) || (clean && fName === clean);
+    return !isMatch;
+  });
+
+  try {
+    localStorage.setItem("agri_registered_farmers", JSON.stringify(updated));
+    const current = localStorage.getItem("agri_current_farmer");
+    if (current) {
+      const parsed = JSON.parse(current);
+      if (
+        (normPhone && normalizePhone(parsed.mobile) === normPhone) ||
+        (clean && String(parsed.name || '').trim().toLowerCase() === clean)
+      ) {
+        localStorage.removeItem("agri_current_farmer");
+      }
+    }
+    const last = localStorage.getItem("agri_last_farmer");
+    if (last) {
+      const parsed = JSON.parse(last);
+      if (
+        (normPhone && normalizePhone(parsed.mobile) === normPhone) ||
+        (clean && String(parsed.name || '').trim().toLowerCase() === clean)
+      ) {
+        localStorage.removeItem("agri_last_farmer");
+      }
+    }
+  } catch (e) {
+    console.error("Error deleting farmer:", e);
+  }
+  return updated;
+}
+
+// Permanently delete a registered tractor owner by mobile, RC, or name
+export function deleteRegisteredOwner(identifier) {
+  if (!identifier) return [];
+  const cleanId = String(identifier).trim().toUpperCase();
+  const normPhone = normalizePhone(identifier);
+  const owners = getRegisteredOwners();
+
+  const updated = owners.filter(o => {
+    const oPhone = normalizePhone(o.mobile);
+    const oRc = String(o.rcNumber || o.vehicleNumber || "").trim().toUpperCase();
+    const oName = String(o.fullName || o.owner || "").trim().toUpperCase();
+    const isMatch = (normPhone && oPhone === normPhone) || (cleanId && (oRc === cleanId || oName === cleanId));
+    return !isMatch;
+  });
+
+  try {
+    localStorage.setItem("agri_registered_owners", JSON.stringify(updated));
+    localStorage.removeItem("agri_current_owner");
+    localStorage.removeItem("agri_last_owner");
+  } catch (e) {
+    console.error("Error deleting owner:", e);
+  }
+  return updated;
+}

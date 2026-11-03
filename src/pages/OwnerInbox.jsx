@@ -6,7 +6,9 @@ export default function OwnerInbox({
   setBookings, 
   tractors = [],
   onViewSlip,
-  language = 'en'
+  language = 'en',
+  currentOwner,
+  onOwnerDeleteAccount
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -107,9 +109,21 @@ export default function OwnerInbox({
 
   return (
     <div className="page-anim">
-      <div className="section-header" style={{ marginBottom: '20px' }}>
-        <h3>{t.ownerInboxTitle}</h3>
-        <p>{t.ownerInboxSubtitle}</p>
+      <div className="section-header" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+        <div>
+          <h3>{t.ownerInboxTitle}</h3>
+          <p>{t.ownerInboxSubtitle}</p>
+        </div>
+        {currentOwner && onOwnerDeleteAccount && (
+          <button
+            type="button"
+            className="danger-account-btn"
+            onClick={onOwnerDeleteAccount}
+            title={isTe ? 'వాహన యజమాని ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Vehicle Owner Account'}
+          >
+            🗑️ {isTe ? 'యజమాని ఖాతా తొలగించండి' : 'Delete Owner Account'}
+          </button>
+        )}
       </div>
 
       {/* Tractor Selector Strip */}

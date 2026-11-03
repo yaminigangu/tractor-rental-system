@@ -20,6 +20,7 @@ import MyBookings from './pages/MyBookings';
 import Dashboard from './pages/Dashboard';
 import AdminLogin from './pages/AdminLogin';
 import DualLoginSelect from './pages/DualLoginSelect';
+import { deleteRegisteredFarmer, deleteRegisteredOwner } from './data/userData';
 import { DEFAULT_LOCATION } from './data/telanganaLocations';
 import { buildFleetForLocation } from './data/fleetData';
 import { fetchRegionWeather, getFallbackWeather } from './services/weatherService';
@@ -411,6 +412,8 @@ function App() {
             tractors={tractors}
             onViewSlip={(b) => setReceiptModalBooking(b)}
             language={language}
+            currentOwner={currentOwner}
+            onOwnerDeleteAccount={handleOwnerDeleteAccount}
           />
         );
       case 'my-bookings':
@@ -421,6 +424,8 @@ function App() {
             setActivePage={setActivePage}
             onViewSlip={(b) => setReceiptModalBooking(b)}
             language={language}
+            currentFarmer={currentFarmer}
+            onFarmerDeleteAccount={handleFarmerDeleteAccount}
           />
         );
       case 'admin-dashboard':
@@ -477,6 +482,57 @@ function App() {
     setActivePage('portal-select');
   };
 
+  // Delete account handlers
+  const handleFarmerDeleteAccount = () => {
+    if (!currentFarmer) return;
+    const isTe = language === 'te';
+    const farmerName = currentFarmer.name || (isTe ? 'రైతు' : 'Farmer');
+    const confirmMsg = isTe
+      ? `మీ రైతు ఖాతాను (${farmerName}) శాశ్వతంగా తొలగించాలనుకుంటున్నారా?\n\nఈ చర్యతో మీ ప్రొఫైల్ ఆధారాలు మరియు సేషన్ పూర్తిగా తొలగించబడతాయి.`
+      : `Are you sure you want to permanently delete your Farmer account (${farmerName})?\n\nThis action cannot be undone. Your profile credentials and session will be removed.`;
+
+    if (window.confirm(confirmMsg)) {
+      deleteRegisteredFarmer(currentFarmer.mobile || currentFarmer.name);
+      setCurrentFarmer(null);
+      try {
+        localStorage.removeItem('agri_current_farmer');
+        localStorage.removeItem('agri_last_farmer');
+      } catch (e) {
+        console.warn(e);
+      }
+      alert(isTe ? 'మీ రైతు ఖాతా శాశ్వతంగా తొలగించబడింది.' : 'Your Farmer account has been permanently deleted.');
+      setActivePage('portal-select');
+    }
+  };
+
+  const handleOwnerDeleteAccount = () => {
+    if (!currentOwner) return;
+    const isTe = language === 'te';
+    const ownerName = currentOwner.fullName || currentOwner.owner || (isTe ? 'యజమాని' : 'Vehicle Owner');
+    const confirmMsg = isTe
+      ? `మీ వాహన యజమాని ఖాతాను (${ownerName}) శాశ్వతంగా తొలగించాలనుకుంటున్నారా?\n\nఈ చర్యతో మీ యంత్రాల జాబితా మరియు KYC ప్రొఫైల్ పూర్తిగా తొలగించబడతాయి.`
+      : `Are you sure you want to permanently delete your Vehicle Owner account (${ownerName})?\n\nThis action cannot be undone. Your machinery listings, KYC profile, and owner records will be removed.`;
+
+    if (window.confirm(confirmMsg)) {
+      deleteRegisteredOwner(currentOwner.mobile || currentOwner.rcNumber || ownerName);
+      // Unlist custom tractors registered by this owner
+      setCustomTractors(prev => (Array.isArray(prev) ? prev.filter(t => 
+        t.ownerMobile !== currentOwner.mobile && 
+        t.owner !== currentOwner.fullName &&
+        t.rcNumber !== currentOwner.rcNumber
+      ) : []));
+      setCurrentOwner(null);
+      try {
+        localStorage.removeItem('agri_current_owner');
+        localStorage.removeItem('agri_last_owner');
+      } catch (e) {
+        console.warn(e);
+      }
+      alert(isTe ? 'మీ వాహన యజమాని ఖాతా శాశ్వతంగా తొలగించబడింది.' : 'Your Vehicle Owner account has been permanently deleted.');
+      setActivePage('portal-select');
+    }
+  };
+
   const handleAdminLogout = () => {
     setIsAdminLoggedIn(false);
     try {
@@ -514,13 +570,14 @@ function App() {
           selectedLocation={selectedLocation}
           currentFarmer={currentFarmer}
           onFarmerLogout={handleFarmerLogout}
+          onFarmerDeleteAccount={handleFarmerDeleteAccount}
           currentOwner={currentOwner}
           onOwnerLogout={handleOwnerLogout}
+          onOwnerDeleteAccount={handleOwnerDeleteAccount}
           isAdminLoggedIn={isAdminLoggedIn}
           onAdminLogout={handleAdminLogout}
           isInstalled={pwa.isInstalled}
           onInstallApp={pwa.promptInstall}
-          onShowLoader={() => setIsLoadingApp(true)}
         />
       )}
 
@@ -545,8 +602,10 @@ function App() {
             onOpenLocationPicker={() => setIsLocationModalOpen(true)}
             currentFarmer={currentFarmer}
             onFarmerLogout={handleFarmerLogout}
+            onFarmerDeleteAccount={handleFarmerDeleteAccount}
             currentOwner={currentOwner}
             onOwnerLogout={handleOwnerLogout}
+            onOwnerDeleteAccount={handleOwnerDeleteAccount}
             isInstalled={pwa.isInstalled}
             onInstallApp={pwa.promptInstall}
           />

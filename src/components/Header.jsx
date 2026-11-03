@@ -14,8 +14,10 @@ export default function Header({
   onOpenLocationPicker,
   currentFarmer,
   onFarmerLogout,
+  onFarmerDeleteAccount,
   currentOwner,
   onOwnerLogout,
+  onOwnerDeleteAccount,
   isInstalled = false,
   onInstallApp
 }) {
@@ -112,7 +114,7 @@ export default function Header({
           <span className="lang-text-mobile">{language === 'en' ? 'తెలుగు' : 'EN'}</span>
         </button>
 
-        {/* Clean Logged-in User Badge & Logout Button */}
+        {/* Clean Logged-in User Badge & Logout / Delete Account Buttons */}
         {currentFarmer && (
           <div className="header-logged-in-user">
             <div className="header-user-badge farmer-badge">
@@ -127,7 +129,17 @@ export default function Header({
                 onClick={onFarmerLogout}
                 title={isTe ? "లాగ్అవుట్" : "Logout"}
               >
-                🚪 {isTe ? 'లాగ్అవుట్' : 'Logout'}
+                🚪 <span className="header-btn-text">{isTe ? 'లాగ్అవుట్' : 'Logout'}</span>
+              </button>
+            )}
+            {onFarmerDeleteAccount && (
+              <button
+                type="button"
+                className="header-delete-btn"
+                onClick={onFarmerDeleteAccount}
+                title={isTe ? "రైతు ఖాతాను శాశ్వతంగా తొలగించండి" : "Permanently Delete Farmer Account"}
+              >
+                🗑️ <span className="header-btn-text">{isTe ? 'ఖాతా తొలగించు' : 'Delete Account'}</span>
               </button>
             )}
           </div>
@@ -147,7 +159,17 @@ export default function Header({
                 onClick={onOwnerLogout}
                 title={isTe ? "లాగ్అవుట్" : "Logout"}
               >
-                🚪 {isTe ? 'లాగ్అవుట్' : 'Logout'}
+                🚪 <span className="header-btn-text">{isTe ? 'లాగ్అవుట్' : 'Logout'}</span>
+              </button>
+            )}
+            {onOwnerDeleteAccount && (
+              <button
+                type="button"
+                className="header-delete-btn"
+                onClick={onOwnerDeleteAccount}
+                title={isTe ? "వాహన యజమాని ఖాతాను శాశ్వతంగా తొలగించండి" : "Permanently Delete Vehicle Owner Account"}
+              >
+                🗑️ <span className="header-btn-text">{isTe ? 'ఖాతా తొలగించు' : 'Delete Account'}</span>
               </button>
             )}
           </div>

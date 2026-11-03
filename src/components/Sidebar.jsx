@@ -11,13 +11,14 @@ export default function Sidebar({
   selectedLocation,
   currentFarmer,
   onFarmerLogout,
+  onFarmerDeleteAccount,
   currentOwner,
   onOwnerLogout,
+  onOwnerDeleteAccount,
   isAdminLoggedIn,
   onAdminLogout,
   isInstalled = false,
-  onInstallApp,
-  onShowLoader
+  onInstallApp
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -237,24 +238,38 @@ export default function Sidebar({
                 🚪
               </button>
             </div>
-          </div>
-        )}
 
-        {/* Replay GSAP Tractor Loading Screen Animation */}
-        {onShowLoader && (
-          <button
-            type="button"
-            className="sidebar-replay-loader-btn"
-            onClick={() => {
-              closeMobileMenu();
-              onShowLoader();
-            }}
-            title={isTe ? 'ట్రాక్టర్ యానిమేషన్ చూడండి' : 'View Tractor GSAP Animation'}
-          >
-            <span className="replay-icon">🚜</span>
-            <span className="replay-text">{isTe ? 'ట్రాక్టర్ యానిమేషన్' : 'Tractor Loader Animation'}</span>
-            <span className="replay-badge">GSAP</span>
-          </button>
+            {/* Delete Account Option inside Farmer or Vehicle Owner account */}
+            {currentFarmer && onFarmerDeleteAccount && (
+              <button
+                type="button"
+                className="sidebar-user-delete-btn"
+                onClick={() => {
+                  if (closeMobileMenu) closeMobileMenu();
+                  onFarmerDeleteAccount();
+                }}
+                title={isTe ? 'రైతు ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Farmer Account'}
+              >
+                <span className="del-icon">🗑️</span>
+                <span>{isTe ? 'రైతు ఖాతా తొలగించండి' : 'Delete Farmer Account'}</span>
+              </button>
+            )}
+
+            {!currentFarmer && currentOwner && onOwnerDeleteAccount && (
+              <button
+                type="button"
+                className="sidebar-user-delete-btn"
+                onClick={() => {
+                  if (closeMobileMenu) closeMobileMenu();
+                  onOwnerDeleteAccount();
+                }}
+                title={isTe ? 'వాహన యజమాని ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Vehicle Owner Account'}
+              >
+                <span className="del-icon">🗑️</span>
+                <span>{isTe ? 'యజమాని ఖాతా తొలగించండి' : 'Delete Owner Account'}</span>
+              </button>
+            )}
+          </div>
         )}
 
         {/* PWA Web App Install Widget in Sidebar */}

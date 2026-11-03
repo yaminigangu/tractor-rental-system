@@ -6,7 +6,9 @@ export default function MyBookings({
   setBookings, 
   setActivePage,
   onViewSlip,
-  language = 'en'
+  language = 'en',
+  currentFarmer,
+  onFarmerDeleteAccount
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -42,9 +44,21 @@ export default function MyBookings({
           <h3>{t.myBookingsTitle}</h3>
           <p>{t.myBookingsSubtitle}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setActivePage('booking-form')}>
-          {t.btnNewBooking}
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {currentFarmer && onFarmerDeleteAccount && (
+            <button
+              type="button"
+              className="danger-account-btn"
+              onClick={onFarmerDeleteAccount}
+              title={isTe ? 'రైతు ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Farmer Account'}
+            >
+              🗑️ {isTe ? 'రైతు ఖాతా తొలగించండి' : 'Delete Farmer Account'}
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={() => setActivePage('booking-form')}>
+            {t.btnNewBooking}
+          </button>
+        </div>
       </div>
 
       <div className="table-card">
