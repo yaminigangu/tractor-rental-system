@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import WeatherBar from '../components/WeatherBar';
-import TractorFarmerScene from '../components/TractorFarmerScene';
+import TractorFarmerScene, { TRACTOR_MODELS } from '../components/TractorFarmerScene';
 import { translations } from '../translations';
 
 // Returns 100% accurate matching photo corresponding to the specific tractor model and brand
@@ -132,6 +132,7 @@ export default function FindTractor({
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [listSuccessToast, setListSuccessToast] = useState('');
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState('All');
 
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -280,7 +281,18 @@ export default function FindTractor({
       isSpecialtyMachine ||
       (tractor.location || '').toLowerCase().includes(activeVillage.toLowerCase());
 
-    return matchesSearch && matchesService && matchesLocal;
+    const matchesModel = (() => {
+      if (!selectedModelId || selectedModelId === 'All') return true;
+      const targetModel = TRACTOR_MODELS.find((m) => m.id === selectedModelId);
+      if (!targetModel) return true;
+      const b = targetModel.brand.toLowerCase();
+      const s = targetModel.shortName.toLowerCase();
+      const tractorM = (tractor.model || '').toLowerCase();
+      const tractorB = (tractor.brand || '').toLowerCase();
+      return tractorM.includes(b) || tractorB.includes(b) || tractorM.includes(s);
+    })();
+
+    return matchesSearch && matchesService && matchesModel && matchesLocal;
   });
 
   // Sorting Logic
@@ -437,7 +449,7 @@ export default function FindTractor({
         { opacity: 1, y: 0, scale: 1, duration: 0.35, stagger: 0.035, ease: 'power2.out' }
       );
     }
-  }, [serviceFilter, searchQuery, sortBy, selectedLocation]);
+  }, [serviceFilter, selectedModelId, searchQuery, sortBy, selectedLocation]);
 
   const handleBookTractor = (tractor) => {
     if (setSelectedTractor) {
@@ -495,7 +507,12 @@ export default function FindTractor({
                 : 'Direct Farmer-to-Farmer (F2F) tractor and equipment rental across Telangana. Transparent rates with instant village dispatch.'}
             </p>
 
-            {/* Quick Category Toggle Pills (QuickRide Style: AIRPORT | RENTAL | OUTSTATION | LOCAL) */}
+            {/* Section 1: Quick Machinery Category Toggle Pills */}
+            <div className="jfarm-tab-section-header">
+              <span className="jfarm-tab-section-title">
+                {isTe ? '🌾 వ్యవసాయ యంత్రం / పని రకం:' : '🌾 MACHINERY & SERVICE TYPE:'}
+              </span>
+            </div>
             <div className="jfarm-quick-tabs" role="tablist">
               {[
                 { id: 'All', label: isTe ? 'అన్నీ' : 'ALL FLEET', icon: '🚜' },
@@ -521,11 +538,56 @@ export default function FindTractor({
                 );
               })}
             </div>
+
+            {/* Section 2: Tractor Model Names Selector (Allows farmer to see & pick different tractor models) */}
+            <div className="jfarm-tab-section-header" style={{ marginTop: '14px' }}>
+              <span className="jfarm-tab-section-title">
+                {isTe ? '🚜 ప్రముఖ ట్రాక్టర్ మోడల్స్ (బ్రాండ్లు):' : '🚜 TRACTOR MODEL TYPES & BRANDS:'}
+              </span>
+              {selectedModelId !== 'All' && (
+                <button
+                  type="button"
+                  className="jfarm-clear-model-pill"
+                  onClick={() => setSelectedModelId('All')}
+                >
+                  ✕ {isTe ? 'అన్నీ చూపించు' : 'All Models'}
+                </button>
+              )}
+            </div>
+            <div className="jfarm-quick-tabs jfarm-models-tabs" role="tablist">
+              <button
+                type="button"
+                className={`jfarm-tab-pill model-tab ${selectedModelId === 'All' ? 'active' : ''}`}
+                onClick={() => setSelectedModelId('All')}
+              >
+                <span className="jfarm-tab-text">{isTe ? 'అన్ని మోడల్స్' : 'All Models'}</span>
+              </button>
+              {TRACTOR_MODELS.map((tm) => {
+                const isActive = selectedModelId === tm.id;
+                return (
+                  <button
+                    key={tm.id}
+                    type="button"
+                    className={`jfarm-tab-pill model-tab ${isActive ? 'active' : ''}`}
+                    onClick={() => setSelectedModelId(isActive ? 'All' : tm.id)}
+                  >
+                    <span className="model-tab-dot" style={{ backgroundColor: tm.primaryColor }} />
+                    <span className="jfarm-tab-text">{tm.shortName}</span>
+                    <span className="jfarm-tab-hp">{tm.hp}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* GSAP Animated Video Showcase: Tractor along with Farmer (Changes with category selection) */}
+          {/* GSAP Animated Video Showcase: Tractor along with Farmer (Changes with category & model selection) */}
           <div className="jfarm-hero-anim-col">
-            <TractorFarmerScene language={language} activeService={serviceFilter} />
+            <TractorFarmerScene
+              language={language}
+              activeService={serviceFilter}
+              selectedModelId={selectedModelId === 'All' ? null : selectedModelId}
+              onModelSelect={(m) => setSelectedModelId(m.id)}
+            />
           </div>
         </div>
 
@@ -664,6 +726,18 @@ export default function FindTractor({
           {serviceFilter && serviceFilter !== 'All' && (
             <span className="results-filter-pill">
               Filter: {serviceFilter}
+            </span>
+          )}
+          {selectedModelId && selectedModelId !== 'All' && (
+            <span className="results-filter-pill model-filter" style={{ marginLeft: '6px' }}>
+              Model: {TRACTOR_MODELS.find(m => m.id === selectedModelId)?.shortName}
+              <button
+                type="button"
+                onClick={() => setSelectedModelId('All')}
+                style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', marginLeft: '6px' }}
+              >
+                ✕
+              </button>
             </span>
           )}
         </div>

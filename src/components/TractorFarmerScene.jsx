@@ -1,16 +1,150 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 
-// Machinery configurations with Telugu and English titles
+// 10 Major Agricultural Tractor Models with Authentic Livery & Specifications
+export const TRACTOR_MODELS = [
+  {
+    id: 'mahindra-575',
+    brand: 'Mahindra',
+    modelName: 'Mahindra 575 DI Sarpanch',
+    shortName: 'Mahindra 575',
+    hp: '47 HP',
+    primaryColor: '#dc2626',
+    secondaryColor: '#991b1b',
+    rimColor: '#eab308',
+    chassisColor: '#334155',
+    badgeText: 'MAHINDRA 575',
+    fenderColor: '#dc2626'
+  },
+  {
+    id: 'swaraj-744',
+    brand: 'Swaraj',
+    modelName: 'Swaraj 744 FE XT',
+    shortName: 'Swaraj 744',
+    hp: '48 HP',
+    primaryColor: '#2563eb',
+    secondaryColor: '#1d4ed8',
+    rimColor: '#cbd5e1',
+    chassisColor: '#1e293b',
+    badgeText: 'SWARAJ 744',
+    fenderColor: '#ffffff'
+  },
+  {
+    id: 'john-deere-5310',
+    brand: 'John Deere',
+    modelName: 'John Deere 5310 GearPro',
+    shortName: 'John Deere 5310',
+    hp: '55 HP',
+    primaryColor: '#15803d',
+    secondaryColor: '#14532d',
+    rimColor: '#facc15',
+    chassisColor: '#1e293b',
+    badgeText: 'JOHN DEERE 5310',
+    fenderColor: '#15803d'
+  },
+  {
+    id: 'massey-241',
+    brand: 'Massey Ferguson',
+    modelName: 'Massey Ferguson 241 DI',
+    shortName: 'Massey 241',
+    hp: '42 HP',
+    primaryColor: '#b91c1c',
+    secondaryColor: '#7f1d1d',
+    rimColor: '#cbd5e1',
+    chassisColor: '#64748b',
+    badgeText: 'MASSEY 241',
+    fenderColor: '#b91c1c'
+  },
+  {
+    id: 'farmtrac-60',
+    brand: 'Farmtrac',
+    modelName: 'Farmtrac 60 Powermaxx',
+    shortName: 'Farmtrac 60',
+    hp: '55 HP',
+    primaryColor: '#1d4ed8',
+    secondaryColor: '#1e3a8a',
+    rimColor: '#cbd5e1',
+    chassisColor: '#334155',
+    badgeText: 'FARMTRAC 60',
+    fenderColor: '#1d4ed8'
+  },
+  {
+    id: 'sonalika-745',
+    brand: 'Sonalika',
+    modelName: 'Sonalika DI 745 Sikander',
+    shortName: 'Sonalika 745',
+    hp: '50 HP',
+    primaryColor: '#1e40af',
+    secondaryColor: '#172554',
+    rimColor: '#eab308',
+    chassisColor: '#1e293b',
+    badgeText: 'SONALIKA 745',
+    fenderColor: '#1e40af'
+  },
+  {
+    id: 'new-holland-3630',
+    brand: 'New Holland',
+    modelName: 'New Holland 3630 TX Super',
+    shortName: 'New Holland',
+    hp: '55 HP',
+    primaryColor: '#0284c7',
+    secondaryColor: '#0369a1',
+    rimColor: '#ffffff',
+    chassisColor: '#1e293b',
+    badgeText: 'NEW HOLLAND',
+    fenderColor: '#0284c7'
+  },
+  {
+    id: 'kubota-4501',
+    brand: 'Kubota',
+    modelName: 'Kubota MU4501 4WD',
+    shortName: 'Kubota 4501',
+    hp: '45 HP',
+    primaryColor: '#ea580c',
+    secondaryColor: '#c2410c',
+    rimColor: '#ffffff',
+    chassisColor: '#334155',
+    badgeText: 'KUBOTA 4501',
+    fenderColor: '#ffffff'
+  },
+  {
+    id: 'eicher-380',
+    brand: 'Eicher',
+    modelName: 'Eicher 380 Super DI',
+    shortName: 'Eicher 380',
+    hp: '40 HP',
+    primaryColor: '#3b82f6',
+    secondaryColor: '#1d4ed8',
+    rimColor: '#cbd5e1',
+    chassisColor: '#334155',
+    badgeText: 'EICHER 380',
+    fenderColor: '#3b82f6'
+  },
+  {
+    id: 'kartar-4000',
+    brand: 'Kartar',
+    modelName: 'Kartar 4000 Combine Harvester',
+    shortName: 'Kartar 4000',
+    hp: '101 HP',
+    primaryColor: '#16a34a',
+    secondaryColor: '#15803d',
+    rimColor: '#eab308',
+    chassisColor: '#14532d',
+    badgeText: 'KARTAR 4000',
+    fenderColor: '#16a34a'
+  }
+];
+
+// Machinery implement configuration
 const MACHINERY_CONFIGS = {
   plough: {
     id: 'plough',
     icon: '🌱',
     labelEn: 'Ploughing Active',
     labelTe: 'దుక్కి దున్నడం',
-    titleEn: 'Mahindra 575 DI + 3-Disc Furrow Plough',
-    titleTe: 'మహీంద్రా 575 DI + 3-డిస్క్ నాగలి దుక్కి',
-    furrowColor: '#78350f',
+    implementEn: '3-Disc Furrow Plough',
+    implementTe: '3-డిస్క్ నాగలి దుక్కి',
+    defaultModelId: 'mahindra-575',
     sproutIcon: '🌱'
   },
   rotavator: {
@@ -18,9 +152,9 @@ const MACHINERY_CONFIGS = {
     icon: '🔄',
     labelEn: 'Rotavator Active',
     labelTe: 'రొటవేటర్ సేద్యం',
-    titleEn: 'Swaraj 744 FE + Heavy-Duty Rotary Tiller (Rotavator)',
-    titleTe: 'స్వరాజ్ 744 FE + హెవీ రొటవేటర్',
-    furrowColor: '#92400e',
+    implementEn: 'Heavy-Duty Rotary Tiller',
+    implementTe: 'హెవీ రొటవేటర్',
+    defaultModelId: 'swaraj-744',
     sproutIcon: '🌾'
   },
   cultivator: {
@@ -28,9 +162,9 @@ const MACHINERY_CONFIGS = {
     icon: '🌾',
     labelEn: 'Cultivator Active',
     labelTe: 'కల్టివేటర్ సేద్యం',
-    titleEn: 'Farmtrac 60 Powermaxx + 9-Tyne Spring Cultivator',
-    titleTe: 'ఫార్మ్‌ట్రాక్ 60 + 9-టైన్ స్ప్రింగ్ కల్టివేటర్',
-    furrowColor: '#78350f',
+    implementEn: '9-Tyne Spring Cultivator',
+    implementTe: '9-టైన్ స్ప్రింగ్ కల్టివేటర్',
+    defaultModelId: 'farmtrac-60',
     sproutIcon: '🌿'
   },
   harvester: {
@@ -38,9 +172,9 @@ const MACHINERY_CONFIGS = {
     icon: '🌽',
     labelEn: 'Harvester Active',
     labelTe: 'కోత యంత్రం',
-    titleEn: 'Kartar 4000 Maize & Paddy Combine Harvester • 101 HP',
-    titleTe: 'కర్తార్ 4000 కంబైన్ హార్వెస్టర్ (మొక్కజొన్న/వరి)',
-    furrowColor: '#ca8a04',
+    implementEn: 'Maize & Paddy Grain Header',
+    implementTe: 'మొక్కజొన్న/వరి కోత హెడర్',
+    defaultModelId: 'kartar-4000',
     sproutIcon: '🌽'
   },
   baler: {
@@ -48,9 +182,9 @@ const MACHINERY_CONFIGS = {
     icon: '📦',
     labelEn: 'Straw Baler Active',
     labelTe: 'గడ్డి బెయిలర్',
-    titleEn: 'John Deere 5050D + Round Straw Baler',
-    titleTe: 'జాన్ డీర్ 5050D + రౌండ్ గడ్డి బెయిలర్',
-    furrowColor: '#eab308',
+    implementEn: 'Round Straw Baler',
+    implementTe: 'రౌండ్ గడ్డి బెయిలర్',
+    defaultModelId: 'john-deere-5310',
     sproutIcon: '📦'
   },
   seeder: {
@@ -58,9 +192,9 @@ const MACHINERY_CONFIGS = {
     icon: '🌱',
     labelEn: 'Seed Planter Active',
     labelTe: 'విత్తన నాటే యంత్రం',
-    titleEn: 'Mahindra 475 DI + Precision Seed & Fertilizer Planter',
-    titleTe: 'మహీంద్రా 475 DI + విత్తన సీడర్ డ్రిల్',
-    furrowColor: '#65a30d',
+    implementEn: 'Precision Multi-Crop Planter',
+    implementTe: 'విత్తన సీడర్ డ్రిల్',
+    defaultModelId: 'mahindra-575',
     sproutIcon: '🌱'
   },
   trailer: {
@@ -68,9 +202,9 @@ const MACHINERY_CONFIGS = {
     icon: '🚚',
     labelEn: 'Trailer Trolley Active',
     labelTe: 'ట్రాలీ రవాణా',
-    titleEn: 'Sonalika DI 745 + 4-Ton Hydraulic Tipping Trolley',
-    titleTe: 'సోనాలికా DI 745 + 4-టన్ హైడ్రాలిక్ ట్రాలీ',
-    furrowColor: '#78350f',
+    implementEn: '4-Ton Farm Tipping Trolley',
+    implementTe: '4-టన్ హైడ్రాలిక్ ట్రాలీ',
+    defaultModelId: 'sonalika-745',
     sproutIcon: '🌾'
   },
   all: {
@@ -78,9 +212,9 @@ const MACHINERY_CONFIGS = {
     icon: '🚜',
     labelEn: 'All Fleet Drive',
     labelTe: 'అన్ని ట్రాక్టర్లు',
-    titleEn: 'Mahindra 575 DI Sarpanch • 47 HP Tractor Fleet',
-    titleTe: 'మహీంద్రా 575 DI సర్పంచ్ • 47 HP ఫ్లీట్',
-    furrowColor: '#78350f',
+    implementEn: 'Fleet Demonstration',
+    implementTe: 'యంత్రాల ప్రదర్శన',
+    defaultModelId: 'mahindra-575',
     sproutIcon: '🌱'
   }
 };
@@ -98,10 +232,51 @@ function normalizeServiceMode(service) {
   return 'all';
 }
 
-export default function TractorFarmerScene({ language = 'en', activeService = 'All' }) {
+export default function TractorFarmerScene({
+  language = 'en',
+  activeService = 'All',
+  selectedModelId = null,
+  onModelSelect = null
+}) {
   const isTe = language === 'te';
-  const mode = normalizeServiceMode(activeService);
-  const currentConfig = MACHINERY_CONFIGS[mode] || MACHINERY_CONFIGS.all;
+  const serviceMode = normalizeServiceMode(activeService);
+  const currentServiceConfig = MACHINERY_CONFIGS[serviceMode] || MACHINERY_CONFIGS.all;
+
+  // Active Tractor Model State
+  const [internalModelId, setInternalModelId] = useState(() => {
+    if (selectedModelId) return selectedModelId;
+    return currentServiceConfig.defaultModelId || 'mahindra-575';
+  });
+
+  // When activeService changes, switch default model if user hasn't explicitly locked one
+  useEffect(() => {
+    if (selectedModelId) {
+      setInternalModelId(selectedModelId);
+    } else if (serviceMode === 'harvester') {
+      setInternalModelId('kartar-4000');
+    } else if (serviceMode === 'rotavator') {
+      setInternalModelId('swaraj-744');
+    } else if (serviceMode === 'cultivator') {
+      setInternalModelId('farmtrac-60');
+    } else if (serviceMode === 'baler') {
+      setInternalModelId('john-deere-5310');
+    } else if (serviceMode === 'trailer') {
+      setInternalModelId('sonalika-745');
+    } else if (serviceMode === 'plough') {
+      setInternalModelId('mahindra-575');
+    }
+  }, [serviceMode, selectedModelId]);
+
+  const activeModel =
+    TRACTOR_MODELS.find(m => m.id === (selectedModelId || internalModelId)) ||
+    TRACTOR_MODELS[0];
+
+  const handleSelectModel = (model) => {
+    setInternalModelId(model.id);
+    if (onModelSelect) {
+      onModelSelect(model);
+    }
+  };
 
   // Master Scene Refs
   const sceneWrapperRef = useRef(null);
@@ -137,7 +312,6 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
   const [speedMultiplier, setSpeedMultiplier] = useState(1); // 1 = normal, 2 = turbo
 
   useEffect(() => {
-    // Master GSAP Context for the active machinery mode
     const ctx = gsap.context(() => {
       // 1. Wheel Spin Tweens
       const wheelsToSpin = [frontWheelRef.current, rearWheelRef.current];
@@ -171,7 +345,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         });
       }
 
-      // 3. Farmer Sitting & Bobbing with Driver Seat Spring
+      // 3. Farmer Sitting & Bobbing with Seat Spring
       let farmerTween = null;
       if (farmerRef.current) {
         farmerTween = gsap.to(farmerRef.current, {
@@ -185,7 +359,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         });
       }
 
-      // 4. Farmer Hands & Steering Wheel Realistic Micro-Adjustment
+      // 4. Steering Wheel Micro-Adjustment
       let steerTween = null;
       if (steeringRef.current) {
         steerTween = gsap.to(steeringRef.current, {
@@ -198,7 +372,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         });
       }
 
-      // 5. Traditional Saffron Turban Flapping in the Wind
+      // 5. Turban Flapping in the Wind
       let turbanTween = null;
       if (turbanTailRef.current) {
         turbanTween = gsap.to(turbanTailRef.current, {
@@ -212,7 +386,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         });
       }
 
-      // 6. Infinite Farmland Soil & Furrow Scrolling
+      // 6. Ground Soil Track Infinite Scrolling
       let groundTween = null;
       if (groundTrackRef.current) {
         groundTween = gsap.to(groundTrackRef.current, {
@@ -223,7 +397,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         });
       }
 
-      // 7. Golden Telangana Sun Rays Gentle Pulse
+      // 7. Golden Sun Rays Pulse
       if (sunRaysRef.current) {
         gsap.to(sunRaysRef.current, {
           scale: 1.08,
@@ -237,11 +411,10 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
       }
 
       // ==========================================
-      // MODE-SPECIFIC GSAP TWEENS
+      // MODE-SPECIFIC IMPLEMENT TWEENS
       // ==========================================
 
-      // Mode: Ploughing (Disc plough vibration & turning discs)
-      if (mode === 'plough') {
+      if (serviceMode === 'plough') {
         if (ploughRef.current) {
           gsap.to(ploughRef.current, {
             y: 2,
@@ -264,8 +437,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         }
       }
 
-      // Mode: Rotavator (Rapid spinning rotary tiller blades)
-      if (mode === 'rotavator') {
+      if (serviceMode === 'rotavator') {
         if (rotavatorBladesRef.current) {
           gsap.to(rotavatorBladesRef.current, {
             rotation: 360,
@@ -286,8 +458,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         }
       }
 
-      // Mode: Cultivator (High-frequency spring tine tension bounce)
-      if (mode === 'cultivator' && cultivatorTinesRef.current) {
+      if (serviceMode === 'cultivator' && cultivatorTinesRef.current) {
         gsap.to(cultivatorTinesRef.current, {
           x: 2,
           y: -2,
@@ -300,8 +471,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         });
       }
 
-      // Mode: Combine Harvester (Rotating reel & golden crop feed)
-      if (mode === 'harvester') {
+      if (serviceMode === 'harvester' || activeModel.id === 'kartar-4000') {
         if (harvesterReelRef.current) {
           gsap.to(harvesterReelRef.current, {
             rotation: 360,
@@ -321,8 +491,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         }
       }
 
-      // Mode: Straw Baler (Pickup rotation & straw bale rolling)
-      if (mode === 'baler') {
+      if (serviceMode === 'baler') {
         if (balerPickupRef.current) {
           gsap.to(balerPickupRef.current, {
             rotation: 360,
@@ -345,8 +514,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         }
       }
 
-      // Mode: Seed Planter (Metering press wheel spin)
-      if (mode === 'seeder' && seederWheelRef.current) {
+      if (serviceMode === 'seeder' && seederWheelRef.current) {
         gsap.to(seederWheelRef.current, {
           rotation: 360,
           duration: 0.85 / speedMultiplier,
@@ -356,8 +524,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         });
       }
 
-      // Mode: Trailer Trolley (Chassis sway)
-      if (mode === 'trailer' && trailerChassisRef.current) {
+      if (serviceMode === 'trailer' && trailerChassisRef.current) {
         gsap.to(trailerChassisRef.current, {
           y: -3,
           rotation: 0.7,
@@ -369,9 +536,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         });
       }
 
-      // ==========================================
-      // Continuous Exhaust Smoke Emitter
-      // ==========================================
+      // Exhaust Smoke Interval
       const smokeInterval = setInterval(() => {
         if (!smokeContainerRef.current || !isPlaying) return;
         const puff = document.createElement('div');
@@ -401,9 +566,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         );
       }, 260 / speedMultiplier);
 
-      // ==========================================
-      // Soil Dust Particles Kicked Up by Tires
-      // ==========================================
+      // Dust Particles Interval
       const dustInterval = setInterval(() => {
         if (!dustContainerRef.current || !isPlaying) return;
         const dust = document.createElement('div');
@@ -432,7 +595,6 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
         );
       }, 200 / speedMultiplier);
 
-      // Pause/Resume handling
       if (!isPlaying) {
         if (wheelTween) wheelTween.pause();
         if (chassisTween) chassisTween.pause();
@@ -449,19 +611,21 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
     }, sceneWrapperRef);
 
     return () => ctx.revert();
-  }, [mode, isPlaying, speedMultiplier]);
+  }, [serviceMode, activeModel.id, isPlaying, speedMultiplier]);
 
   const togglePlay = () => setIsPlaying(prev => !prev);
   const toggleSpeed = () => setSpeedMultiplier(prev => (prev === 1 ? 1.75 : 1));
 
+  const isCombineHarvester = serviceMode === 'harvester' || activeModel.id === 'kartar-4000';
+
   return (
     <div className="tractor-video-card" ref={sceneWrapperRef}>
-      {/* Top Video Header HUD Bar - User requested removal of LIVE AGRI-DRIVE heading */}
+      {/* Top Header HUD Bar */}
       <div className="video-card-top-bar">
         <div className="video-category-tag">
-          <span className="category-tag-icon">{currentConfig.icon}</span>
+          <span className="category-tag-icon">{currentServiceConfig.icon}</span>
           <span className="category-tag-text">
-            {isTe ? currentConfig.labelTe : currentConfig.labelEn}
+            {isTe ? currentServiceConfig.labelTe : currentServiceConfig.labelEn}
           </span>
         </div>
 
@@ -504,17 +668,14 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
 
         {/* Layer 2: Animated SVG Scene */}
         <div className="scene-stage-actors">
-          {/* Exhaust Smoke Puffs Container */}
           <div
             className="scene-smoke-emitter"
             ref={smokeContainerRef}
-            style={{ left: mode === 'harvester' ? '38%' : '68%' }}
+            style={{ left: isCombineHarvester ? '38%' : '68%' }}
           />
 
-          {/* Wheel Dust Particles Container */}
           <div className="scene-dust-emitter" ref={dustContainerRef} />
 
-          {/* SVG Vehicle and Agricultural Implement */}
           <svg
             className="scene-tractor-svg"
             viewBox="-55 0 405 190"
@@ -522,20 +683,11 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
             xmlns="http://www.w3.org/2000/svg"
           >
             <defs>
-              {/* Vibrant Mahindra Agricultural Red Gradient */}
-              <linearGradient id="tractorRedGradient" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#ef4444" />
-                <stop offset="50%" stopColor="#dc2626" />
-                <stop offset="100%" stopColor="#991b1b" />
-              </linearGradient>
-
-              {/* Metallic Grille & Engine Block */}
               <linearGradient id="metalEngineGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#64748b" />
                 <stop offset="100%" stopColor="#334155" />
               </linearGradient>
 
-              {/* Concave Disc Plough Polished Steel */}
               <linearGradient id="ploughSteelGradient" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#f8fafc" />
                 <stop offset="40%" stopColor="#cbd5e1" />
@@ -543,34 +695,29 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                 <stop offset="100%" stopColor="#334155" />
               </linearGradient>
 
-              {/* Heavy Duty Tire Rubber */}
               <radialGradient id="tireRubberGradient" cx="50%" cy="50%" r="50%">
                 <stop offset="65%" stopColor="#1e293b" />
                 <stop offset="90%" stopColor="#0f172a" />
                 <stop offset="100%" stopColor="#020617" />
               </radialGradient>
 
-              {/* Golden Wheel Rim */}
               <linearGradient id="goldenRimGradient" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#fef08a" />
                 <stop offset="60%" stopColor="#eab308" />
                 <stop offset="100%" stopColor="#a16207" />
               </linearGradient>
 
-              {/* Headlight Golden Beam */}
               <linearGradient id="headlightBeamGradient" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stopColor="#fde047" stopOpacity="0.85" />
                 <stop offset="60%" stopColor="#fde047" stopOpacity="0.25" />
                 <stop offset="100%" stopColor="#fde047" stopOpacity="0" />
               </linearGradient>
 
-              {/* Combine Harvester Glass Cab */}
               <linearGradient id="harvesterGlass" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#bae6fd" stopOpacity="0.85" />
                 <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.5" />
               </linearGradient>
 
-              {/* Kartar Harvester Green */}
               <linearGradient id="kartarGreen" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#22c55e" />
                 <stop offset="60%" stopColor="#16a34a" />
@@ -578,12 +725,9 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
               </linearGradient>
             </defs>
 
-            {/* ==========================================================
-                BRANCH 1: FULL COMBINE HARVESTER (When Harvester selected)
-               ========================================================== */}
-            {mode === 'harvester' ? (
+            {/* COMBINE HARVESTER (When Harvester selected or Kartar 4000 model chosen) */}
+            {isCombineHarvester ? (
               <g id="combineHarvesterGroup">
-                {/* Main Combine Thresher Body */}
                 <path
                   d="M70 70 L235 70 L260 95 L260 134 L60 134 L60 90 Z"
                   fill="url(#kartarGreen)"
@@ -591,24 +735,20 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   strokeWidth="2"
                 />
 
-                {/* Yellow Decal Stripe & Kartar Badge */}
                 <path d="M70 95 L255 95 L255 102 L70 102 Z" fill="#eab308" />
                 <text x="115" y="88" fill="#ffffff" fontSize="9" fontWeight="900" letterSpacing="1">
                   KARTAR 4000
                 </text>
 
-                {/* Exhaust Chimney */}
                 <rect x="95" y="44" width="6" height="28" rx="2" fill="#1e293b" />
                 <ellipse cx="98" cy="43" rx="4" ry="2" fill="#475569" />
 
-                {/* Overhead Unloading Auger Pipe */}
                 <g id="unloadingAuger">
                   <path d="M160 55 L45 35 L45 42 L160 62 Z" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5" />
                   <polygon points="45,35 32,48 38,50 48,42" fill="#1e293b" />
                   <circle cx="160" cy="58" r="7" fill="#ca8a04" />
                 </g>
 
-                {/* High Panoramic Glass Driver Cab */}
                 <path
                   d="M195 50 L255 50 L265 95 L195 95 Z"
                   fill="url(#harvesterGlass)"
@@ -617,7 +757,6 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                 />
                 <rect x="190" y="45" width="75" height="7" rx="3" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" />
 
-                {/* Farmer Driver Seated Inside High Cab */}
                 <g transform="translate(68, -12)">
                   <circle cx="140" cy="67" r="10" fill="#f59e0b" />
                   <ellipse cx="140" cy="58" rx="13" ry="8" fill="#f97316" />
@@ -627,18 +766,14 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   <line x1="150" y1="84" x2="162" y2="76" stroke="#0f172a" strokeWidth="3" />
                 </g>
 
-                {/* Feeder House Tilted Down to Header */}
                 <polygon points="255,105 296,128 296,138 255,124" fill="#15803d" stroke="#14532d" strokeWidth="1.5" />
 
-                {/* Combine Drive Wheels */}
-                {/* Front Giant Traction Drive Wheel at (225, 132) */}
                 <g ref={frontWheelRef} style={{ transformOrigin: '225px 132px' }}>
                   <circle cx="225" cy="132" r="32" fill="url(#tireRubberGradient)" />
                   <circle cx="225" cy="132" r="28" stroke="#475569" strokeWidth="5" strokeDasharray="10 6" fill="none" />
                   <circle cx="225" cy="132" r="18" fill="url(#goldenRimGradient)" stroke="#854d0e" strokeWidth="1.5" />
                   <circle cx="225" cy="132" r="6" fill="#1e293b" />
                 </g>
-                {/* Rear Guide Wheel at (95, 138) */}
                 <g ref={rearWheelRef} style={{ transformOrigin: '95px 138px' }}>
                   <circle cx="95" cy="138" r="21" fill="url(#tireRubberGradient)" />
                   <circle cx="95" cy="138" r="19" stroke="#334155" strokeWidth="3" strokeDasharray="6 4" fill="none" />
@@ -646,11 +781,9 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   <circle cx="95" cy="138" r="4" fill="#1e293b" />
                 </g>
 
-                {/* Yellow Crop Divider Snouts (Gatherers) */}
                 <polygon points="292,138 335,142 338,146 290,146" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5" />
                 <polygon points="296,132 328,138 328,142 296,138" fill="#facc15" />
 
-                {/* Massive Front Rotating Cutterbar Reel */}
                 <g id="harvesterReel" ref={harvesterReelRef} style={{ transformOrigin: '312px 124px' }}>
                   <circle cx="312" cy="124" r="4" fill="#1e293b" />
                   {[0, 72, 144, 216, 288].map((angle, idx) => {
@@ -668,23 +801,16 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   <circle cx="312" cy="124" r="16" stroke="#ca8a04" strokeWidth="1.2" strokeDasharray="4 4" fill="none" />
                 </g>
 
-                {/* Golden Crop Stalks sliding into cutter */}
                 <g ref={harvesterCropsRef}>
                   <text x="326" y="146" fontSize="14">🌽</text>
                   <text x="342" y="146" fontSize="14">🌾</text>
                 </g>
               </g>
             ) : (
-              /* ==========================================================
-                  BRANCH 2: TRACTOR + ACTIVE IMPLEMENT ATTACHMENT
-                 ========================================================== */
+              /* AGRICULTURAL TRACTOR (Styled in Selected Model's Authentic Colors) */
               <g id="tractorWithImplement">
-                {/* ----------------------------------------------------
-                    ACTIVE IMPLEMENT ATTACHED BEHIND TRACTOR (x: -55 to 75)
-                   ---------------------------------------------------- */}
-
-                {/* Mode 1: PLOUGHING (3-Disc Mouldboard Plough) */}
-                {mode === 'plough' && (
+                {/* 1. Plough Implement */}
+                {serviceMode === 'plough' && (
                   <g id="ploughImplement" ref={ploughRef}>
                     <path d="M75 116 L52 118 L46 126 L75 126" fill="#334155" stroke="#1e293b" strokeWidth="2" />
                     <line x1="75" y1="110" x2="52" y2="118" stroke="#64748b" strokeWidth="3" />
@@ -711,15 +837,14 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                       </g>
                     </g>
 
-                    {/* Freshly turned soil clods */}
                     <path d="M42 144 Q38 138 32 141 Q28 147 38 149 Z" fill="#78350f" />
                     <path d="M22 147 Q18 141 12 144 Q8 150 18 152 Z" fill="#78350f" />
                     <path d="M2 150 Q-2 144 -8 147 Q-12 153 -2 155 Z" fill="#78350f" />
                   </g>
                 )}
 
-                {/* Mode 2: ROTAVATOR (Rotary Tiller) */}
-                {mode === 'rotavator' && (
+                {/* 2. Rotavator Implement */}
+                {serviceMode === 'rotavator' && (
                   <g id="rotavatorImplement">
                     <line x1="75" y1="122" x2="48" y2="124" stroke="#1e293b" strokeWidth="4.5" strokeDasharray="4 2" />
                     <path d="M75 116 L48 116 L48 126" stroke="#475569" strokeWidth="3" fill="none" />
@@ -741,15 +866,14 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                       <path d="M24 136 L10 136 L10 143" stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" fill="none" />
                     </g>
 
-                    {/* Fine pulverized soil spray */}
                     <circle cx="-16" cy="140" r="2.5" fill="#854d0e" />
                     <circle cx="-22" cy="143" r="2" fill="#a16207" />
                     <circle cx="-18" cy="146" r="3" fill="#78350f" />
                   </g>
                 )}
 
-                {/* Mode 3: CULTIVATOR (Spring Tiller) */}
-                {mode === 'cultivator' && (
+                {/* 3. Cultivator Implement */}
+                {serviceMode === 'cultivator' && (
                   <g id="cultivatorImplement">
                     <line x1="75" y1="114" x2="52" y2="114" stroke="#334155" strokeWidth="3.5" />
                     <line x1="75" y1="124" x2="52" y2="120" stroke="#334155" strokeWidth="3.5" />
@@ -774,8 +898,8 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   </g>
                 )}
 
-                {/* Mode 4: STRAW BALER (Round Straw Baler) */}
-                {mode === 'baler' && (
+                {/* 4. Straw Baler Implement */}
+                {serviceMode === 'baler' && (
                   <g id="balerImplement">
                     <line x1="75" y1="124" x2="32" y2="128" stroke="#334155" strokeWidth="5" />
                     <ellipse cx="2" cy="116" rx="34" ry="26" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
@@ -805,8 +929,8 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   </g>
                 )}
 
-                {/* Mode 5: SEED PLANTER (Precision Seed Drill) */}
-                {mode === 'seeder' && (
+                {/* 5. Seed Planter Implement */}
+                {serviceMode === 'seeder' && (
                   <g id="seederImplement">
                     <line x1="75" y1="120" x2="48" y2="120" stroke="#334155" strokeWidth="4" />
                     <line x1="75" y1="126" x2="48" y2="126" stroke="#334155" strokeWidth="4" />
@@ -839,8 +963,8 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   </g>
                 )}
 
-                {/* Mode 6: TRAILER (Haulage Trolley with Produce Bags) */}
-                {mode === 'trailer' && (
+                {/* 6. Trailer Trolley Implement */}
+                {serviceMode === 'trailer' && (
                   <g id="trailerImplement" ref={trailerChassisRef}>
                     <polygon points="75,124 45,122 45,127 75,127" fill="#334155" />
                     <circle cx="72" cy="125" r="3" fill="#cbd5e1" />
@@ -857,7 +981,6 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                     <line x1="0" y1="125" x2="4" y2="129" stroke="#b91c1c" strokeWidth="2" />
                     <line x1="20" y1="125" x2="24" y2="129" stroke="#b91c1c" strokeWidth="2" />
 
-                    {/* Stacked Produce Bags */}
                     <ellipse cx="-38" cy="98" rx="13" ry="8" fill="#d97706" stroke="#92400e" strokeWidth="1" />
                     <ellipse cx="-16" cy="97" rx="14" ry="8" fill="#b45309" stroke="#78350f" strokeWidth="1" />
                     <ellipse cx="8" cy="97" rx="14" ry="8" fill="#d97706" stroke="#92400e" strokeWidth="1" />
@@ -869,7 +992,6 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                     <line x1="-14" y1="82" x2="18" y2="104" stroke="#451a03" strokeWidth="1.2" />
                     <line x1="18" y1="82" x2="42" y2="104" stroke="#451a03" strokeWidth="1.2" />
 
-                    {/* Dual Trailer Wheels */}
                     <g ref={trailerWheel1Ref} style={{ transformOrigin: '-24px 136px' }}>
                       <circle cx="-24" cy="136" r="17" fill="url(#tireRubberGradient)" />
                       <circle cx="-24" cy="136" r="14" stroke="#334155" strokeWidth="2.5" strokeDasharray="5 3" fill="none" />
@@ -885,28 +1007,48 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   </g>
                 )}
 
-                {/* ----------------------------------------------------
-                    TRACTOR CHASSIS & ENGINE
-                   ---------------------------------------------------- */}
+                {/* Headlight Forward Cone */}
                 <polygon
                   points="285,118 340,105 340,150 285,125"
                   fill="url(#headlightBeamGradient)"
                   className="headlight-beam"
                 />
 
+                {/* TRACTOR CHASSIS & BONNET (Dynamic Brand Paint & Decals) */}
                 <g id="tractorChassis" ref={tractorChassisRef}>
-                  <rect x="75" y="112" width="195" height="18" rx="4" fill="url(#metalEngineGradient)" />
+                  <rect x="75" y="112" width="195" height="18" rx="4" fill={activeModel.chassisColor || '#334155'} />
+                  
+                  {/* Engine Bonnet / Hood */}
                   <path
                     d="M175 92 L280 92 C285 92 288 95 288 100 L288 126 C288 128 286 130 284 130 L175 130 Z"
-                    fill="url(#tractorRedGradient)"
+                    fill={activeModel.primaryColor}
                   />
+
+                  {/* Tractor Model Decal Badge on Bonnet */}
+                  <rect x="188" y="103" width="82" height="11" rx="2" fill="rgba(0,0,0,0.45)" />
+                  <text
+                    x="229"
+                    y="111"
+                    fill="#ffffff"
+                    fontSize="6.2"
+                    fontWeight="900"
+                    textAnchor="middle"
+                    letterSpacing="0.4"
+                  >
+                    {activeModel.badgeText}
+                  </text>
+
+                  {/* Grille & Emblem */}
                   <rect x="282" y="98" width="5" height="28" rx="2" fill="#cbd5e1" />
                   <line x1="284" y1="102" x2="284" y2="122" stroke="#475569" strokeWidth="2" strokeDasharray="2 2" />
                   <circle cx="282" cy="120" r="5" fill="#fef08a" stroke="#ca8a04" strokeWidth="1.5" />
+                  
+                  {/* Rear Wheel Arch Fender */}
                   <path
                     d="M60 115 C60 70 120 70 140 115 L124 118 C110 85 85 85 76 118 Z"
-                    fill="url(#tractorRedGradient)"
+                    fill={activeModel.fenderColor || activeModel.primaryColor}
                   />
+
                   <rect x="110" y="125" width="60" height="7" rx="2" fill="#334155" />
                   <rect x="135" y="132" width="22" height="4" rx="1" fill="#64748b" />
                   <line x1="102" y1="125" x2="102" y2="108" stroke="#1e293b" strokeWidth="5" strokeLinecap="round" />
@@ -926,9 +1068,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   </g>
                 </g>
 
-                {/* ----------------------------------------------------
-                    FARMER CHARACTER
-                   ---------------------------------------------------- */}
+                {/* FARMER DRIVER */}
                 <g id="farmerDriver" ref={farmerRef}>
                   <path
                     d="M112 104 C112 85 125 78 138 78 C148 78 156 86 156 104 L148 120 L118 120 Z"
@@ -964,13 +1104,11 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   </g>
                 </g>
 
-                {/* ----------------------------------------------------
-                    TRACTOR WHEELS
-                   ---------------------------------------------------- */}
+                {/* TRACTOR WHEELS */}
                 <g id="frontWheel" ref={frontWheelRef} style={{ transformOrigin: '252px 134px' }}>
                   <circle cx="252" cy="134" r="23" fill="url(#tireRubberGradient)" />
                   <circle cx="252" cy="134" r="21" stroke="#334155" strokeWidth="3" strokeDasharray="6 4" fill="none" />
-                  <circle cx="252" cy="134" r="12" fill="url(#goldenRimGradient)" stroke="#78350f" strokeWidth="1.5" />
+                  <circle cx="252" cy="134" r="12" fill={activeModel.rimColor || '#eab308'} stroke="#78350f" strokeWidth="1.5" />
                   <circle cx="252" cy="134" r="4.5" fill="#1e293b" />
                   <line x1="252" y1="123" x2="252" y2="145" stroke="#78350f" strokeWidth="2" />
                   <line x1="241" y1="134" x2="263" y2="134" stroke="#78350f" strokeWidth="2" />
@@ -980,7 +1118,7 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
                   <circle cx="94" cy="122" r="46" fill="url(#tireRubberGradient)" />
                   <circle cx="94" cy="122" r="42" stroke="#475569" strokeWidth="6" strokeDasharray="12 7" fill="none" />
                   <circle cx="94" cy="122" r="33" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
-                  <circle cx="94" cy="122" r="27" fill="url(#goldenRimGradient)" stroke="#854d0e" strokeWidth="2" />
+                  <circle cx="94" cy="122" r="27" fill={activeModel.rimColor || '#eab308'} stroke="#854d0e" strokeWidth="2" />
                   <circle cx="94" cy="122" r="9" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
                   <circle cx="94" cy="108" r="2" fill="#0f172a" />
                   <circle cx="106" cy="115" r="2" fill="#0f172a" />
@@ -1000,18 +1138,53 @@ export default function TractorFarmerScene({ language = 'en', activeService = 'A
             {[...Array(20)].map((_, i) => (
               <span key={i} className="ground-furrow-pattern">
                 <span className="soil-track-bar" />
-                <span className="soil-sprout-mark">{currentConfig.sproutIcon}</span>
+                <span className="soil-sprout-mark">{currentServiceConfig.sproutIcon}</span>
               </span>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Bottom Video Telemetry Footer - Removed 15 mins quick dispatch as requested */}
+      {/* Horizontal Interactive Tractor Model Strip (Allows farmer to see & switch tractor models) */}
+      <div className="video-model-strip-wrap">
+        <span className="video-model-strip-label">
+          {isTe ? 'ట్రాక్టర్ మోడల్స్:' : 'TRACTOR MODELS:'}
+        </span>
+        <div className="video-model-strip">
+          {TRACTOR_MODELS.map((m) => {
+            const isModelActive = activeModel.id === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                className={`video-model-pill ${isModelActive ? 'active' : ''}`}
+                onClick={() => handleSelectModel(m)}
+                title={m.modelName}
+              >
+                <span
+                  className="model-pill-dot"
+                  style={{ backgroundColor: m.primaryColor }}
+                />
+                <span className="model-pill-name">{m.shortName}</span>
+                <span className="model-pill-hp">{m.hp}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom Video Telemetry Footer (Clearly displaying Model Name + Implement) */}
       <div className="video-card-bottom-bar">
         <div className="video-spec-badge">
-          <span className="spec-dot">●</span>
-          <span>{isTe ? currentConfig.titleTe : currentConfig.titleEn}</span>
+          <span className="spec-dot" style={{ color: activeModel.primaryColor }}>●</span>
+          <span className="spec-model-brand">
+            {activeModel.modelName} ({activeModel.hp})
+          </span>
+          {serviceMode !== 'all' && (
+            <span className="spec-implement-tag">
+              • {isTe ? currentServiceConfig.implementTe : currentServiceConfig.implementEn}
+            </span>
+          )}
         </div>
       </div>
     </div>
