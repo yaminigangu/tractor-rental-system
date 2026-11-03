@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n \"FE,BE\" -c \"cyan,green\" \"vite\" \"node server/server.js\"",
-    "dev:frontend": "vite",
+    "dev": "vite",
+    "dev:all": "concurrently -n \"FE,BE\" -c \"cyan,green\" \"vite\" \"node server/server.js\"",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",

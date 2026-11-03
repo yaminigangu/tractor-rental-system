@@ -323,8 +323,15 @@ app.put('/api/bookings/:id/status', async (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n🚀 AgriRent Backend API Server running on http://localhost:${PORT}`);
   console.log(`📡 PostgreSQL Database Target: ${process.env.DB_NAME || 'tractor_rental_db'} on ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}\n`);
+});
+
+// Keep event loop active
+setInterval(() => {}, 1000 * 60 * 60);
+
+server.on('error', (err) => {
+  console.error('Server error:', err);
 });
 
