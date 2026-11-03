@@ -1,6 +1,6 @@
 import { TELANGANA_DISTRICTS } from './telanganaLocations';
 
-// 14 Standard Diverse Agricultural Tractors + 3 Specialized Machines with 17 Distinct Photos
+// 14 Standard Diverse Agricultural Tractors + 6 Specialized Agricultural Machines (4 Combine Harvesters, 1 Straw Baler, 1 Precision Seeder)
 export const BASE_TRACTOR_MODELS = [
   {
     id: 1,
@@ -247,7 +247,7 @@ export const BASE_TRACTOR_MODELS = [
     brand: "Kisan Tools",
     model: "Hand Push Corn Seeder & Precision Planter",
     hp: "Manual Precision Planter",
-    equipment: "Corn Seeder, Hand Push Seeder, Seed Planter, Corn Seeding, Precision Maize Planting, Fertilizer Dispensing, Seed Sowing, Corn Machine",
+    equipment: "Corn Seeder, Hand Push Seeder, Seed Planter, Corn Seeding, Precision Maize Planting, Fertilizer Dispensing, Seed Sowing, Precision Planter Machine",
     pricing: 350,
     photo: "/corn_seeder.jpg",
     rating: 4.9,
@@ -256,12 +256,57 @@ export const BASE_TRACTOR_MODELS = [
     defaultMobile: "9848551234",
     villageType: "local",
     distanceKm: 0.5
+  },
+  {
+    id: 18,
+    brand: "Preet",
+    model: "987 Multi-Crop Combine Harvester (Paddy & Corn)",
+    hp: "101 HP Combine",
+    equipment: "Corn Harvester, Combine Harvester, Paddy Harvesting, Maize Harvester, Multi-Crop Grain Thresher, Field Cleaning",
+    pricing: 2500,
+    photo: "/images/preet_combine_harvester.jpg",
+    rating: 4.9,
+    jobsDone: 39,
+    defaultOwner: "Ch. Thirupathi Reddy",
+    defaultMobile: "9989044123",
+    villageType: "specialty_hub",
+    distanceKm: 2.8
+  },
+  {
+    id: 19,
+    brand: "Claas",
+    model: "Crop Tiger 40 Terra Trac (Rubber Track Combine)",
+    hp: "76 HP Combine",
+    equipment: "Corn Harvester, Combine Harvester, Wetland Paddy Harvesting, Track Harvester, Grain Separation, Mud Field Combine",
+    pricing: 2800,
+    photo: "/images/claas_combine_harvester.jpg",
+    rating: 5.0,
+    jobsDone: 54,
+    defaultOwner: "V. Lingaiah Yadav",
+    defaultMobile: "9701478901",
+    villageType: "specialty_hub",
+    distanceKm: 3.6
+  },
+  {
+    id: 20,
+    brand: "John Deere",
+    model: "W70 Grain Master Combine Harvester (4WD)",
+    hp: "100 HP Combine",
+    equipment: "Corn Harvester, Combine Harvester, Maize Harvesting, Grain Tank Unloader, Multi-Crop Thresher, High Capacity Combine",
+    pricing: 2600,
+    photo: "/images/johndeere_combine_harvester.jpg",
+    rating: 4.9,
+    jobsDone: 47,
+    defaultOwner: "M. Bhaskar Reddy",
+    defaultMobile: "9700011223",
+    villageType: "specialty_hub",
+    distanceKm: 4.1
   }
 ];
 
 /**
  * Dynamically builds a realistic, localized fleet for any selected village & district in Telangana.
- * Ensures all 14 tractors + 3 machines belong to the chosen village and neighboring mandals in that district.
+ * Ensures all 14 tractors + 6 specialized machines belong to the chosen village and neighboring mandals in that district.
  */
 export function buildFleetForLocation(selectedLocation, customUserTractors = []) {
   const activeVillage = selectedLocation?.village || 'Bhupalpally Rural';
@@ -277,7 +322,7 @@ export function buildFleetForLocation(selectedLocation, customUserTractors = [])
     .map((v) => v.name)
     .filter((name) => name.toLowerCase() !== activeVillage.toLowerCase());
 
-  // Generate localized fleet from the base 17 models
+  // Generate localized fleet from the base 20 models
   const localizedFleet = BASE_TRACTOR_MODELS.map((base, idx) => {
     let loc = activeVillage;
     let distance = base.distanceKm;
@@ -310,6 +355,6 @@ export function buildFleetForLocation(selectedLocation, customUserTractors = [])
   });
 
   // Append any user-registered custom tractors
-  const customTractors = customUserTractors.filter((t) => t.id > 17);
+  const customTractors = customUserTractors.filter((t) => t.id > 20);
   return [...localizedFleet, ...customTractors];
 }

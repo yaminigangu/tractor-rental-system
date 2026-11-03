@@ -254,7 +254,7 @@ function App() {
       const saved = localStorage.getItem('agri_custom_tractors');
       if (saved) return JSON.parse(saved);
       const oldSaved = localStorage.getItem('agri_tractors');
-      return oldSaved ? JSON.parse(oldSaved).filter(t => t.id > 17) : [];
+      return oldSaved ? JSON.parse(oldSaved).filter(t => t.id > 20) : [];
     } catch {
       return [];
     }
@@ -274,10 +274,10 @@ function App() {
   const setTractors = (updater) => {
     if (typeof updater === 'function') {
       const updated = updater(tractors);
-      const newCustom = updated.filter(t => t.id > 17);
+      const newCustom = updated.filter(t => t.id > 20);
       setCustomTractors(newCustom);
     } else if (Array.isArray(updater)) {
-      const newCustom = updater.filter(t => t.id > 17);
+      const newCustom = updater.filter(t => t.id > 20);
       setCustomTractors(newCustom);
     }
   };

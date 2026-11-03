@@ -20,7 +20,7 @@ export const getAccurateTractorPhoto = (tractor) => {
   }
   // 3. Corn / combine harvester
   if (model.includes('harvester') || model.includes('combine')) {
-    return '/corn_harvester.jpg';
+    return photo || '/corn_harvester.jpg';
   }
   // 4. Mahindra 575 DI (Must use 575 image, NOT the 475 photo)
   if (model.includes('575') || (brand.includes('mahindra') && model.includes('sarpanch'))) {
@@ -247,7 +247,12 @@ export default function FindTractor({
 
       if (sf.includes('baler')) return combined.includes('baler') || combined.includes('baling');
       if (sf.includes('seeder') || sf.includes('planter')) return combined.includes('seeder') || combined.includes('seeding') || combined.includes('planter');
-      if (sf.includes('harvester') || sf === 'corn') return combined.includes('harvester') || combined.includes('combine') || combined.includes('corn');
+      if (sf.includes('harvester')) {
+        return (combined.includes('harvester') || combined.includes('combine')) &&
+               !combined.includes('hand push') &&
+               !combined.includes('seeder') &&
+               !combined.includes('planter');
+      }
       if (sf.includes('plough')) return combined.includes('plough') || combined.includes('tillage');
       if (sf.includes('rotavator')) return combined.includes('rotavator');
       if (sf.includes('cultivator')) return combined.includes('cultivator');
@@ -310,6 +315,9 @@ export default function FindTractor({
     'New Holland',
     'Farmtrac',
     'Kubota',
+    'Kartar',
+    'Preet',
+    'Claas',
     'Kisan Tools'
   ];
 
@@ -332,7 +340,10 @@ export default function FindTractor({
     { id: 'farmtrac_60', label: 'Farmtrac 60', src: '/farmtrac_60.jpg' },
     { id: 'new_holland', label: 'New Holland 3630', src: '/new_holland_3630.jpg' },
     { id: 'sonalika', label: 'Sonalika Tiger 55', src: '/sonalika_tiger_55.jpg' },
-    { id: 'harvester', label: 'Corn Harvester', src: '/corn_harvester.jpg' },
+    { id: 'harvester_kartar', label: 'Kartar 4000 Combine', src: '/corn_harvester.jpg' },
+    { id: 'harvester_preet', label: 'Preet 987 Harvester', src: '/images/preet_combine_harvester.jpg' },
+    { id: 'harvester_claas', label: 'Claas Track Harvester', src: '/images/claas_combine_harvester.jpg' },
+    { id: 'harvester_johndeere', label: 'John Deere W70 Combine', src: '/images/johndeere_combine_harvester.jpg' },
     { id: 'baler', label: 'Straw Baler', src: '/straw_baler.jpg' },
     { id: 'seeder', label: 'Corn Seeder', src: '/corn_seeder.jpg' },
     { id: 'trailer', label: 'Trailer Trolley', src: '/tractor9.jpg' }
