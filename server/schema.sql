@@ -91,3 +91,4 @@ CREATE TABLE IF NOT EXISTS tractors (
 CREATE INDEX IF NOT EXISTS idx_farmers_mobile ON farmers(mobile);
 CREATE INDEX IF NOT EXISTS idx_owners_mobile ON vehicle_owners(mobile);
 CREATE INDEX IF NOT EXISTS idx_bookings_mobile ON bookings(farmer_mobile);
+

@@ -48,3 +48,4 @@ The backend API starts on `http://localhost:5000`.
    SELECT * FROM vehicle_owners;
    SELECT * FROM bookings;
    ```
+

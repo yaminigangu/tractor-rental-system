@@ -157,3 +157,4 @@ export async function apiUpdateBookingStatus(id, status) {
   }
   return null;
 }
+

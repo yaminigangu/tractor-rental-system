@@ -327,3 +327,4 @@ app.listen(PORT, () => {
   console.log(`\n🚀 AgriRent Backend API Server running on http://localhost:${PORT}`);
   console.log(`📡 PostgreSQL Database Target: ${process.env.DB_NAME || 'tractor_rental_db'} on ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}\n`);
 });
+
