@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import WeatherBar from '../components/WeatherBar';
+import TractorFarmerScene from '../components/TractorFarmerScene';
 import { translations } from '../translations';
 
 // Returns 100% accurate matching photo corresponding to the specific tractor model and brand
@@ -479,45 +480,52 @@ export default function FindTractor({
       {/* AgriRent Desktop Hero Banner (Edge-to-Edge Full Workspace) */}
       <section className="jfarm-hero-section page-anim">
         <div className="jfarm-hero-header">
-          <div className="jfarm-badge-pill">
-            <span className="jfarm-badge-dot">●</span>
-            <span>{isTe ? 'తెలంగాణ వ్యవసాయ యంత్రీకరణ వేదిక' : 'Telangana Farm Machinery Rental Platform'}</span>
+          <div className="jfarm-hero-text-col">
+            <div className="jfarm-badge-pill">
+              <span className="jfarm-badge-dot">●</span>
+              <span>{isTe ? 'తెలంగాణ వ్యవసాయ యంత్రీకరణ వేదిక' : 'Telangana Farm Machinery Rental Platform'}</span>
+            </div>
+
+            <h1 className="jfarm-hero-title">
+              {isTe ? 'ఉత్తమ యంత్రం. ఉత్తమ ధర.' : 'Best Machinery. Best Fare.'}
+            </h1>
+            <p className="jfarm-hero-subtitle">
+              {isTe
+                ? 'తెలంగాణలోని 33 జిల్లాల్లో సమీప ట్రాక్టర్లు, రొటవేటర్లు, హార్వెస్టర్లను నేరుగా యజమానుల నుండి అద్దెకు తీసుకోండి • 0% కమీషన్'
+                : 'Direct Farmer-to-Farmer (F2F) tractor and equipment rental across Telangana. Transparent rates with instant village dispatch.'}
+            </p>
+
+            {/* Quick Category Toggle Pills (QuickRide Style: AIRPORT | RENTAL | OUTSTATION | LOCAL) */}
+            <div className="jfarm-quick-tabs" role="tablist">
+              {[
+                { id: 'All', label: isTe ? 'అన్నీ' : 'ALL FLEET', icon: '🚜' },
+                { id: 'Ploughing', label: isTe ? 'దుక్కి' : 'PLOUGHING', icon: '🌱' },
+                { id: 'Rotavator', label: isTe ? 'రొటవేటర్' : 'ROTAVATOR', icon: '🔄' },
+                { id: 'Cultivator', label: isTe ? 'కల్టివేటర్' : 'CULTIVATOR', icon: '🌾' },
+                { id: 'Corn Harvester', label: isTe ? 'హార్వెస్టర్' : 'HARVESTER', icon: '🌽' },
+                { id: 'Straw Baler', label: isTe ? 'బెయిలర్' : 'STRAW BALER', icon: '📦' },
+                { id: 'Corn Seeder', label: isTe ? 'సీడర్' : 'SEED PLANTER', icon: '🌱' },
+                { id: 'Trailer Services', label: isTe ? 'ట్రాలీ' : 'TRAILER', icon: '🚚' }
+              ].map((tab) => {
+                const isActive = (serviceFilter || 'All').toLowerCase() === tab.id.toLowerCase();
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`jfarm-tab-pill ${isActive ? 'active' : ''}`}
+                    onClick={() => setServiceFilter(tab.id)}
+                  >
+                    <span className="jfarm-tab-icon">{tab.icon}</span>
+                    <span className="jfarm-tab-text">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <h1 className="jfarm-hero-title">
-            {isTe ? 'ఉత్తమ యంత్రం. ఉత్తమ ధర.' : 'Best Machinery. Best Fare.'}
-          </h1>
-          <p className="jfarm-hero-subtitle">
-            {isTe
-              ? 'తెలంగాణలోని 33 జిల్లాల్లో సమీప ట్రాక్టర్లు, రొటవేటర్లు, హార్వెస్టర్లను నేరుగా యజమానుల నుండి అద్దెకు తీసుకోండి • 0% కమీషన్'
-              : 'Direct Farmer-to-Farmer (F2F) tractor and equipment rental across Telangana. Transparent rates with instant village dispatch.'}
-          </p>
-
-          {/* Quick Category Toggle Pills (QuickRide Style: AIRPORT | RENTAL | OUTSTATION | LOCAL) */}
-          <div className="jfarm-quick-tabs" role="tablist">
-            {[
-              { id: 'All', label: isTe ? 'అన్నీ' : 'ALL FLEET', icon: '🚜' },
-              { id: 'Ploughing', label: isTe ? 'దుక్కి' : 'PLOUGHING', icon: '🌱' },
-              { id: 'Rotavator', label: isTe ? 'రొటవేటర్' : 'ROTAVATOR', icon: '🔄' },
-              { id: 'Cultivator', label: isTe ? 'కల్టివేటర్' : 'CULTIVATOR', icon: '🌾' },
-              { id: 'Corn Harvester', label: isTe ? 'హార్వెస్టర్' : 'HARVESTER', icon: '🌽' },
-              { id: 'Straw Baler', label: isTe ? 'బెయిలర్' : 'STRAW BALER', icon: '📦' },
-              { id: 'Corn Seeder', label: isTe ? 'సీడర్' : 'SEED PLANTER', icon: '🌱' },
-              { id: 'Trailer Services', label: isTe ? 'ట్రాలీ' : 'TRAILER', icon: '🚚' }
-            ].map((tab) => {
-              const isActive = (serviceFilter || 'All').toLowerCase() === tab.id.toLowerCase();
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={`jfarm-tab-pill ${isActive ? 'active' : ''}`}
-                  onClick={() => setServiceFilter(tab.id)}
-                >
-                  <span className="jfarm-tab-icon">{tab.icon}</span>
-                  <span className="jfarm-tab-text">{tab.label}</span>
-                </button>
-              );
-            })}
+          {/* GSAP Animated Video Showcase: Tractor along with Farmer */}
+          <div className="jfarm-hero-anim-col">
+            <TractorFarmerScene language={language} />
           </div>
         </div>
 
