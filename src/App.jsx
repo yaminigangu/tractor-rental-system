@@ -20,7 +20,7 @@ import MyBookings from './pages/MyBookings';
 import Dashboard from './pages/Dashboard';
 import AdminLogin from './pages/AdminLogin';
 import DualLoginSelect from './pages/DualLoginSelect';
-import { deleteRegisteredFarmer, deleteRegisteredOwner } from './data/userData';
+import { deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from './data/userData';
 import { DEFAULT_LOCATION } from './data/telanganaLocations';
 import { buildFleetForLocation } from './data/fleetData';
 import { fetchRegionWeather, getFallbackWeather } from './services/weatherService';
@@ -267,6 +267,11 @@ function App() {
       console.error(e);
     }
   }, [customTractors]);
+
+  // Sync latest records from PostgreSQL database on startup if server is running
+  useEffect(() => {
+    syncUserDataWithPostgres().catch(() => {});
+  }, []);
 
   // Dynamically built localized fleet tailored to the selected village & district + custom tractors
   const tractors = buildFleetForLocation(selectedLocation, customTractors);

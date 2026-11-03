@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StatCard from '../components/StatCard';
 import { translations } from '../translations';
 import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
-import { getRegisteredFarmers, getRegisteredOwners, deleteRegisteredFarmer, deleteRegisteredOwner } from '../data/userData';
+import { getRegisteredFarmers, getRegisteredOwners, deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from '../data/userData';
+import { checkBackendHealth } from '../api/apiClient';
 
 export default function Dashboard({
   bookings = [],
@@ -20,6 +21,11 @@ export default function Dashboard({
   const [dbSearch, setDbSearch] = useState('');
   const [dbSubTab, setDbSubTab] = useState('farmers'); // 'farmers' or 'owners'
   const [dbNotice, setDbNotice] = useState('');
+  const [pgStatus, setPgStatus] = useState(null);
+
+  useEffect(() => {
+    checkBackendHealth().then((status) => setPgStatus(status));
+  }, [activeTab]);
 
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -353,24 +359,57 @@ export default function Dashboard({
           {/* Header & Controls Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h4 style={{ color: 'var(--primary-900)', margin: '0 0 4px 0' }}>
-                {isTe ? 'అగ్రిరెంట్ వినియోగదారుల డేటాబేస్ (LocalStorage)' : 'AgriRent Registered Users Database'}
-              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <h4 style={{ color: 'var(--primary-900)', margin: 0 }}>
+                  {isTe ? 'అగ్రిరెంట్ వినియోగదారుల డేటాబేస్' : 'AgriRent Database'}
+                </h4>
+                {pgStatus === true ? (
+                  <span className="badge bg-success" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', display: 'inline-block' }}></span>
+                    PostgreSQL Live (tractor_rental_db)
+                  </span>
+                ) : (
+                  <span className="badge bg-warning" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', background: '#f59e0b', color: '#fff' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff', display: 'inline-block' }}></span>
+                    Browser Storage Mode
+                  </span>
+                )}
+              </div>
               <small style={{ color: 'var(--text-muted)' }}>
-                {isTe
-                  ? 'బ్రౌజర్ LocalStorage లో సేవ్ చేయబడిన రైతులు మరియు వాహన యజమానుల ప్రత్యక్ష రికార్డులు.'
-                  : 'Live client-side records stored in browser LocalStorage (`agri_registered_farmers` & `agri_registered_owners`).'}
+                {pgStatus === true
+                  ? 'Connected to local PostgreSQL database on port 5432. All updates sync directly to PostgreSQL.'
+                  : 'PostgreSQL Server offline. Start backend with `npm run server` to link PostgreSQL directly.'}
               </small>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-primary"
+                style={{ fontSize: '13px', padding: '6px 12px' }}
+                onClick={async () => {
+                  setDbNotice(isTe ? 'PostgreSQL తో సమన్వయం చేస్తోంది...' : 'Syncing with PostgreSQL...');
+                  const res = await syncUserDataWithPostgres();
+                  setFarmersList(getRegisteredFarmers());
+                  setOwnersList(getRegisteredOwners());
+                  const health = await checkBackendHealth();
+                  setPgStatus(health);
+                  if (res.success && health) {
+                    setDbNotice(`✓ Synced with PostgreSQL: ${res.farmersCount} Farmers, ${res.ownersCount} Owners.`);
+                  } else {
+                    setDbNotice('ℹ️ Synced with local storage. Start backend with "npm run server" for PostgreSQL live connection.');
+                  }
+                  setTimeout(() => setDbNotice(''), 4000);
+                }}
+              >
+                ⚡ {isTe ? 'PostgreSQL సమన్వయం' : 'Sync PostgreSQL'}
+              </button>
               <button
                 className="btn btn-secondary"
                 style={{ fontSize: '13px', padding: '6px 12px' }}
                 onClick={() => {
                   setFarmersList(getRegisteredFarmers());
                   setOwnersList(getRegisteredOwners());
-                  setDbNotice(isTe ? '✓ డేటాబేస్ రిఫ్రెష్ చేయబడింది!' : '✓ Database refreshed from storage!');
+                  setDbNotice(isTe ? '✓ డేటాబేస్ రిఫ్రెష్ చేయబడింది!' : '✓ Database refreshed!');
                   setTimeout(() => setDbNotice(''), 3000);
                 }}
               >

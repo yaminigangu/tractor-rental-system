@@ -1,4 +1,12 @@
 // User data storage and authentication management for Farmers and Tractor Owners
+import {
+  apiGetFarmers,
+  apiSaveFarmer,
+  apiDeleteFarmer,
+  apiGetOwners,
+  apiSaveOwner,
+  apiDeleteOwner
+} from '../api/apiClient';
 
 export const DEFAULT_FARMERS = [
   {
@@ -181,6 +189,10 @@ export function saveRegisteredFarmer(newFarmer) {
   } catch (e) {
     console.error("Error saving farmer:", e);
   }
+
+  // Asynchronously mirror into PostgreSQL database if server is running
+  apiSaveFarmer(newFarmer).catch(() => {});
+
   return updated;
 }
 
@@ -251,6 +263,10 @@ export function saveRegisteredOwner(newOwner) {
   } catch (e) {
     console.error("Error saving owner:", e);
   }
+
+  // Asynchronously mirror into PostgreSQL database if server is running
+  apiSaveOwner(newOwner).catch(() => {});
+
   return updated;
 }
 
@@ -292,6 +308,12 @@ export function deleteRegisteredFarmer(identifier) {
   } catch (e) {
     console.error("Error deleting farmer:", e);
   }
+
+  // Asynchronously mirror deletion into PostgreSQL database if server is running
+  if (normPhone) {
+    apiDeleteFarmer(normPhone).catch(() => {});
+  }
+
   return updated;
 }
 
@@ -317,5 +339,38 @@ export function deleteRegisteredOwner(identifier) {
   } catch (e) {
     console.error("Error deleting owner:", e);
   }
+
+  // Asynchronously mirror deletion into PostgreSQL database if server is running
+  if (normPhone) {
+    apiDeleteOwner(normPhone).catch(() => {});
+  }
+
   return updated;
+}
+
+// Bi-directional synchronizer with PostgreSQL database
+export async function syncUserDataWithPostgres() {
+  try {
+    const [pgFarmers, pgOwners] = await Promise.all([apiGetFarmers(), apiGetOwners()]);
+    let syncedFarmers = 0;
+    let syncedOwners = 0;
+
+    if (Array.isArray(pgFarmers) && pgFarmers.length > 0) {
+      localStorage.setItem("agri_registered_farmers", JSON.stringify(pgFarmers));
+      syncedFarmers = pgFarmers.length;
+    }
+    if (Array.isArray(pgOwners) && pgOwners.length > 0) {
+      localStorage.setItem("agri_registered_owners", JSON.stringify(pgOwners));
+      syncedOwners = pgOwners.length;
+    }
+
+    return {
+      success: true,
+      farmersCount: syncedFarmers,
+      ownersCount: syncedOwners
+    };
+  } catch (err) {
+    console.warn("PostgreSQL sync skipped (server offline):", err);
+    return { success: false, error: err.message };
+  }
 }
