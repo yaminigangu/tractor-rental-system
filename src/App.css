@@ -13900,3 +13900,818 @@ html {
 
 
 
+
+
+/* ==========================================================================
+   FARMER PROFILE COMPONENT & HEADER CHIP STYLES
+   ========================================================================== */
+
+/* Farmer Profile Pill Trigger in Header (Replaces cluttered buttons) */
+.header-user-badge.farmer-profile-chip-btn {
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  color: #15803d;
+  cursor: pointer;
+  padding: 5px 14px 5px 10px;
+  border-radius: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(22, 101, 52, 0.08);
+}
+
+.header-user-badge.farmer-profile-chip-btn:hover {
+  background: #dcfce7;
+  border-color: #22c55e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.16);
+}
+
+.farmer-badge-role-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(22, 101, 52, 0.12);
+  color: #14532d;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.badge-status-dot {
+  font-size: 8px;
+  color: #16a34a;
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+.user-badge-chevron {
+  font-size: 10px;
+  opacity: 0.65;
+  transition: transform 0.2s ease;
+}
+
+.header-user-badge.farmer-profile-chip-btn:hover .user-badge-chevron {
+  opacity: 1;
+  transform: translateY(1px);
+}
+
+.sidebar-user-card.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-user-card.clickable:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   Farmer Profile Modal (Overlay & Card)
+   -------------------------------------------------------------------------- */
+.farmer-profile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(15, 23, 42, 0.68);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  animation: fadeInModal 0.22s ease-out forwards;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.farmer-profile-card {
+  background: #ffffff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 660px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  animation: slideUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUpModal {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.farmer-profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+}
+
+.farmer-profile-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.farmer-profile-header-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.farmer-profile-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.farmer-profile-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.farmer-profile-close-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 14px;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.farmer-profile-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: scale(1.05);
+}
+
+.farmer-profile-scroll-body {
+  padding: 22px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Alert Notification */
+.farmer-profile-alert {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.farmer-profile-alert.success {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #15803d;
+}
+
+.farmer-profile-alert.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+/* Hero Identity Banner */
+.farmer-hero-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #14532d 0%, #166534 60%, #15803d 100%);
+  color: #ffffff;
+  padding: 18px 20px;
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(20, 83, 45, 0.22);
+}
+
+.farmer-hero-avatar-wrap {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.farmer-hero-avatar {
+  font-size: 32px;
+}
+
+.farmer-hero-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #22c55e;
+  color: #ffffff;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.farmer-hero-info {
+  flex: 1;
+}
+
+.farmer-hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.farmer-hero-name {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.farmer-verified-pill {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.farmer-hero-meta {
+  margin: 6px 0 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.88);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-sep {
+  opacity: 0.5;
+}
+
+/* Quick Navigation Row */
+.farmer-quick-nav-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.farmer-nav-btn {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  color: #334155;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.18s ease;
+}
+
+.farmer-nav-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.farmer-nav-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+/* Details Card */
+.farmer-details-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.farmer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.farmer-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.farmer-card-edit-btn {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #15803d;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.farmer-card-edit-btn:hover {
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+
+.farmer-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .farmer-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.farmer-field-box {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.farmer-field-box.full-width {
+  grid-column: 1 / -1;
+}
+
+.farmer-field-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.farmer-field-value {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.farmer-field-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.farmer-otp-chip {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  color: #15803d;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.farmer-crops-chips-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.farmer-crop-pill {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 14px;
+}
+
+/* Edit Form */
+.farmer-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .form-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.form-input {
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-input:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.form-input.readonly {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.form-select {
+  cursor: pointer;
+}
+
+.crops-toggle-strip {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.crop-toggle-pill {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 5px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.crop-toggle-pill:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.crop-toggle-pill.selected {
+  background: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+}
+
+.form-actions-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.farmer-save-btn {
+  background: #15803d;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+}
+
+.farmer-save-btn:hover:not(:disabled) {
+  background: #166534;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.25);
+}
+
+.farmer-save-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.farmer-cancel-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.farmer-cancel-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* --------------------------------------------------------------------------
+   Account Session & Logout Card
+   -------------------------------------------------------------------------- */
+.farmer-session-card {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.session-card-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.session-card-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.session-card-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.session-card-desc {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.farmer-logout-action-btn {
+  background: #334155;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.farmer-logout-action-btn:hover {
+  background: #0f172a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* --------------------------------------------------------------------------
+   Danger Zone: Delete Farmer Account
+   -------------------------------------------------------------------------- */
+.farmer-danger-card {
+  background: #fff5f5;
+  border: 1.5px solid #fecaca;
+  border-radius: 18px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.danger-card-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.danger-card-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.danger-card-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #991b1b;
+}
+
+.danger-card-desc {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #b91c1c;
+  line-height: 1.4;
+}
+
+.farmer-delete-action-btn {
+  background: #ffffff;
+  border: 1.5px solid #f87171;
+  color: #dc2626;
+  padding: 8px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.farmer-delete-action-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+}
+
+.delete-confirm-box {
+  width: 100%;
+  background: #ffffff;
+  border: 1.5px solid #fca5a5;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 10px;
+}
+
+.delete-confirm-warning {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.delete-final-btn {
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.delete-final-btn:hover {
+  background: #991b1b;
+}
+
+.delete-cancel-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   Dedicated Full-Page Farmer Profile Layout
+   -------------------------------------------------------------------------- */
+.farmer-profile-page-wrap {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 24px 20px 60px 20px;
+}
+
+.farmer-profile-page-header {
+  margin-bottom: 20px;
+}
+
+.farmer-profile-page-header .header-meta-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.farmer-profile-page-header .back-btn {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.farmer-profile-page-header .back-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.farmer-page-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.farmer-page-desc {
+  margin: 4px 0 0 0;
+  font-size: 13.5px;
+  color: #64748b;
+}
+
+.farmer-profile-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}

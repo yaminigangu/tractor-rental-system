@@ -10,6 +10,7 @@ export default function Sidebar({
   setLanguage,
   selectedLocation,
   currentFarmer,
+  onOpenFarmerProfile,
   onFarmerLogout,
   onFarmerDeleteAccount,
   currentOwner,
@@ -88,6 +89,11 @@ export default function Sidebar({
           id: 'my-bookings', 
           label: isTe ? 'నా బుకింగ్‌లు' : 'My Bookings', 
           icon: '📄' 
+        },
+        { 
+          id: 'farmer-profile', 
+          label: isTe ? 'రైతు ప్రొఫైల్' : 'Farmer Profile', 
+          icon: '👤' 
         }
       );
     } else if (currentOwner) {
@@ -212,7 +218,16 @@ export default function Sidebar({
         {/* Logged-In User Profile Card & Sign Out in Sidebar */}
         {(currentFarmer || currentOwner || isAdminLoggedIn) && (
           <div className="sidebar-user-section">
-            <div className="sidebar-user-card">
+            <div 
+              className={`sidebar-user-card ${currentFarmer ? 'clickable' : ''}`}
+              onClick={() => {
+                if (currentFarmer && onOpenFarmerProfile) {
+                  if (closeMobileMenu) closeMobileMenu();
+                  onOpenFarmerProfile();
+                }
+              }}
+              title={currentFarmer ? (isTe ? 'రైతు ప్రొఫైల్ వివరాలు తెరవండి' : 'Open Farmer Profile & Settings') : ''}
+            >
               <span className="sidebar-user-avatar">
                 {currentFarmer ? '👨‍🌾' : (currentOwner ? '🚜' : '🛡️')}
               </span>

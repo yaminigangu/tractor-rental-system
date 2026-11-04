@@ -13,6 +13,7 @@ export default function Header({
   selectedLocation,
   onOpenLocationPicker,
   currentFarmer,
+  onOpenFarmerProfile,
   onFarmerLogout,
   onFarmerDeleteAccount,
   currentOwner,
@@ -44,6 +45,8 @@ export default function Header({
         return language === 'te' ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Website Admin Dashboard';
       case 'farmer-login':
         return language === 'te' ? 'రైతు లాగిన్' : 'Farmer Login';
+      case 'farmer-profile':
+        return language === 'te' ? 'రైతు ప్రొఫైల్' : 'Farmer Profile & Settings';
       case 'farmer-onboarding':
         return language === 'te' ? 'కొత్త రైతు నమోదు' : 'Farmer Onboarding';
       default:
@@ -114,34 +117,26 @@ export default function Header({
           <span className="lang-text-mobile">{language === 'en' ? 'తెలుగు' : 'EN'}</span>
         </button>
 
-        {/* Clean Logged-in User Badge & Logout / Delete Account Buttons */}
+        {/* Farmer Profile Badge Chip Button (Opens Full Profile Modal & Edit Form) */}
         {currentFarmer && (
           <div className="header-logged-in-user">
-            <div className="header-user-badge farmer-badge">
+            <button
+              type="button"
+              className="header-user-badge farmer-badge farmer-profile-chip-btn"
+              onClick={onOpenFarmerProfile || (() => setActivePage && setActivePage('farmer-profile'))}
+              title={isTe ? 'రైతు ప్రొఫైల్ వివరాలు, సవరణ & ఖాతా సెట్టింగ్‌లు' : 'Farmer Profile, Edit Details & Settings'}
+              aria-label="Open Farmer Profile"
+            >
               <span className="user-badge-avatar">👨‍🌾</span>
-              <span className="user-badge-name">{currentFarmer.name ? currentFarmer.name.split(' ')[0] : 'Farmer'}</span>
-              <span className="user-badge-role">({isTe ? 'రైతు' : 'Farmer'})</span>
-            </div>
-            {onFarmerLogout && (
-              <button
-                type="button"
-                className="header-logout-btn"
-                onClick={onFarmerLogout}
-                title={isTe ? "లాగ్అవుట్" : "Logout"}
-              >
-                🚪 <span className="header-btn-text">{isTe ? 'లాగ్అవుట్' : 'Logout'}</span>
-              </button>
-            )}
-            {onFarmerDeleteAccount && (
-              <button
-                type="button"
-                className="header-delete-btn"
-                onClick={onFarmerDeleteAccount}
-                title={isTe ? "రైతు ఖాతాను శాశ్వతంగా తొలగించండి" : "Permanently Delete Farmer Account"}
-              >
-                🗑️ <span className="header-btn-text">{isTe ? 'ఖాతా తొలగించు' : 'Delete Account'}</span>
-              </button>
-            )}
+              <span className="user-badge-name">
+                {currentFarmer.name ? currentFarmer.name.split(' ')[0] : (isTe ? 'రైతు' : 'Farmer')}
+              </span>
+              <span className="farmer-badge-role-tag">
+                <span className="badge-status-dot">●</span>
+                {isTe ? 'ప్రొఫైల్' : 'Profile'}
+              </span>
+              <span className="user-badge-chevron">▾</span>
+            </button>
           </div>
         )}
 

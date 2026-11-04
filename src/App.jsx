@@ -8,19 +8,22 @@ import MobileBottomNav from './components/MobileBottomNav';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import OfflineNotificationBanner from './components/OfflineNotificationBanner';
 import TractorLoadingScreen from './components/TractorLoadingScreen';
+import FarmerProfileModal from './components/FarmerProfileModal';
 import Home from './pages/Home';
 import FindTractor from './pages/FindTractor';
 import TractorBooking from './pages/TractorBooking';
 import OwnerRegistration from './pages/OwnerRegistration';
 import OwnerLogin from './pages/OwnerLogin';
 import FarmerLogin from './pages/FarmerLogin';
+import FarmerProfile from './pages/FarmerProfile';
 import FarmerOnboarding from './pages/FarmerOnboarding';
 import OwnerInbox from './pages/OwnerInbox';
 import MyBookings from './pages/MyBookings';
 import Dashboard from './pages/Dashboard';
 import AdminLogin from './pages/AdminLogin';
 import DualLoginSelect from './pages/DualLoginSelect';
-import { deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from './data/userData';
+import { saveRegisteredFarmer, deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from './data/userData';
+import { apiUpdateFarmer } from './api/apiClient';
 import { DEFAULT_LOCATION } from './data/telanganaLocations';
 import { buildFleetForLocation } from './data/fleetData';
 import { fetchRegionWeather, getFallbackWeather } from './services/weatherService';
@@ -164,6 +167,9 @@ function App() {
 
   // Mobile number passed when redirecting new farmer to Onboarding
   const [onboardingMobile, setOnboardingMobile] = useState('');
+
+  // Farmer Profile & Account Settings Modal State
+  const [isFarmerProfileOpen, setIsFarmerProfileOpen] = useState(false);
 
   // Admin Login Authentication State with SessionStorage
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
@@ -433,6 +439,17 @@ function App() {
             onFarmerDeleteAccount={handleFarmerDeleteAccount}
           />
         );
+      case 'farmer-profile':
+        return (
+          <FarmerProfile
+            currentFarmer={currentFarmer}
+            onUpdateFarmer={handleUpdateFarmer}
+            onFarmerLogout={handleFarmerLogout}
+            onFarmerDeleteAccount={handleFarmerDeleteAccount}
+            setActivePage={setActivePage}
+            language={language}
+          />
+        );
       case 'admin-dashboard':
         return isAdminLoggedIn ? (
           <Dashboard
@@ -464,6 +481,30 @@ function App() {
           />
         );
     }
+  };
+
+  // Farmer Profile Update Handler (Syncs state, localStorage, and PostgreSQL)
+  const handleUpdateFarmer = async (updatedData) => {
+    if (!currentFarmer) return null;
+    const merged = { ...currentFarmer, ...updatedData };
+    setCurrentFarmer(merged);
+    try {
+      localStorage.setItem('agri_current_farmer', JSON.stringify(merged));
+    } catch (e) {
+      console.warn('Failed to update localStorage agri_current_farmer:', e);
+    }
+    saveRegisteredFarmer(merged);
+    if (merged.mobile) {
+      await apiUpdateFarmer(merged.mobile, {
+        name: merged.name,
+        village: merged.village,
+        district: merged.district,
+        landArea: merged.landArea,
+        crops: merged.crops,
+        passbookNo: merged.passbookNo,
+      }).catch((err) => console.warn('PostgreSQL farmer update failed:', err));
+    }
+    return merged;
   };
 
   // Logout handlers
@@ -574,6 +615,7 @@ function App() {
           setLanguage={setLanguage}
           selectedLocation={selectedLocation}
           currentFarmer={currentFarmer}
+          onOpenFarmerProfile={() => setIsFarmerProfileOpen(true)}
           onFarmerLogout={handleFarmerLogout}
           onFarmerDeleteAccount={handleFarmerDeleteAccount}
           currentOwner={currentOwner}
@@ -606,6 +648,7 @@ function App() {
             selectedLocation={selectedLocation}
             onOpenLocationPicker={() => setIsLocationModalOpen(true)}
             currentFarmer={currentFarmer}
+            onOpenFarmerProfile={() => setIsFarmerProfileOpen(true)}
             onFarmerLogout={handleFarmerLogout}
             onFarmerDeleteAccount={handleFarmerDeleteAccount}
             currentOwner={currentOwner}
@@ -628,6 +671,20 @@ function App() {
         onSelectLocation={handleSelectLocation}
         language={language}
       />
+
+      {/* Comprehensive Farmer Profile & Account Settings Modal */}
+      {isFarmerProfileOpen && currentFarmer && (
+        <FarmerProfileModal
+          isOpen={isFarmerProfileOpen}
+          onClose={() => setIsFarmerProfileOpen(false)}
+          currentFarmer={currentFarmer}
+          onUpdateFarmer={handleUpdateFarmer}
+          onFarmerLogout={handleFarmerLogout}
+          onFarmerDeleteAccount={handleFarmerDeleteAccount}
+          language={language}
+          onNavigateBookings={() => setActivePage('my-bookings')}
+        />
+      )}
 
       {/* Digital Agricultural Work Slip / Receipt Modal */}
       {receiptModalBooking && (
