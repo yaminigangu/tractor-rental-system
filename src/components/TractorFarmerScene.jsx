@@ -290,6 +290,7 @@ export default function TractorFarmerScene({
   const smokeContainerRef = useRef(null);
   const dustContainerRef = useRef(null);
   const sunRaysRef = useRef(null);
+  const modelStripRef = useRef(null);
 
   // Implement Specific Refs
   const ploughRef = useRef(null);
@@ -1150,7 +1151,18 @@ export default function TractorFarmerScene({
         <span className="video-model-strip-label">
           {isTe ? 'ట్రాక్టర్ మోడల్స్:' : 'TRACTOR MODELS:'}
         </span>
-        <div className="video-model-strip">
+        <button
+          type="button"
+          className="model-strip-arrow-btn"
+          onClick={() => {
+            if (modelStripRef.current) modelStripRef.current.scrollBy({ left: -140, behavior: 'smooth' });
+          }}
+          title="Scroll Left"
+          aria-label="Previous tractor models"
+        >
+          ‹
+        </button>
+        <div className="video-model-strip" ref={modelStripRef}>
           {TRACTOR_MODELS.map((m) => {
             const isModelActive = activeModel.id === m.id;
             return (
@@ -1171,6 +1183,17 @@ export default function TractorFarmerScene({
             );
           })}
         </div>
+        <button
+          type="button"
+          className="model-strip-arrow-btn"
+          onClick={() => {
+            if (modelStripRef.current) modelStripRef.current.scrollBy({ left: 140, behavior: 'smooth' });
+          }}
+          title="Scroll Right"
+          aria-label="Next tractor models"
+        >
+          ›
+        </button>
       </div>
 
       {/* Bottom Video Telemetry Footer (Clearly displaying Model Name + Implement) */}

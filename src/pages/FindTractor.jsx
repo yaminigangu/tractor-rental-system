@@ -430,7 +430,6 @@ export default function FindTractor({
       tl.from('.jfarm-badge-pill', { opacity: 0, y: -12, duration: 0.35, ease: 'power2.out' })
         .from('.jfarm-hero-title', { opacity: 0, y: 22, duration: 0.45, ease: 'power3.out' }, '-=0.2')
         .from('.jfarm-hero-subtitle', { opacity: 0, y: 16, duration: 0.4, ease: 'power3.out' }, '-=0.25')
-        .from('.jfarm-tab-pill', { opacity: 0, scale: 0.85, y: 12, stagger: 0.03, duration: 0.32, ease: 'back.out(2)' }, '-=0.2')
         .from('.jfarm-search-card', { opacity: 0, y: 22, duration: 0.45, ease: 'power2.out' }, '-=0.15')
         .from('.swiggy-cat-card', { opacity: 0, scale: 0.75, y: 18, stagger: 0.035, duration: 0.38, ease: 'back.out(1.6)' }, '-=0.2');
     }, containerRef);
@@ -534,46 +533,6 @@ export default function FindTractor({
                   >
                     <span className="jfarm-tab-icon">{tab.icon}</span>
                     <span className="jfarm-tab-text">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Section 2: Tractor Model Names Selector (Allows farmer to see & pick different tractor models) */}
-            <div className="jfarm-tab-section-header" style={{ marginTop: '14px' }}>
-              <span className="jfarm-tab-section-title">
-                {isTe ? '🚜 ప్రముఖ ట్రాక్టర్ మోడల్స్ (బ్రాండ్లు):' : '🚜 TRACTOR MODEL TYPES & BRANDS:'}
-              </span>
-              {selectedModelId !== 'All' && (
-                <button
-                  type="button"
-                  className="jfarm-clear-model-pill"
-                  onClick={() => setSelectedModelId('All')}
-                >
-                  ✕ {isTe ? 'అన్నీ చూపించు' : 'All Models'}
-                </button>
-              )}
-            </div>
-            <div className="jfarm-quick-tabs jfarm-models-tabs" role="tablist">
-              <button
-                type="button"
-                className={`jfarm-tab-pill model-tab ${selectedModelId === 'All' ? 'active' : ''}`}
-                onClick={() => setSelectedModelId('All')}
-              >
-                <span className="jfarm-tab-text">{isTe ? 'అన్ని మోడల్స్' : 'All Models'}</span>
-              </button>
-              {TRACTOR_MODELS.map((tm) => {
-                const isActive = selectedModelId === tm.id;
-                return (
-                  <button
-                    key={tm.id}
-                    type="button"
-                    className={`jfarm-tab-pill model-tab ${isActive ? 'active' : ''}`}
-                    onClick={() => setSelectedModelId(isActive ? 'All' : tm.id)}
-                  >
-                    <span className="model-tab-dot" style={{ backgroundColor: tm.primaryColor }} />
-                    <span className="jfarm-tab-text">{tm.shortName}</span>
-                    <span className="jfarm-tab-hp">{tm.hp}</span>
                   </button>
                 );
               })}

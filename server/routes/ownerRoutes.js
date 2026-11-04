@@ -16,3 +16,4 @@ router.put('/:mobile', updateOwner);
 router.delete('/:mobile', deleteOwner);
 
 export default router;
+

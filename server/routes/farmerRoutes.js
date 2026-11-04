@@ -16,3 +16,4 @@ router.put('/:mobile', updateFarmer);
 router.delete('/:mobile', deleteFarmer);
 
 export default router;
+

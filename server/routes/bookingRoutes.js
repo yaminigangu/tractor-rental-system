@@ -19,3 +19,4 @@ router.put('/:id/status', updateBookingStatus);
 router.delete('/:id', deleteBooking);
 
 export default router;
+
