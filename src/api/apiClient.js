@@ -229,8 +229,80 @@ export async function apiDeleteOwner(mobile) {
 }
 
 // =====================================================================
+// AUTH & SESSIONS
+// =====================================================================
+export function getStoredAuthToken() {
+  try {
+    return localStorage.getItem('agri_jwt_token') || null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredAuthToken(token) {
+  try {
+    if (token) {
+      localStorage.setItem('agri_jwt_token', token);
+    } else {
+      localStorage.removeItem('agri_jwt_token');
+    }
+  } catch {}
+}
+
+export async function apiGetSessionToken(user) {
+  try {
+    if (!user || !user.mobile) return null;
+    const res = await fetch(`${API_BASE}/auth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mobile: user.mobile,
+        name: user.name || user.fullName,
+        role: user.role || 'farmer',
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.token) {
+        setStoredAuthToken(data.token);
+        return data.token;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to obtain JWT session token:', err);
+  }
+  return null;
+}
+
+// =====================================================================
 // BOOKINGS
 // =====================================================================
+export async function apiGetMyBookings(user = null) {
+  try {
+    let token = getStoredAuthToken();
+    if (!token && user) {
+      token = await apiGetSessionToken(user);
+    }
+    if (!token) return null;
+
+    const res = await fetch(`${API_BASE}/bookings/my`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(4000),
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('apiGetMyBookings failed:', err);
+  }
+  return null;
+}
+
 export async function apiGetBookings(filters = {}) {
   try {
     const params = new URLSearchParams();
@@ -245,7 +317,14 @@ export async function apiGetBookings(filters = {}) {
 
 export async function apiGetBookingById(id) {
   try {
-    const res = await fetch(`${API_BASE}/bookings/${id}`, { signal: AbortSignal.timeout(3000) });
+    const token = getStoredAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/bookings/${id}`, {
+      headers,
+      signal: AbortSignal.timeout(3000)
+    });
     if (res.ok) return await res.json();
   } catch {}
   return null;
@@ -253,9 +332,13 @@ export async function apiGetBookingById(id) {
 
 export async function apiSaveBooking(booking) {
   try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/bookings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(booking),
       signal: AbortSignal.timeout(4000),
     });
@@ -266,9 +349,13 @@ export async function apiSaveBooking(booking) {
 
 export async function apiUpdateBooking(id, updates) {
   try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/bookings/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(updates),
       signal: AbortSignal.timeout(3000),
     });
@@ -277,12 +364,16 @@ export async function apiUpdateBooking(id, updates) {
   return null;
 }
 
-export async function apiUpdateBookingStatus(id, status) {
+export async function apiUpdateBookingStatus(id, status, paymentStatus = null) {
   try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/bookings/${id}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      headers,
+      body: JSON.stringify({ status, paymentStatus }),
       signal: AbortSignal.timeout(3000),
     });
     if (res.ok) return await res.json();
@@ -292,8 +383,13 @@ export async function apiUpdateBookingStatus(id, status) {
 
 export async function apiDeleteBooking(id) {
   try {
+    const token = getStoredAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/bookings/${id}`, {
       method: 'DELETE',
+      headers,
       signal: AbortSignal.timeout(3000),
     });
     if (res.ok) return await res.json();

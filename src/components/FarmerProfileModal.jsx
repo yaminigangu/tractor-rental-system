@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TELANGANA_33_DISTRICTS } from '../data/telanganaDistricts';
+import { apiGetMyBookings } from '../api/apiClient';
 
 const CROPS_OPTIONS = [
   { id: 'Paddy', en: 'Paddy (Rice)', te: 'వరి' },
@@ -29,6 +30,7 @@ export default function FarmerProfileModal({
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [myBookingsCount, setMyBookingsCount] = useState(0);
 
   // Form edit fields
   const [name, setName] = useState('');
@@ -53,6 +55,16 @@ export default function FarmerProfileModal({
       setSaveSuccessMsg('');
       setErrorMsg('');
       setShowDeleteConfirm(false);
+
+      if (isOpen) {
+        apiGetMyBookings(currentFarmer)
+          .then((records) => {
+            if (Array.isArray(records)) {
+              setMyBookingsCount(records.length);
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, [currentFarmer, isOpen]);
 
@@ -188,6 +200,8 @@ export default function FarmerProfileModal({
                 <span>📍 {currentFarmer.village || 'Hasanparthy'}, {currentFarmer.district || 'Hanumakonda'}</span>
                 <span className="meta-sep">•</span>
                 <span>🌾 {currentFarmer.landArea || 3} {isTe ? 'ఎకరాలు' : 'Acres'}</span>
+                <span className="meta-sep">•</span>
+                <span>📋 {myBookingsCount} {isTe ? 'బుకింగ్‌లు' : 'Bookings'}</span>
               </p>
             </div>
           </div>
@@ -204,7 +218,7 @@ export default function FarmerProfileModal({
                 }}
               >
                 <span>📄</span>
-                <span>{isTe ? 'నా బుకింగ్‌లు చూడండి' : 'View My Bookings'}</span>
+                <span>{isTe ? 'నా బుకింగ్‌లు చూడండి' : 'View My Bookings'} ({myBookingsCount})</span>
               </button>
             )}
             <button
@@ -516,3 +530,4 @@ export default function FarmerProfileModal({
     </div>
   );
 }
+

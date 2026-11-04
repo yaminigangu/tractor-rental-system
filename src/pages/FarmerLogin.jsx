@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredFarmer, findFarmerByMobile, findOwnerByMobile } from '../data/userData';
-import { apiSendOtp, apiVerifyOtp } from '../api/apiClient';
+import { apiSendOtp, apiVerifyOtp, setStoredAuthToken, apiGetSessionToken } from '../api/apiClient';
 
 export default function FarmerLogin({
   setActivePage,
@@ -197,6 +197,13 @@ export default function FarmerLogin({
         return;
       }
 
+      // Store authentic JWT session token
+      if (res.token) {
+        setStoredAuthToken(res.token);
+      } else {
+        apiGetSessionToken(loginMatchedFarmer).catch(() => {});
+      }
+
       // Secure Login: Save session and navigate into fleet
       try {
         localStorage.setItem('agri_current_farmer', JSON.stringify(loginMatchedFarmer));
@@ -323,6 +330,7 @@ export default function FarmerLogin({
 
       // Save in AgriRent database & PostgreSQL
       saveRegisteredFarmer(newFarmer);
+      apiGetSessionToken(newFarmer).catch(() => {});
 
       try {
         localStorage.setItem('agri_current_farmer', JSON.stringify(newFarmer));

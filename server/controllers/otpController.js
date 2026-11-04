@@ -3,6 +3,8 @@ import {
   validateOtp,
   isMessageCentralConfigured
 } from '../services/messageCentralService.js';
+import { generateToken } from '../middleware/auth.js';
+import { query } from '../db.js';
 
 /**
  * POST /api/otp/send
@@ -34,7 +36,7 @@ export async function sendOtpHandler(req, res, next) {
  */
 export async function verifyOtpHandler(req, res, next) {
   try {
-    const { verificationId, code, countryCode } = req.body;
+    const { verificationId, code, countryCode, mobileNumber } = req.body;
     if (!verificationId) {
       return res.status(400).json({ error: 'verificationId is required' });
     }
@@ -49,7 +51,30 @@ export async function verifyOtpHandler(req, res, next) {
     });
 
     if (result.success && result.verified) {
-      return res.status(200).json(result);
+      let token = null;
+      let farmer = null;
+      if (mobileNumber) {
+        const cleanMobile = String(mobileNumber).replace(/\D/g, '');
+        const dbRes = await query(
+          'SELECT id, name, mobile, village, district, land_area as "landArea" FROM farmers WHERE mobile = $1 OR mobile LIKE $2',
+          [cleanMobile, `%${cleanMobile.slice(-10)}`]
+        );
+        if (dbRes.rows.length > 0) {
+          farmer = dbRes.rows[0];
+        }
+        token = generateToken({
+          id: farmer ? farmer.id : null,
+          mobile: cleanMobile,
+          name: farmer ? farmer.name : 'Farmer',
+          role: 'farmer'
+        });
+      }
+
+      return res.status(200).json({
+        ...result,
+        token,
+        farmer
+      });
     }
 
     return res.status(400).json(result);

@@ -14715,3 +14715,316 @@ html {
   flex-direction: column;
   gap: 18px;
 }
+
+
+/* ==========================================================================
+   AUTHENTICATED FARMER BOOKINGS & DATA ISOLATION STYLES
+   ========================================================================== */
+
+.my-bookings-page-wrap {
+  padding: 10px 0 40px 0;
+}
+
+.my-bookings-header {
+  margin-bottom: 20px;
+}
+
+.bookings-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.my-bookings-main-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.farmer-auth-badge {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #15803d;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 14px;
+}
+
+.my-bookings-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.header-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bookings-container-card {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+/* Empty Bookings State ("You haven't booked any tractors yet.") */
+.empty-bookings-box {
+  background: #f8fafc;
+  border-radius: 16px;
+  margin: 20px;
+  border: 2px dashed #cbd5e1;
+}
+
+.empty-icon-wrap {
+  display: inline-flex;
+  animation: bounce-subtle 2.5s infinite ease-in-out;
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Table Enhancements */
+.farmer-bookings-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.farmer-bookings-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 14px 16px;
+  border-bottom: 1.5px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.farmer-bookings-table td {
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.booking-row:hover {
+  background-color: #f8fafc;
+}
+
+/* Booking ID Cell */
+.id-badge-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.booking-hash-id {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.booking-date-tag {
+  font-size: 12px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.booking-time-tag {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Operation & Specs */
+.work-type-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.booking-specs-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 3px;
+  font-weight: 600;
+}
+
+.duration-tag {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+/* Rented Tractor Details */
+.tractor-info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.booked-tractor-thumbnail {
+  width: 54px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.booked-tractor-placeholder-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.tractor-text-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tractor-model-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.tractor-reg-badge {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.tractor-brand-tag {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Tractor Owner Details */
+.owner-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.owner-name-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.owner-tractor-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.owner-call-link {
+  font-size: 11.5px;
+  color: #15803d;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  transition: color 0.15s ease;
+}
+
+.owner-call-link:hover {
+  color: #166534;
+  text-decoration: underline;
+}
+
+/* Total Cost & Payment Status */
+.cost-display-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cost-total-amount {
+  font-size: 16px;
+  font-weight: 900;
+  color: #c2410c;
+}
+
+.payment-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.payment-status-badge.paid {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  color: #15803d;
+}
+
+.payment-status-badge.pending {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
+}
+
+/* Actions */
+.booking-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.action-slip-btn {
+  border: 1.5px solid #22c55e !important;
+  color: #15803d !important;
+  background: #f0fdf4 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+  transition: all 0.15s ease !important;
+}
+
+.action-slip-btn:hover {
+  background: #15803d !important;
+  color: #ffffff !important;
+}
+
+.cancel-booking-btn {
+  background: #fee2e2 !important;
+  border: 1px solid #fca5a5 !important;
+  color: #dc2626 !important;
+  font-size: 12px !important;
+  padding: 6px 9px !important;
+  border-radius: 8px !important;
+}
+
+.cancel-booking-btn:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}

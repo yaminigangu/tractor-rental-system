@@ -23,7 +23,7 @@ import Dashboard from './pages/Dashboard';
 import AdminLogin from './pages/AdminLogin';
 import DualLoginSelect from './pages/DualLoginSelect';
 import { saveRegisteredFarmer, deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from './data/userData';
-import { apiUpdateFarmer } from './api/apiClient';
+import { apiUpdateFarmer, getStoredAuthToken, setStoredAuthToken, apiGetSessionToken } from './api/apiClient';
 import { DEFAULT_LOCATION } from './data/telanganaLocations';
 import { buildFleetForLocation } from './data/fleetData';
 import { fetchRegionWeather, getFallbackWeather } from './services/weatherService';
@@ -123,8 +123,12 @@ function App() {
     try {
       if (currentFarmer) {
         localStorage.setItem('agri_current_farmer', JSON.stringify(currentFarmer));
+        if (!getStoredAuthToken()) {
+          apiGetSessionToken(currentFarmer).catch(() => {});
+        }
       } else {
         localStorage.removeItem('agri_current_farmer');
+        setStoredAuthToken(null);
       }
     } catch (e) {
       console.warn(e);

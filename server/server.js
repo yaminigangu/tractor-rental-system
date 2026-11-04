@@ -14,6 +14,7 @@ import ownerRoutes from './routes/ownerRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import otpRoutes from './routes/otpRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,6 +69,7 @@ app.use('/api/owners', ownerRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/otp', otpRoutes);
+app.use('/api/auth', authRoutes);
 
 // Root Welcome Endpoint
 app.get('/', (req, res) => {
@@ -98,8 +100,26 @@ app.use((req, res) => {
 // Centralized Error Handler
 app.use(errorHandler);
 
+async function ensureBookingsSchema() {
+  try {
+    await query(`
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS farmer_id INTEGER;
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'Pending Cash on Service';
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS registration_no VARCHAR(50) DEFAULT 'TS 03 AB 4589';
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS owner_mobile VARCHAR(50) DEFAULT '9876543210';
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS tractor_photo TEXT;
+      CREATE INDEX IF NOT EXISTS idx_bookings_farmer_id ON bookings(farmer_id);
+      CREATE INDEX IF NOT EXISTS idx_bookings_farmer_mobile ON bookings(farmer_mobile);
+    `);
+    console.log('✅ PostgreSQL bookings schema verified & migrated.');
+  } catch (err) {
+    console.warn('PostgreSQL schema migration check warning:', err.message);
+  }
+}
+
 // Start Server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
+  await ensureBookingsSchema();
   console.log(`\n=============================================================`);
   console.log(`🚀 AgriRent Node.js REST API Server running on http://localhost:${PORT}`);
   console.log(`📡 Database: PostgreSQL [${process.env.DB_NAME || 'tractor_rental_db'}] on ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}`);
