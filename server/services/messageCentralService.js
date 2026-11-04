@@ -12,15 +12,26 @@ const mockOtpStore = new Map();
 
 /**
  * Checks whether Message Central credentials are configured in .env
+ * Supports either:
+ * 1) Direct Auth Token: MESSAGE_CENTRAL_AUTH_TOKEN (from Message Central dashboard)
+ * 2) Key/Password: MESSAGE_CENTRAL_CUSTOMER_ID + MESSAGE_CENTRAL_KEY
  */
 export function isMessageCentralConfigured() {
-  const customerId = process.env.MESSAGE_CENTRAL_CUSTOMER_ID || '';
-  const key = process.env.MESSAGE_CENTRAL_KEY || '';
+  const directToken = (process.env.MESSAGE_CENTRAL_AUTH_TOKEN || '').trim();
+  const key = (process.env.MESSAGE_CENTRAL_KEY || '').trim();
+  
+  // If direct JWT token is provided in either variable, we are live!
+  if (directToken.startsWith('eyJ') || key.startsWith('eyJ')) {
+    return true;
+  }
+
+  const customerId = (process.env.MESSAGE_CENTRAL_CUSTOMER_ID || '').trim();
   return (
-    customerId.trim().length > 0 &&
+    customerId.length > 0 &&
     !customerId.includes('YOUR_CUSTOMER_ID') &&
-    key.trim().length > 0 &&
-    !key.includes('YOUR_BASE64_KEY')
+    key.length > 0 &&
+    !key.includes('YOUR_BASE64_KEY') &&
+    !key.includes('YOUR_KEY')
   );
 }
 
@@ -40,10 +51,25 @@ function getBase64Key(rawOrBase64Key) {
 }
 
 /**
- * 1. Generate / Retrieve Auth Token from Message Central
- * GET /auth/v1/authentication/token?customerId=...&key=...&scope=NEW&country=91&email=...
+ * 1. Retrieve Auth Token from Message Central
+ * Supports:
+ * - Direct static auth token from Message Central dashboard (MESSAGE_CENTRAL_AUTH_TOKEN)
+ * - Dynamic token generation via GET /auth/v1/authentication/token
  */
 export async function getAuthToken() {
+  // 1. If direct Auth Token is provided in .env, use it directly!
+  const directToken = (process.env.MESSAGE_CENTRAL_AUTH_TOKEN || '').trim();
+  if (directToken && !directToken.includes('YOUR_AUTH_TOKEN')) {
+    return directToken;
+  }
+
+  // 2. If user pasted JWT token into MESSAGE_CENTRAL_KEY, detect and use it directly!
+  const keyCandidate = (process.env.MESSAGE_CENTRAL_KEY || '').trim();
+  if (keyCandidate && keyCandidate.startsWith('eyJ')) {
+    return keyCandidate;
+  }
+
+  // 3. Otherwise check in-memory cache
   const now = Date.now();
   if (cachedToken && tokenExpiresAt > now + 60000) {
     return cachedToken;
@@ -55,7 +81,7 @@ export async function getAuthToken() {
   const country = (process.env.MESSAGE_CENTRAL_COUNTRY_CODE || '91').trim();
 
   if (!customerId || !rawKey) {
-    throw new Error('Message Central credentials not configured in .env (MESSAGE_CENTRAL_CUSTOMER_ID, MESSAGE_CENTRAL_KEY)');
+    throw new Error('Message Central credentials not configured in .env. Please set MESSAGE_CENTRAL_AUTH_TOKEN or MESSAGE_CENTRAL_KEY.');
   }
 
   const base64Key = getBase64Key(rawKey);
@@ -164,6 +190,11 @@ export async function sendOtp({
     mobileNumber: cleanMobile,
   });
 
+  const customerId = (process.env.MESSAGE_CENTRAL_CUSTOMER_ID || '').trim();
+  if (customerId && !customerId.includes('YOUR_CUSTOMER_ID')) {
+    params.append('customerId', customerId);
+  }
+
   if (configuredLength && configuredLength >= 4 && configuredLength <= 8) {
     params.append('otpLength', String(configuredLength));
   }
@@ -253,6 +284,11 @@ export async function validateOtp({
     code: cleanCode,
   });
 
+  const customerId = (process.env.MESSAGE_CENTRAL_CUSTOMER_ID || '').trim();
+  if (customerId && !customerId.includes('YOUR_CUSTOMER_ID')) {
+    params.append('customerId', customerId);
+  }
+
   const validateUrl = `${MESSAGE_CENTRAL_BASE_URL}/verification/v3/validateOtp?${params.toString()}`;
 
   const response = await fetch(validateUrl, {
@@ -305,3 +341,4 @@ export async function validateOtp({
     error: json.data?.errorMessage || json.message || 'Verification failed',
   };
 }
+

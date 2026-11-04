@@ -12,3 +12,4 @@ router.post('/send', sendOtpHandler);
 router.post('/verify', verifyOtpHandler);
 
 export default router;
+

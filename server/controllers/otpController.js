@@ -72,3 +72,4 @@ export async function getOtpStatusHandler(req, res) {
     countryCode: process.env.MESSAGE_CENTRAL_COUNTRY_CODE || '91'
   });
 }
+
