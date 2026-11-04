@@ -3,7 +3,7 @@ import StatCard from '../components/StatCard';
 import { translations } from '../translations';
 import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
 import { getRegisteredFarmers, getRegisteredOwners, deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from '../data/userData';
-import { checkBackendHealth } from '../api/apiClient';
+import { checkBackendHealth, apiUpdateBookingStatus } from '../api/apiClient';
 
 export default function Dashboard({
   bookings = [],
@@ -39,6 +39,7 @@ export default function Dashboard({
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
     );
+    apiUpdateBookingStatus(id, newStatus).catch(() => {});
   };
 
   const handleToggleTractorAvailability = (id) => {

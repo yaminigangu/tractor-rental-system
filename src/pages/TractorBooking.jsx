@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { translations } from '../translations';
 import { ALL_LOCATIONS_LIST } from '../data/telanganaLocations';
 import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
+import { apiSaveBooking } from '../api/apiClient';
 
 const TODAY_DATE = new Date().toISOString().split('T')[0];
 
@@ -86,6 +87,9 @@ export default function TractorBooking({
     };
 
     setBookings((prev) => [newBooking, ...prev]);
+
+    // Asynchronously persist work order to PostgreSQL database if backend is running
+    apiSaveBooking(newBooking).catch(() => {});
 
     // Trigger Digital Receipt Slip Modal!
     if (onBookingSuccess) {

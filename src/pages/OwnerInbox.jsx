@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { translations } from '../translations';
+import { apiUpdateBookingStatus } from '../api/apiClient';
 
 export default function OwnerInbox({ 
   bookings = [], 
@@ -52,6 +53,9 @@ export default function OwnerInbox({
         return b;
       })
     );
+
+    // Asynchronously update booking status in PostgreSQL database
+    apiUpdateBookingStatus(booking.id, decisionStatus).catch(() => {});
 
     // Open permanent in-app modal with manual OK button
     const updatedBooking = { ...booking, status: decisionStatus };
