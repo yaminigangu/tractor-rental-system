@@ -210,7 +210,13 @@ export async function sendOtp({
     signal: AbortSignal.timeout(10000),
   });
 
-  const json = await response.json();
+  const rawText = await response.text();
+  let json;
+  try {
+    json = JSON.parse(rawText);
+  } catch {
+    throw new Error(`Message Central returned invalid response: ${rawText || response.statusText}`);
+  }
 
   if (json.responseCode === 200 || json.message === 'SUCCESS') {
     const verificationId = json.data?.verificationId || json.data?.transactionId;
@@ -291,8 +297,9 @@ export async function validateOtp({
 
   const validateUrl = `${MESSAGE_CENTRAL_BASE_URL}/verification/v3/validateOtp?${params.toString()}`;
 
+  // NOTE: According to Message Central VerifyNow documentation (Page 07), validateOtp is a GET request
   const response = await fetch(validateUrl, {
-    method: 'POST',
+    method: 'GET',
     headers: {
       authToken: token,
       accept: '*/*',
@@ -300,7 +307,19 @@ export async function validateOtp({
     signal: AbortSignal.timeout(10000),
   });
 
-  const json = await response.json();
+  const rawText = await response.text();
+  let json;
+  try {
+    json = JSON.parse(rawText);
+  } catch (parseErr) {
+    console.error('Failed to parse Message Central validateOtp response:', rawText);
+    return {
+      success: false,
+      verified: false,
+      responseCode: response.status || 500,
+      error: 'Message Central returned non-JSON response during verification.',
+    };
+  }
 
   if (
     json.responseCode === 200 &&
@@ -316,7 +335,7 @@ export async function validateOtp({
     };
   }
 
-  if (json.responseCode === 702) {
+  if (json.responseCode === 702 || json.message === 'WRONG_OTP_PROVIDED') {
     return {
       success: false,
       verified: false,
@@ -325,12 +344,21 @@ export async function validateOtp({
     };
   }
 
-  if (json.responseCode === 705) {
+  if (json.responseCode === 705 || json.message === 'VERIFICATION_EXPIRED') {
     return {
       success: false,
       verified: false,
       responseCode: 705,
       error: 'OTP has expired. Please request a new OTP.',
+    };
+  }
+
+  if (json.responseCode === 505) {
+    return {
+      success: false,
+      verified: false,
+      responseCode: 505,
+      error: 'Verification session has expired or is invalid. Please request a new OTP.',
     };
   }
 
