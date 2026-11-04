@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredOwner, findOwnerByIdentifier } from '../data/userData';
+import { apiSendOtp, apiVerifyOtp } from '../api/apiClient';
 
 export default function OwnerRegistration({
   setTractors,
@@ -39,6 +40,8 @@ export default function OwnerRegistration({
   const [currentStep, setCurrentStep] = useState(1);
   const [otpSent, setOtpSent] = useState(true); // Pre-sent by default as shown in Screenshot 1
   const [enteredOtp, setEnteredOtp] = useState('354498');
+  const [verificationId, setVerificationId] = useState('');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
 
@@ -183,7 +186,7 @@ export default function OwnerRegistration({
   };
 
   // Step 1: Verify OTP and advance to Step 2
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
 
@@ -201,7 +204,26 @@ export default function OwnerRegistration({
       return;
     }
 
-    setCurrentStep(2);
+    setIsVerifyingOtp(true);
+    try {
+      const res = await apiVerifyOtp({
+        verificationId: verificationId || `owner_v_${cleanPhone}`,
+        code: enteredOtp.trim(),
+        countryCode: '91'
+      });
+
+      if (!res.success || !res.verified) {
+        setErrorMsg(res.error || (isTe ? 'తప్పుడు OTP కోడ్. దయచేసి మళ్లీ ప్రయత్నించండి.' : 'Invalid OTP code. Please retry.'));
+        setIsVerifyingOtp(false);
+        return;
+      }
+
+      setCurrentStep(2);
+    } catch (err) {
+      setErrorMsg(err.message || 'OTP Verification failed');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   // Step 2: Next to Payout Details
@@ -592,24 +614,50 @@ export default function OwnerRegistration({
                   </div>
 
                   <div className="signin-field-group signin-otp-block">
-                    <label className="signin-field-label" style={{ fontWeight: 800 }}>
-                      {isTe ? '6-అంకెల OTP కోడ్ నమోదు చేయండి' : 'Enter 6-Digit OTP Code'}
-                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="signin-field-label" style={{ fontWeight: 800, margin: 0 }}>
+                        {isTe ? '6-అంకెల OTP కోడ్ నమోదు చేయండి' : 'Enter 6-Digit OTP Code'}
+                      </label>
+                      <button
+                        type="button"
+                        className="signin-change-phone-btn"
+                        onClick={async () => {
+                          const clean = formData.mobile.replace(/\D/g, '');
+                          if (clean.length < 10) {
+                            setErrorMsg(isTe ? 'దయచేసి 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter 10-digit mobile number.');
+                            return;
+                          }
+                          try {
+                            const res = await apiSendOtp({ mobileNumber: clean });
+                            setVerificationId(res.verificationId || '');
+                            if (res.demoOtp) setEnteredOtp(res.demoOtp);
+                            setSuccessNotice(isTe ? '✓ కొత్త OTP పంపబడింది!' : '✓ New OTP sent via Message Central!');
+                            setTimeout(() => setSuccessNotice(''), 4000);
+                          } catch (err) {
+                            setErrorMsg(err.message);
+                          }
+                        }}
+                      >
+                        🔄 {isTe ? 'OTP మళ్లీ పంపండి' : 'Resend OTP'}
+                      </button>
+                    </div>
                     <input
                       type="text"
-                      maxLength={6}
+                      maxLength={8}
                       className="signin-otp-input"
                       value={enteredOtp}
                       onChange={(e) => setEnteredOtp(e.target.value.replace(/\D/g, ''))}
-                      placeholder="354498"
+                      placeholder="••••••"
                     />
-                    <span className="signin-demo-otp-hint">
-                      {isTe ? 'డెమో OTP ప్రివ్యూ: 354498' : 'Demo OTP preview: 354498'}
-                    </span>
+                    {enteredOtp && (
+                      <span className="signin-demo-otp-hint">
+                        {isTe ? `సిమ్యులేటర్ ప్రివ్యూ కోడ్: ${enteredOtp}` : `Simulator test code: ${enteredOtp}`}
+                      </span>
+                    )}
                   </div>
 
-                  <button type="submit" className="owner-btn-primary-blue">
-                    <span>{isTe ? 'OTP ధృవీకరించి కొనసాగించండి →' : 'Verify OTP & Continue →'}</span>
+                  <button type="submit" className="owner-btn-primary-blue" disabled={isVerifyingOtp}>
+                    <span>{isVerifyingOtp ? (isTe ? 'ధృవీకరిస్తోంది...' : 'Verifying OTP...') : (isTe ? 'OTP ధృవీకరించి కొనసాగించండి →' : 'Verify OTP & Continue →')}</span>
                   </button>
                 </form>
               )}

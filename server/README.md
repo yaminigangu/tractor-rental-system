@@ -71,6 +71,9 @@ npm run dev:all
 |---|---|---|
 | **GET** | `/api/health` | Service health, PostgreSQL uptime & database status |
 | **GET** | `/api/stats` | Platform KPIs (total fleet, active bookings, revenue, etc.) |
+| **GET** | `/api/otp/status` | Check Message Central VerifyNow connection status |
+| **POST** | `/api/otp/send` | Send 3rd-party SMS/WhatsApp OTP via Message Central |
+| **POST** | `/api/otp/verify` | Verify OTP code via Message Central |
 | **GET** | `/api/tractors` | List all tractors & machinery (filter by `brand`, `village`, `equipment`) |
 | **GET** | `/api/tractors/:id` | Get single tractor by ID |
 | **POST** | `/api/tractors` | Register new tractor or machinery |
@@ -247,6 +250,44 @@ curl.exe -X PATCH http://localhost:5000/api/bookings/1730000002/status ^
 #### Delete / Cancel Booking
 ```bash
 curl.exe -X DELETE http://localhost:5000/api/bookings/1730000002
+```
+
+---
+
+### 3.7 Message Central VerifyNow 3rd-Party OTP Verification
+
+#### Send OTP to Mobile Number (SMS / WhatsApp)
+```bash
+curl.exe -X POST http://localhost:5000/api/otp/send ^
+  -H "Content-Type: application/json" ^
+  -d "{\"mobileNumber\":\"9876543210\",\"flowType\":\"SMS\"}"
+```
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "verificationId": "2949",
+  "mobileNumber": "9876543210",
+  "timeout": "60",
+  "message": "OTP sent successfully via Message Central SMS"
+}
+```
+
+#### Validate / Verify OTP Code
+```bash
+curl.exe -X POST http://localhost:5000/api/otp/verify ^
+  -H "Content-Type: application/json" ^
+  -d "{\"verificationId\":\"2949\",\"code\":\"1476\"}"
+```
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "verified": true,
+  "verificationId": "2949",
+  "verificationStatus": "VERIFICATION_COMPLETED",
+  "message": "Mobile number verified successfully via Message Central"
+}
 ```
 
 ---

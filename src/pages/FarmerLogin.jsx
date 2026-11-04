@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredFarmer, findFarmerByMobile, findOwnerByMobile } from '../data/userData';
+import { apiSendOtp, apiVerifyOtp } from '../api/apiClient';
 
 export default function FarmerLogin({
   setActivePage,
@@ -24,7 +25,8 @@ export default function FarmerLogin({
   // ----------------------------------------------------
   const [loginPhone, setLoginPhone] = useState('');
   const [loginOtpSent, setLoginOtpSent] = useState(false);
-  const [loginOtp, setLoginOtp] = useState('874885');
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginVerificationId, setLoginVerificationId] = useState('');
   const [loginMatchedFarmer, setLoginMatchedFarmer] = useState(null);
   const [matchedOwnerHint, setMatchedOwnerHint] = useState(null);
   const [loginError, setLoginError] = useState('');
@@ -38,9 +40,13 @@ export default function FarmerLogin({
   const [regVillage, setRegVillage] = useState(defaultVillage);
   const [regLandArea, setRegLandArea] = useState('3.0');
   const [regOtpSent, setRegOtpSent] = useState(false);
-  const [regOtp, setRegOtp] = useState('874885');
+  const [regOtp, setRegOtp] = useState('');
+  const [regVerificationId, setRegVerificationId] = useState('');
   const [regError, setRegError] = useState('');
   const [regNotice, setRegNotice] = useState('');
+
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const toggleLanguage = () => {
     if (setLanguage) {
@@ -81,9 +87,9 @@ export default function FarmerLogin({
   };
 
   // ----------------------------------------------------
-  // STEP 1A: Existing User - Send Login OTP
+  // STEP 1A: Existing User - Send Login OTP via Message Central
   // ----------------------------------------------------
-  const handleSendLoginOtp = (e) => {
+  const handleSendLoginOtp = async (e) => {
     if (e) e.preventDefault();
     setLoginError('');
     setLoginNotice('');
@@ -125,30 +131,45 @@ export default function FarmerLogin({
     }
 
     setMatchedOwnerHint(null);
-
-    // User is registered: send secure OTP
     setLoginMatchedFarmer(matched);
-    setLoginOtpSent(true);
-    setLoginOtp('874885');
-    setLoginNotice(
-      isTe
-        ? `✓ +91 ${maskPhone(phone)} కి 6 అంకెల లాగిన్ OTP పంపబడింది!`
-        : `✓ 6-Digit login OTP sent to +91 ${maskPhone(phone)}!`
-    );
+    setIsSendingOtp(true);
+
+    try {
+      // Dispatch OTP via Message Central VerifyNow API
+      const res = await apiSendOtp({ mobileNumber: phone });
+      setLoginVerificationId(res.verificationId || '');
+      setLoginOtpSent(true);
+
+      if (res.demoOtp) {
+        setLoginOtp(res.demoOtp);
+      } else {
+        setLoginOtp('');
+      }
+
+      setLoginNotice(
+        isTe
+          ? `✓ +91 ${maskPhone(phone)} కి SMS ధృవీకరణ OTP పంపబడింది!`
+          : `✓ Verification OTP sent to +91 ${maskPhone(phone)} via Message Central VerifyNow!`
+      );
+    } catch (err) {
+      setLoginError(err.message || 'Failed to dispatch SMS OTP. Please retry.');
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
   // ----------------------------------------------------
   // STEP 2A: Existing User - Verify OTP & Login Directly
   // ----------------------------------------------------
-  const handleVerifyLoginOtp = (e) => {
+  const handleVerifyLoginOtp = async (e) => {
     if (e) e.preventDefault();
     setLoginError('');
 
     if (loginOtp.trim().length < 4) {
       setLoginError(
         isTe
-          ? 'దయచేసి సరైన 6 అంకెల OTP నమోదు చేయండి.'
-          : 'Please enter the 6-digit OTP.'
+          ? 'దయచేసి సరైన OTP కోడ్ నమోదు చేయండి.'
+          : 'Please enter the OTP verification code.'
       );
       return;
     }
@@ -159,24 +180,46 @@ export default function FarmerLogin({
       return;
     }
 
-    // Secure Login: Save session and navigate into fleet
+    setIsVerifyingOtp(true);
     try {
-      localStorage.setItem('agri_current_farmer', JSON.stringify(loginMatchedFarmer));
+      const res = await apiVerifyOtp({
+        verificationId: loginVerificationId,
+        code: loginOtp.trim(),
+        mobileNumber: loginMatchedFarmer.mobile,
+      });
+
+      if (!res.success || !res.verified) {
+        setLoginError(
+          res.error ||
+          (isTe ? 'తప్పుడు OTP కోడ్. దయచేసి మళ్లీ ప్రయత్నించండి.' : 'Invalid OTP code. Please check SMS and try again.')
+        );
+        setIsVerifyingOtp(false);
+        return;
+      }
+
+      // Secure Login: Save session and navigate into fleet
+      try {
+        localStorage.setItem('agri_current_farmer', JSON.stringify(loginMatchedFarmer));
+      } catch (err) {
+        console.warn(err);
+      }
+
+      if (setCurrentFarmer) {
+        setCurrentFarmer(loginMatchedFarmer);
+      }
+
+      setActivePage('find-tractor');
     } catch (err) {
-      console.warn(err);
+      setLoginError(err.message || 'OTP verification error. Please retry.');
+    } finally {
+      setIsVerifyingOtp(false);
     }
-
-    if (setCurrentFarmer) {
-      setCurrentFarmer(loginMatchedFarmer);
-    }
-
-    setActivePage('find-tractor');
   };
 
   // ----------------------------------------------------
-  // STEP 1B: First-Time User - Send Sign-Up OTP
+  // STEP 1B: First-Time User - Send Sign-Up OTP via Message Central
   // ----------------------------------------------------
-  const handleSendRegOtp = (e) => {
+  const handleSendRegOtp = async (e) => {
     if (e) e.preventDefault();
     setRegError('');
     setRegNotice('');
@@ -209,69 +252,94 @@ export default function FarmerLogin({
       return;
     }
 
-    // Pre-save into AgriRent database immediately so switching tabs or checking database finds this number
-    const newFarmer = {
-      name: regFullName.trim(),
-      mobile: phone,
-      village: regVillage.trim() || defaultVillage,
-      district: selectedLocation?.district || 'Hanamkonda',
-      landArea: parseFloat(regLandArea) || 3.0,
-      crops: ['Paddy', 'Cotton'],
-      isVerified: true,
-      registeredAt: new Date().toISOString().split('T')[0]
-    };
-    saveRegisteredFarmer(newFarmer);
+    setIsSendingOtp(true);
+    try {
+      // Dispatch 3rd-Party SMS OTP via Message Central
+      const res = await apiSendOtp({ mobileNumber: phone });
+      setRegVerificationId(res.verificationId || '');
+      setRegOtpSent(true);
 
-    setRegOtpSent(true);
-    setRegOtp('874885');
-    setRegNotice(
-      isTe
-        ? `✓ +91 ${maskPhone(phone)} ఖాతా వివరాలు నమోదు చేయబడ్డాయి! ధృవీకరణ OTP: 874885`
-        : `✓ Account registered for +91 ${maskPhone(phone)}! Click 'Verify & Complete Account' below to finalize session.`
-    );
+      if (res.demoOtp) {
+        setRegOtp(res.demoOtp);
+      } else {
+        setRegOtp('');
+      }
+
+      setRegNotice(
+        isTe
+          ? `✓ +91 ${maskPhone(phone)} కి SMS OTP పంపబడింది!`
+          : `✓ Verification OTP sent to +91 ${maskPhone(phone)} via Message Central!`
+      );
+    } catch (err) {
+      setRegError(err.message || 'Failed to dispatch registration OTP. Please retry.');
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
   // ----------------------------------------------------
-  // STEP 2B: First-Time User - Verify OTP & Create Account
+  // STEP 2B: First-Time User - Verify OTP & Create Account in PostgreSQL
   // ----------------------------------------------------
-  const handleVerifyRegOtp = (e) => {
+  const handleVerifyRegOtp = async (e) => {
     if (e) e.preventDefault();
     setRegError('');
 
     if (regOtp.trim().length < 4) {
       setRegError(
         isTe
-          ? 'దయచేసి సరైన 6 అంకెల OTP నమోదు చేయండి.'
-          : 'Please enter the 6-digit OTP.'
+          ? 'దయచేసి సరైన OTP కోడ్ నమోదు చేయండి.'
+          : 'Please enter the OTP verification code.'
       );
       return;
     }
 
-    const newFarmer = {
-      name: regFullName.trim(),
-      mobile: cleanPhone(regMobile),
-      village: regVillage.trim() || defaultVillage,
-      district: selectedLocation?.district || 'Hanamkonda',
-      landArea: parseFloat(regLandArea) || 3.0,
-      crops: ['Paddy', 'Cotton'],
-      isVerified: true,
-      registeredAt: new Date().toISOString().split('T')[0]
-    };
-
-    // Save in AgriRent database
-    saveRegisteredFarmer(newFarmer);
-
+    setIsVerifyingOtp(true);
     try {
-      localStorage.setItem('agri_current_farmer', JSON.stringify(newFarmer));
+      const res = await apiVerifyOtp({
+        verificationId: regVerificationId,
+        code: regOtp.trim(),
+        mobileNumber: cleanPhone(regMobile),
+      });
+
+      if (!res.success || !res.verified) {
+        setRegError(
+          res.error ||
+          (isTe ? 'తప్పుడు OTP కోడ్. దయచేసి మళ్లీ ప్రయత్నించండి.' : 'Invalid OTP code. Please check SMS and try again.')
+        );
+        setIsVerifyingOtp(false);
+        return;
+      }
+
+      const newFarmer = {
+        name: regFullName.trim(),
+        mobile: cleanPhone(regMobile),
+        village: regVillage.trim() || defaultVillage,
+        district: selectedLocation?.district || 'Hanamkonda',
+        landArea: parseFloat(regLandArea) || 3.0,
+        crops: ['Paddy', 'Cotton'],
+        isVerified: true,
+        registeredAt: new Date().toISOString().split('T')[0]
+      };
+
+      // Save in AgriRent database & PostgreSQL
+      saveRegisteredFarmer(newFarmer);
+
+      try {
+        localStorage.setItem('agri_current_farmer', JSON.stringify(newFarmer));
+      } catch (err) {
+        console.warn(err);
+      }
+
+      if (setCurrentFarmer) {
+        setCurrentFarmer(newFarmer);
+      }
+
+      setActivePage('find-tractor');
     } catch (err) {
-      console.warn(err);
+      setRegError(err.message || 'Registration verification error. Please retry.');
+    } finally {
+      setIsVerifyingOtp(false);
     }
-
-    if (setCurrentFarmer) {
-      setCurrentFarmer(newFarmer);
-    }
-
-    setActivePage('find-tractor');
   };
 
   return (
@@ -460,8 +528,9 @@ export default function FarmerLogin({
                       type="submit"
                       className="signin-btn-forest-green"
                       style={{ marginTop: '14px' }}
+                      disabled={isSendingOtp}
                     >
-                      <span>📲 {isTe ? 'సురక్షిత లాగిన్ OTP పొందండి' : 'Get Secure Login OTP'}</span>
+                      <span>{isSendingOtp ? (isTe ? 'SMS OTP పంపుతోంది...' : 'Sending SMS OTP via Message Central...') : `📲 ${isTe ? 'సురక్షిత లాగిన్ OTP పొందండి' : 'Get Secure Login OTP'}`}</span>
                     </button>
                   </form>
                 ) : (
@@ -470,7 +539,7 @@ export default function FarmerLogin({
                     <div className="signin-field-group signin-otp-block page-anim">
                       <div className="signin-otp-header-row">
                         <label className="signin-field-label" style={{ fontWeight: 800 }}>
-                          {isTe ? '6-అంకెల లాగిన్ OTP' : 'Enter 6-Digit Login OTP'}
+                          {isTe ? 'లాగిన్ OTP కోడ్ నమోదు చేయండి' : 'Enter Login OTP Code'}
                         </label>
                         <button
                           type="button"
@@ -486,24 +555,27 @@ export default function FarmerLogin({
 
                       <input
                         type="text"
-                        maxLength={6}
+                        maxLength={8}
                         className="signin-otp-input"
                         value={loginOtp}
                         onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, ''))}
-                        placeholder="874885"
+                        placeholder="••••••"
                         autoFocus
                       />
-                      <span className="signin-demo-otp-hint">
-                        {isTe ? 'డెమో OTP ప్రివ్యూ: 874885' : 'Demo OTP preview: 874885'}
-                      </span>
+                      {loginOtp && (
+                        <span className="signin-demo-otp-hint">
+                          {isTe ? `సిమ్యులేటర్ ప్రివ్యూ కోడ్: ${loginOtp}` : `Simulator test code: ${loginOtp}`}
+                        </span>
+                      )}
                     </div>
 
                     <button
                       type="submit"
                       className="signin-btn-forest-green"
                       style={{ marginTop: '14px' }}
+                      disabled={isVerifyingOtp}
                     >
-                      <span>🔓 {isTe ? 'ధృవీకరించి ప్రవేశించండి →' : 'Verify & Login Directly →'}</span>
+                      <span>{isVerifyingOtp ? (isTe ? 'ధృవీకరిస్తోంది...' : 'Verifying OTP...') : `🔓 ${isTe ? 'ధృవీకరించి ప్రవేశించండి →' : 'Verify & Login Directly →'}`}</span>
                     </button>
                   </form>
                 )}
@@ -639,8 +711,9 @@ export default function FarmerLogin({
                       type="submit"
                       className="signin-btn-forest-green"
                       style={{ marginTop: '14px' }}
+                      disabled={isSendingOtp}
                     >
-                      <span>📲 {isTe ? 'ధృవీకరణ OTP పంపండి' : 'Send Verification OTP'}</span>
+                      <span>{isSendingOtp ? (isTe ? 'SMS OTP పంపుతోంది...' : 'Sending SMS OTP via Message Central...') : `📲 ${isTe ? 'ధృవీకరణ OTP పంపండి' : 'Send Verification OTP'}`}</span>
                     </button>
                   </form>
                 ) : (
@@ -649,7 +722,7 @@ export default function FarmerLogin({
                     <div className="signin-field-group signin-otp-block page-anim">
                       <div className="signin-otp-header-row">
                         <label className="signin-field-label" style={{ fontWeight: 800 }}>
-                          {isTe ? '6-అంకెల ధృవీకరణ OTP' : 'Enter 6-Digit Verification OTP'}
+                          {isTe ? 'ధృవీకరణ OTP కోడ్ నమోదు చేయండి' : 'Enter Verification OTP Code'}
                         </label>
                         <button
                           type="button"
@@ -665,24 +738,27 @@ export default function FarmerLogin({
 
                       <input
                         type="text"
-                        maxLength={6}
+                        maxLength={8}
                         className="signin-otp-input"
                         value={regOtp}
                         onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ''))}
-                        placeholder="874885"
+                        placeholder="••••••"
                         autoFocus
                       />
-                      <span className="signin-demo-otp-hint">
-                        {isTe ? 'డెమో OTP ప్రివ్యూ: 874885' : 'Demo OTP preview: 874885'}
-                      </span>
+                      {regOtp && (
+                        <span className="signin-demo-otp-hint">
+                          {isTe ? `సిమ్యులేటర్ ప్రివ్యూ కోడ్: ${regOtp}` : `Simulator test code: ${regOtp}`}
+                        </span>
+                      )}
                     </div>
 
                     <button
                       type="submit"
                       className="signin-btn-forest-green"
                       style={{ marginTop: '14px' }}
+                      disabled={isVerifyingOtp}
                     >
-                      <span>🚀 {isTe ? 'ధృవీకరించి ఖాతా పూర్తి చేయండి →' : 'Verify & Create Farmer Account →'}</span>
+                      <span>{isVerifyingOtp ? (isTe ? 'ధృవీకరిస్తోంది...' : 'Verifying OTP...') : `🚀 ${isTe ? 'ధృవీకరించి ఖాతా పూర్తి చేయండి →' : 'Verify & Create Farmer Account →'}`}</span>
                     </button>
                   </form>
                 )}

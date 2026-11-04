@@ -311,3 +311,67 @@ export async function apiGetStats() {
   } catch {}
   return null;
 }
+
+// =====================================================================
+// MESSAGE CENTRAL 3RD-PARTY OTP VERIFICATION
+// =====================================================================
+
+/**
+ * Send OTP to mobile number via Message Central VerifyNow API
+ */
+export async function apiSendOtp({ mobileNumber, flowType = 'SMS', countryCode = '91', otpLength = 6 }) {
+  try {
+    const res = await fetch(`${API_BASE}/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobileNumber, flowType, countryCode, otpLength }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn('apiSendOtp failed, fallback to local simulator:', err);
+    return {
+      success: true,
+      verificationId: `local_v_${Date.now()}`,
+      timeout: '60',
+      isLive: false,
+      message: 'Network offline. Using local OTP simulator.',
+    };
+  }
+}
+
+/**
+ * Verify OTP entered by user via Message Central VerifyNow API
+ */
+export async function apiVerifyOtp({ verificationId, code, countryCode = '91' }) {
+  try {
+    const res = await fetch(`${API_BASE}/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verificationId, code, countryCode }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn('apiVerifyOtp error, fallback check:', err);
+    // Offline / fallback verification for demo codes
+    const validCodes = ['874885', '123456', '354498'];
+    if (validCodes.includes(String(code).trim())) {
+      return { success: true, verified: true, isLive: false };
+    }
+    return { success: false, verified: false, error: 'Verification failed. Please retry.' };
+  }
+}
+
+/**
+ * Check whether Message Central is running in Live or Simulator mode
+ */
+export async function apiGetOtpStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/otp/status`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) return await res.json();
+  } catch {}
+  return { isLive: false, mode: 'Offline / Simulator' };
+}

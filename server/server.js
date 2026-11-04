@@ -13,6 +13,7 @@ import farmerRoutes from './routes/farmerRoutes.js';
 import ownerRoutes from './routes/ownerRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
+import otpRoutes from './routes/otpRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,6 +67,7 @@ app.use('/api/farmers', farmerRoutes);
 app.use('/api/owners', ownerRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/otp', otpRoutes);
 
 // Root Welcome Endpoint
 app.get('/', (req, res) => {
@@ -80,6 +82,7 @@ app.get('/', (req, res) => {
       owners: 'GET, POST /api/owners | GET, PUT, DELETE /api/owners/:mobile',
       bookings: 'GET, POST /api/bookings | GET, PUT, DELETE /api/bookings/:id | PATCH /api/bookings/:id/status',
       stats: 'GET /api/stats',
+      otp: 'POST /api/otp/send | POST /api/otp/verify | GET /api/otp/status (Message Central)',
     }
   });
 });
