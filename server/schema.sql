@@ -1,13 +1,10 @@
 -- ============================================================
 -- AgriRent PostgreSQL Database Schema
--- Run this in pgAdmin 4 Query Tool or via psql
+-- Run this in pgAdmin 4 Query Tool or automatically via:
+-- npm run db:init
 -- ============================================================
 
--- 1. Create Database (Run if not yet created)
--- CREATE DATABASE tractor_rental_db;
--- \c tractor_rental_db;
-
--- 2. Farmers Table
+-- 1. Farmers Table
 CREATE TABLE IF NOT EXISTS farmers (
     id SERIAL PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
@@ -22,7 +19,7 @@ CREATE TABLE IF NOT EXISTS farmers (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Vehicle Owners / Tractor Captains Table
+-- 2. Vehicle Owners / Tractor Captains Table
 CREATE TABLE IF NOT EXISTS vehicle_owners (
     id SERIAL PRIMARY KEY,
     full_name VARCHAR(150) NOT NULL,
@@ -49,7 +46,28 @@ CREATE TABLE IF NOT EXISTS vehicle_owners (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Bookings / Work Orders Table
+-- 3. Tractors & Agricultural Machinery Fleet Table
+CREATE TABLE IF NOT EXISTS tractors (
+    id INTEGER PRIMARY KEY,
+    brand VARCHAR(100) NOT NULL,
+    model VARCHAR(150) NOT NULL,
+    hp VARCHAR(50),
+    equipment TEXT,
+    pricing INTEGER DEFAULT 1200,
+    photo TEXT,
+    rating NUMERIC(3, 1) DEFAULT 4.8,
+    jobs_done INTEGER DEFAULT 0,
+    default_owner VARCHAR(150),
+    default_mobile VARCHAR(50),
+    village_type VARCHAR(50) DEFAULT 'local',
+    village VARCHAR(100) DEFAULT 'Hasanparthy',
+    district VARCHAR(100) DEFAULT 'Hanamkonda',
+    distance_km NUMERIC(5, 2) DEFAULT 1.0,
+    availability VARCHAR(50) DEFAULT 'Available',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. Bookings & Work Orders Table
 CREATE TABLE IF NOT EXISTS bookings (
     id BIGINT PRIMARY KEY,
     farmer_name VARCHAR(150) NOT NULL,
@@ -69,26 +87,15 @@ CREATE TABLE IF NOT EXISTS bookings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Tractors & Machinery Inventory Table
-CREATE TABLE IF NOT EXISTS tractors (
-    id INTEGER PRIMARY KEY,
-    brand VARCHAR(100) NOT NULL,
-    model VARCHAR(150) NOT NULL,
-    hp VARCHAR(50),
-    equipment TEXT,
-    pricing INTEGER,
-    photo TEXT,
-    rating NUMERIC(3, 1) DEFAULT 4.8,
-    jobs_done INTEGER DEFAULT 0,
-    default_owner VARCHAR(150),
-    default_mobile VARCHAR(50),
-    village_type VARCHAR(50) DEFAULT 'local',
-    distance_km NUMERIC(5, 2) DEFAULT 1.0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- Ensure backward compatibility if columns were added later
+ALTER TABLE tractors ADD COLUMN IF NOT EXISTS village VARCHAR(100) DEFAULT 'Hasanparthy';
+ALTER TABLE tractors ADD COLUMN IF NOT EXISTS district VARCHAR(100) DEFAULT 'Hanamkonda';
+ALTER TABLE tractors ADD COLUMN IF NOT EXISTS availability VARCHAR(50) DEFAULT 'Available';
 
--- Indexes for lightning fast mobile lookups
+-- Performance & Lookup Indexes
 CREATE INDEX IF NOT EXISTS idx_farmers_mobile ON farmers(mobile);
 CREATE INDEX IF NOT EXISTS idx_owners_mobile ON vehicle_owners(mobile);
-CREATE INDEX IF NOT EXISTS idx_bookings_mobile ON bookings(farmer_mobile);
-
+CREATE INDEX IF NOT EXISTS idx_tractors_brand ON tractors(brand);
+CREATE INDEX IF NOT EXISTS idx_tractors_village ON tractors(village);
+CREATE INDEX IF NOT EXISTS idx_bookings_farmer_mobile ON bookings(farmer_mobile);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
