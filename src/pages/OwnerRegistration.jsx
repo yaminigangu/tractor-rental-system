@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredOwner, findOwnerByIdentifier } from '../data/userData';
-import { apiSendOtp, apiVerifyOtp } from '../api/apiClient';
+import { apiSendOtp, apiVerifyOtp, setStoredAuthToken } from '../api/apiClient';
 
 export default function OwnerRegistration({
   setTractors,
@@ -39,20 +39,28 @@ export default function OwnerRegistration({
 
   // Multi-step progress (1: Identity, 2: Vehicle RC, 3: Bank/UPI, 4: Machinery)
   const [currentStep, setCurrentStep] = useState(1);
-  const [otpSent, setOtpSent] = useState(true); // Pre-sent by default as shown in Screenshot 1
-  const [enteredOtp, setEnteredOtp] = useState('354498');
+  const [otpSent, setOtpSent] = useState(false);
+  const [enteredOtp, setEnteredOtp] = useState('');
   const [verificationId, setVerificationId] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
 
-  // Returning owner input
+  // Returning owner login state (Message Central VerifyNow SMS OTP)
   const [returningQuery, setReturningQuery] = useState('');
+  const [loginOtpSent, setLoginOtpSent] = useState(false);
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginVerificationId, setLoginVerificationId] = useState('');
+  const [loginMatchedOwner, setLoginMatchedOwner] = useState(null);
+  const [isSendingLoginOtp, setIsSendingLoginOtp] = useState(false);
+  const [isVerifyingLoginOtp, setIsVerifyingLoginOtp] = useState(false);
 
   // Form State (Exact match to Screenshots 1 - 4)
   const [formData, setFormData] = useState({
     // Step 1: Owner Mobile & Identity
-    fullName: 'G. Srinivas Rao',
+    fullName: '',
+    mobile: '',
     mobile: '9440156789',
 
     // Step 2: Tractor RC & Vehicle Specs
@@ -182,50 +190,228 @@ export default function OwnerRegistration({
       selectedPhoto: '/tractor4.jpeg',
       photoName: 'Swaraj 744 FE XT'
     });
-    setEnteredOtp('354498');
+    setOtpSent(false);
+    setEnteredOtp('');
+    setVerificationId('');
     setErrorMsg('');
   };
 
-  // Step 1: Verify OTP and advance to Step 2
-    const handleVerifyOtp = async (e) => {
-      if (e) e.preventDefault();
-      setErrorMsg('');
+  // Step 1: Send Registration OTP via Message Central
+  const handleSendRegistrationOtp = async () => {
+    setErrorMsg('');
+    setSuccessNotice('');
 
-      if (!formData.fullName.trim()) {
-        setErrorMsg(isTe ? 'దయచేసి యజమాని పూర్తి పేరు నమోదు చేయండి.' : 'Please enter Owner Full Name.');
-        return;
+    if (!formData.fullName.trim()) {
+      setErrorMsg(isTe ? 'దయచేసి యజమాని పూర్తి పేరు నమోదు చేయండి.' : 'Please enter Owner Full Name.');
+      return;
+    }
+    const cleanPhone = formData.mobile.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setErrorMsg(isTe ? 'దయచేసి 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter 10-digit mobile number.');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const res = await apiSendOtp({ mobileNumber: cleanPhone });
+      if (!res.verificationId) {
+        throw new Error(res.error || res.message || 'Failed to dispatch verification OTP.');
       }
-      const cleanPhone = formData.mobile.replace(/\D/g, '');
-      if (cleanPhone.length < 10) {
-        setErrorMsg(isTe ? 'దయచేసి 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter 10-digit mobile number.');
-        return;
+      setVerificationId(res.verificationId);
+      setOtpSent(true);
+      if (res.demoOtp) {
+        setEnteredOtp(res.demoOtp);
+      } else {
+        setEnteredOtp('');
       }
-      if (enteredOtp.trim().length < 4) {
-        setErrorMsg(isTe ? 'దయచేసి OTP నమోదు చేయండి.' : 'Please enter the 6-digit OTP code.');
-        return;
-      }
+      setSuccessNotice(
+        isTe
+          ? `✓ +91 ${cleanPhone} కి మెసేజ్ సెంట్రల్ SMS ద్వారా ధృవీకరణ OTP పంపబడింది!`
+          : `✓ Verification OTP sent to +91 ${cleanPhone} via Message Central VerifyNow!`
+      );
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to send SMS OTP. Please retry.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
 
-      setIsVerifyingOtp(true);
-      try {
-        const res = await apiVerifyOtp({
-          verificationId: verificationId || `owner_v_${cleanPhone}`,
-          code: enteredOtp.trim(),
-          countryCode: '91'
-        });
+  // Step 1: Verify Registration OTP and advance to Step 2
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    setErrorMsg('');
 
-        if (!res.success || !res.verified) {
-          setErrorMsg(res.error || (isTe ? 'తప్పుడు OTP కోడ్. దయచేసి మళ్లీ ప్రయత్నించండి.' : 'Invalid OTP code. Please retry.'));
-          setIsVerifyingOtp(false);
-          return;
-        }
+    if (!formData.fullName.trim()) {
+      setErrorMsg(isTe ? 'దయచేసి యజమాని పూర్తి పేరు నమోదు చేయండి.' : 'Please enter Owner Full Name.');
+      return;
+    }
+    const cleanPhone = formData.mobile.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setErrorMsg(isTe ? 'దయచేసి 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter 10-digit mobile number.');
+      return;
+    }
 
-        setCurrentStep(2);
-      } catch (err) {
-        setErrorMsg(err.message || 'OTP Verification failed');
-      } finally {
+    if (!otpSent || !verificationId) {
+      setErrorMsg(isTe ? 'దయచేసి ముందుగా SMS OTP పంపండి.' : 'Please send verification OTP first.');
+      return;
+    }
+
+    if (enteredOtp.trim().length < 4) {
+      setErrorMsg(isTe ? 'దయచేసి 6-అంకెల OTP నమోదు చేయండి.' : 'Please enter the 6-digit OTP code.');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const res = await apiVerifyOtp({
+        verificationId,
+        code: enteredOtp.trim(),
+        countryCode: '91',
+        mobileNumber: cleanPhone,
+        role: 'owner'
+      });
+
+      if (!res.success || !res.verified) {
+        setErrorMsg(res.error || (isTe ? 'తప్పుడు OTP కోడ్. దయచేసి మళ్లీ ప్రయత్నించండి.' : 'Invalid OTP code. Please retry.'));
         setIsVerifyingOtp(false);
+        return;
       }
-    };
+
+      setSuccessNotice(isTe ? '✓ మొబైల్ నంబర్ విజయవంతంగా ధృవీకరించబడింది!' : '✓ Mobile number verified successfully!');
+      setTimeout(() => setSuccessNotice(''), 3000);
+      setCurrentStep(2);
+    } catch (err) {
+      setErrorMsg(err.message || 'OTP Verification failed');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  // Returning owner: Send Login OTP via Message Central
+  const handleSendLoginOtp = async (e) => {
+    if (e) e.preventDefault();
+    setErrorMsg('');
+    setSuccessNotice('');
+
+    const cleanInput = returningQuery.trim();
+    if (!cleanInput) {
+      setErrorMsg(isTe ? 'దయచేసి మీ నమోదిత మొబైల్ లేదా RC నంబర్ నమోదు చేయండి.' : 'Please enter registered mobile or RC number.');
+      return;
+    }
+
+    const matched = findOwnerByIdentifier(cleanInput);
+    let phone = (matched && matched.mobile) ? matched.mobile.replace(/\D/g, '') : cleanInput.replace(/\D/g, '');
+
+    if (!matched && phone.length < 10) {
+      setErrorMsg(
+        isTe
+          ? 'నమోదైన యజమాని కనుగొనబడలేదు. దయచేసి సరైన 10 అంకెల మొబైల్ లేదా RC నమోదు చేయండి.'
+          : 'Vehicle Owner not found. Please enter a valid 10-digit mobile number or registered RC.'
+      );
+      return;
+    }
+
+    if (phone.length < 10) {
+      setErrorMsg(isTe ? 'నమోదిత మొబైల్ సంఖ్య చెల్లదు.' : 'Invalid registered mobile number.');
+      return;
+    }
+
+    setLoginMatchedOwner(matched || {
+      fullName: 'Vehicle Owner',
+      mobile: phone,
+      rcNumber: cleanInput
+    });
+
+    setIsSendingLoginOtp(true);
+    try {
+      const res = await apiSendOtp({ mobileNumber: phone });
+      if (!res.verificationId) {
+        throw new Error(res.error || res.message || 'Failed to dispatch login OTP.');
+      }
+      setLoginVerificationId(res.verificationId);
+      setLoginOtpSent(true);
+      if (res.demoOtp) {
+        setLoginOtp(res.demoOtp);
+      } else {
+        setLoginOtp('');
+      }
+      setSuccessNotice(
+        isTe
+          ? `✓ +91 ${phone} కి మెసేజ్ సెంట్రల్ SMS ద్వారా లాగిన్ OTP పంపబడింది!`
+          : `✓ Login OTP sent to +91 ${phone} via Message Central VerifyNow!`
+      );
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to send login OTP via Message Central.');
+    } finally {
+      setIsSendingLoginOtp(false);
+    }
+  };
+
+  // Returning owner: Verify OTP and log in to Owner Inbox
+  const handleVerifyLoginOtp = async (e) => {
+    if (e) e.preventDefault();
+    setErrorMsg('');
+
+    if (loginOtp.trim().length < 4) {
+      setErrorMsg(isTe ? 'దయచేసి సరైన OTP కోడ్ నమోదు చేయండి.' : 'Please enter 6-digit OTP code.');
+      return;
+    }
+
+    if (!loginVerificationId) {
+      setErrorMsg('Verification session expired. Please re-send OTP.');
+      setLoginOtpSent(false);
+      return;
+    }
+
+    setIsVerifyingLoginOtp(true);
+    try {
+      const phone = (loginMatchedOwner?.mobile || returningQuery).replace(/\D/g, '');
+      const res = await apiVerifyOtp({
+        verificationId: loginVerificationId,
+        code: loginOtp.trim(),
+        countryCode: '91',
+        mobileNumber: phone,
+        role: 'owner'
+      });
+
+      if (!res.success || !res.verified) {
+        setErrorMsg(
+          res.error ||
+          (isTe ? 'తప్పుడు OTP కోడ్. దయచేసి మళ్లీ ప్రయత్నించండి.' : 'Invalid OTP code. Please retry.')
+        );
+        setIsVerifyingLoginOtp(false);
+        return;
+      }
+
+      if (res.token) {
+        setStoredAuthToken(res.token);
+      }
+
+      const ownerToSave = res.owner || loginMatchedOwner || {
+        fullName: 'Vehicle Owner',
+        mobile: phone,
+        rcNumber: returningQuery
+      };
+
+      saveRegisteredOwner(ownerToSave);
+
+      if (setCurrentOwner) {
+        setCurrentOwner(ownerToSave);
+      }
+      try {
+        localStorage.setItem('agri_last_owner', JSON.stringify(ownerToSave));
+        localStorage.setItem('agri_current_owner', JSON.stringify(ownerToSave));
+      } catch (err) {
+        console.warn(err);
+      }
+
+      setActivePage('owner-inbox');
+    } catch (err) {
+      setErrorMsg(err.message || 'OTP verification failed');
+    } finally {
+      setIsVerifyingLoginOtp(false);
+    }
+  };
 
     // Step 2: Next to Payout Details
     const handleNextPayout = (e) => {
@@ -379,36 +565,6 @@ export default function OwnerRegistration({
       setActivePage('owner-inbox');
     };
 
-    // Returning owner login handler
-    const handleReturningLogin = (e) => {
-      if (e) e.preventDefault();
-      setErrorMsg('');
-
-      const cleanInput = returningQuery.trim();
-      if (!cleanInput) {
-        setErrorMsg(isTe ? 'దయచేసి మీ మొబైల్ లేదా RC నంబర్ నమోదు చేయండి.' : 'Please enter mobile or RC number.');
-        return;
-      }
-
-      const existing = findOwnerByIdentifier(cleanInput);
-      if (existing) {
-        if (setCurrentOwner) {
-          setCurrentOwner(existing);
-          try {
-            localStorage.setItem('agri_last_owner', JSON.stringify(existing));
-            localStorage.setItem('agri_current_owner', JSON.stringify(existing));
-          } catch (err) {
-            console.warn(err);
-          }
-        }
-        setActivePage('owner-inbox');
-      } else {
-        setErrorMsg(isTe ? 'నమోదైన యజమాని కనుగొనబడలేదు. దయచేసి 4-దశల KYC ని పూర్తి చేయండి.' : 'Owner not found. Please complete the 4-step KYC authentication.');
-        setActiveTab('kyc');
-        setCurrentStep(1);
-      }
-    };
-
     return (
       <div className="signin-page-viewport page-anim">
         {/* Background Animated Floating Elements */}
@@ -455,9 +611,9 @@ export default function OwnerRegistration({
           {/* Main Container Card matching Screenshots */}
           <main className="signin-card-container">
             {/* OTP Notification Banner (Step 1) */}
-            {activeTab === 'kyc' && currentStep === 1 && (
+            {activeTab === 'kyc' && currentStep === 1 && otpSent && (
               <div className="signin-otp-banner page-anim">
-                ✓ 📲 {isTe ? `ధృవీకరణ OTP +91 ${formData.mobile} కి పంపబడింది!` : `Verification OTP sent to +91 ${formData.mobile}!`}
+                ✓ 📲 {isTe ? `ధృవీకరణ OTP +91 ${formData.mobile} కి పంపబడింది!` : `Verification OTP sent to +91 ${formData.mobile} via Message Central!`}
               </div>
             )}
 
@@ -493,9 +649,15 @@ export default function OwnerRegistration({
                     type="button"
                     className="signin-returning-tap-btn"
                     style={{ background: '#1d4ed8' }}
-                    onClick={() => handleOneTapOwnerLogin(lastOwner)}
+                    onClick={() => {
+                      setActiveTab('login');
+                      setReturningQuery(lastOwner.mobile || lastOwner.rcNumber);
+                      setLoginOtpSent(false);
+                      setLoginVerificationId('');
+                      setLoginOtp('');
+                    }}
                   >
-                    <span>⚡ {isTe ? `1-ట్యాప్ ఓనర్ లాగిన్ (${(lastOwner.fullName || 'Owner').split(' ')[0]}) →` : `1-Tap Login to Owner Inbox (${(lastOwner.fullName || 'Owner').split(' ')[0]}) →`}</span>
+                    <span>⚡ {isTe ? `SMS OTP తో లాగిన్ అవ్వండి (${(lastOwner.fullName || 'Owner').split(' ')[0]}) →` : `Login via Message Central SMS (${(lastOwner.fullName || 'Owner').split(' ')[0]}) →`}</span>
                   </button>
                 </div>
               )}
@@ -570,7 +732,7 @@ export default function OwnerRegistration({
                   STEP 1 OF 4: Owner Mobile & Identity (Screenshot 1)
                   ---------------------------------------------------- */}
                   {currentStep === 1 && (
-                    <form onSubmit={handleVerifyOtp} className="page-anim">
+                    <form onSubmit={otpSent ? handleVerifyOtp : (e) => { e.preventDefault(); handleSendRegistrationOtp(); }} className="page-anim">
                       <div className="owner-step-header">
                         <span className="owner-step-mini-tag">
                           {isTe ? 'దశ 1 / 4' : 'STEP 1 OF 4'}
@@ -593,6 +755,7 @@ export default function OwnerRegistration({
                             onChange={(e) => handleInputChange('fullName', e.target.value)}
                             placeholder="e.g. G. Srinivas Rao"
                             autoFocus
+                            disabled={otpSent}
                           />
                         </div>
                       </div>
@@ -610,56 +773,82 @@ export default function OwnerRegistration({
                             value={formData.mobile}
                             onChange={(e) => handleInputChange('mobile', e.target.value.replace(/\D/g, ''))}
                             placeholder="9440156789"
+                            disabled={otpSent}
                           />
                         </div>
                       </div>
 
-                      <div className="signin-field-group signin-otp-block">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <label className="signin-field-label" style={{ fontWeight: 800, margin: 0 }}>
-                            {isTe ? '6-అంకెల OTP కోడ్ నమోదు చేయండి' : 'Enter 6-Digit OTP Code'}
-                          </label>
+                      {!otpSent ? (
+                        <button
+                          type="button"
+                          className="owner-btn-primary-blue"
+                          style={{ marginTop: '10px' }}
+                          disabled={isSendingOtp}
+                          onClick={handleSendRegistrationOtp}
+                        >
+                          <span>
+                            {isSendingOtp
+                              ? (isTe ? 'SMS OTP పంపుతోంది...' : 'Sending SMS OTP via Message Central...')
+                              : (isTe ? '📲 మెసేజ్ సెంట్రల్ SMS ద్వారా ధృవీకరణ OTP పంపండి →' : '📲 Send Verification OTP via Message Central →')}
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="signin-field-group signin-otp-block page-anim">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label className="signin-field-label" style={{ fontWeight: 800, margin: 0 }}>
+                              {isTe ? '6-అంకెల OTP కోడ్ నమోదు చేయండి' : 'Enter 6-Digit SMS OTP'}
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                className="signin-change-phone-btn"
+                                onClick={handleSendRegistrationOtp}
+                                disabled={isSendingOtp}
+                              >
+                                🔄 {isSendingOtp ? '...' : (isTe ? 'మళ్లీ పంపు' : 'Resend OTP')}
+                              </button>
+                              <button
+                                type="button"
+                                className="signin-change-phone-btn"
+                                onClick={() => {
+                                  setOtpSent(false);
+                                  setVerificationId('');
+                                  setEnteredOtp('');
+                                }}
+                              >
+                                ✏️ {isTe ? 'నంబర్ మార్చు' : 'Change Phone'}
+                              </button>
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            maxLength={8}
+                            className="signin-otp-input"
+                            value={enteredOtp}
+                            onChange={(e) => setEnteredOtp(e.target.value.replace(/\D/g, ''))}
+                            placeholder="••••••"
+                            autoFocus
+                          />
+                          {enteredOtp && (
+                            <span className="signin-demo-otp-hint">
+                              {isTe ? `సిమ్యులేటర్ ప్రివ్యూ కోడ్: ${enteredOtp}` : `Simulator test code: ${enteredOtp}`}
+                            </span>
+                          )}
+
                           <button
-                            type="button"
-                            className="signin-change-phone-btn"
-                            onClick={async () => {
-                              const clean = formData.mobile.replace(/\D/g, '');
-                              if (clean.length < 10) {
-                                setErrorMsg(isTe ? 'దయచేసి 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter 10-digit mobile number.');
-                                return;
-                              }
-                              try {
-                                const res = await apiSendOtp({ mobileNumber: clean });
-                                setVerificationId(res.verificationId || '');
-                                if (res.demoOtp) setEnteredOtp(res.demoOtp);
-                                setSuccessNotice(isTe ? '✓ కొత్త OTP పంపబడింది!' : '✓ New OTP sent via Message Central!');
-                                setTimeout(() => setSuccessNotice(''), 4000);
-                              } catch (err) {
-                                setErrorMsg(err.message);
-                              }
-                            }}
+                            type="submit"
+                            className="owner-btn-primary-blue"
+                            style={{ marginTop: '14px' }}
+                            disabled={isVerifyingOtp}
                           >
-                            🔄 {isTe ? 'OTP మళ్లీ పంపండి' : 'Resend OTP'}
+                            <span>
+                              {isVerifyingOtp
+                                ? (isTe ? 'OTP ధృవీకరిస్తోంది...' : 'Verifying with Message Central...')
+                                : (isTe ? '🔐 OTP ధృవీకరించి కొనసాగించండి →' : '🔐 Verify OTP & Continue to Vehicle Specs →')}
+                            </span>
                           </button>
                         </div>
-                        <input
-                          type="text"
-                          maxLength={8}
-                          className="signin-otp-input"
-                          value={enteredOtp}
-                          onChange={(e) => setEnteredOtp(e.target.value.replace(/\D/g, ''))}
-                          placeholder="••••••"
-                        />
-                        {enteredOtp && (
-                          <span className="signin-demo-otp-hint">
-                            {isTe ? `సిమ్యులేటర్ ప్రివ్యూ కోడ్: ${enteredOtp}` : `Simulator test code: ${enteredOtp}`}
-                          </span>
-                        )}
-                      </div>
-
-                        <button type="submit" className="owner-btn-primary-blue" disabled={isVerifyingOtp}>
-                          <span>{isVerifyingOtp ? (isTe ? 'ధృవీకరిస్తోంది...' : 'Verifying OTP...') : (isTe ? 'OTP ధృవీకరించి కొనసాగించండి →' : 'Verify OTP & Continue →')}</span>
-                        </button>
+                      )}
                     </form>
                   )}
 
@@ -1051,76 +1240,160 @@ export default function OwnerRegistration({
               )}
 
               {/* ========================================================
-              TAB 2: RETURNING OWNER LOGIN
+              TAB 2: RETURNING OWNER LOGIN (Message Central VerifyNow OTP)
               ======================================================== */}
               {activeTab === 'login' && (
-                <form onSubmit={handleReturningLogin} className="page-anim">
+                <form onSubmit={loginOtpSent ? handleVerifyLoginOtp : handleSendLoginOtp} className="page-anim">
                   <div className="owner-step-header">
-                    <span className="owner-step-mini-tag">RETURNING OWNER</span>
+                    <span className="owner-step-mini-tag">RETURNING OWNER LOGIN</span>
                     <h3 className="owner-step-main-title">
-                      {isTe ? 'మీ మొబైల్ లేదా RC నంబర్‌తో ప్రవేశించండి' : 'Enter with Mobile or Vehicle RC'}
+                      {isTe ? 'మెసేజ్ సెంట్రల్ SMS తో ప్రవేశించండి' : 'Login via Message Central SMS OTP'}
                     </h3>
                   </div>
 
-                  <div className="signin-field-group">
-                    <label className="signin-field-label">
-                      {isTe ? 'మొబైల్ లేదా వాహన RC నంబర్ *' : 'Registered Mobile or RC Number *'}
-                    </label>
-                    <div className="signin-field-input-box">
-                      <span className="signin-input-icon">🔑</span>
-                      <input
-                        type="text"
-                        className="signin-input-text font-bold"
-                        placeholder="e.g. 9440156789 or TS 03 AB 4589"
-                        value={returningQuery}
-                        onChange={(e) => {
-                          setReturningQuery(e.target.value);
-                          setErrorMsg('');
-                        }}
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  {returningQuery.trim() && (() => {
-                    const matched = findOwnerByIdentifier(returningQuery.trim());
-                    if (matched) {
-                      return (
-                        <div className="signin-recognized-status-banner is-member page-anim" style={{ marginTop: '10px' }}>
-                          <span>✓</span>
-                          <span>
-                            {isTe
-                              ? `నమోదిత యజమాని గుర్తించబడ్డారు: ${matched.fullName || matched.owner} (${matched.vehicleNumber || matched.rcNumber})`
-                              : `Registered Owner Recognized: ${matched.fullName || matched.owner} (${matched.vehicleNumber || matched.rcNumber})`}
-                          </span>
+                  {!loginOtpSent ? (
+                    <>
+                      <div className="signin-field-group">
+                        <label className="signin-field-label">
+                          {isTe ? 'నమోదిత మొబైల్ లేదా వాహన RC నంబర్ *' : 'Registered Mobile or RC Number *'}
+                        </label>
+                        <div className="signin-field-input-box">
+                          <span className="signin-input-icon">🔑</span>
+                          <input
+                            type="text"
+                            className="signin-input-text font-bold"
+                            placeholder="e.g. 9876543210 or TS 04 AB 7890"
+                            value={returningQuery}
+                            onChange={(e) => {
+                              setReturningQuery(e.target.value);
+                              setErrorMsg('');
+                            }}
+                            autoFocus
+                          />
                         </div>
-                      );
-                    }
-                    return null;
-                  })()}
+                      </div>
 
-                  <button type="submit" className="owner-btn-primary-blue" style={{ marginTop: '14px' }}>
-                    <span>
-                      {(() => {
-                        const matched = returningQuery.trim() ? findOwnerByIdentifier(returningQuery.trim()) : null;
+                      {returningQuery.trim() && (() => {
+                        const matched = findOwnerByIdentifier(returningQuery.trim());
                         if (matched) {
-                          return `⚡ ${isTe ? '1-ట్యాప్ ఓనర్ లాగిన్' : '1-Tap Owner Login'} (${(matched.fullName || 'Owner').split(' ')[0]}) →`;
+                          return (
+                            <div className="signin-recognized-status-banner is-member page-anim" style={{ marginTop: '10px' }}>
+                              <span>✓</span>
+                              <span>
+                                {isTe
+                                  ? `నమోదిత యజమాని గుర్తించబడ్డారు: ${matched.fullName || matched.owner} (${matched.vehicleNumber || matched.rcNumber})`
+                                  : `Registered Owner Recognized: ${matched.fullName || matched.owner} (${matched.vehicleNumber || matched.rcNumber})`}
+                              </span>
+                            </div>
+                          );
                         }
-                        return isTe ? 'ఓనర్ ఇన్‌బాక్స్‌లోకి లాగిన్ అవ్వండి →' : 'Login to Owner Inbox →';
+                        return null;
                       })()}
-                    </span>
-                  </button>
 
-                  <div className="sancharoo-demo-box" style={{ marginTop: '20px' }}>
-                    <span className="sancharoo-demo-title">💡 TEST WITH REGISTERED OWNER:</span>
-                    <button
-                      type="button"
-                      className="sancharoo-demo-item"
-                      onClick={() => setReturningQuery('9876543210')}
-                    >
-                      ⚡ Ramesh Kumar (9876543210) — TS 04 AB 7890
-                    </button>
-                  </div>
+                      <button
+                        type="submit"
+                        className="owner-btn-primary-blue"
+                        style={{ marginTop: '14px' }}
+                        disabled={isSendingLoginOtp}
+                      >
+                        <span>
+                          {isSendingLoginOtp
+                            ? (isTe ? 'SMS OTP పంపుతోంది...' : 'Sending SMS OTP via Message Central...')
+                            : (isTe ? '📲 మెసేజ్ సెంట్రల్ SMS లాగిన్ OTP పంపండి →' : '📲 Send Login OTP via Message Central →')}
+                        </span>
+                      </button>
+
+                      <div className="sancharoo-demo-box" style={{ marginTop: '20px' }}>
+                        <span className="sancharoo-demo-title">💡 QUICK FILL REGISTERED OWNER:</span>
+                        <button
+                          type="button"
+                          className="sancharoo-demo-item"
+                          onClick={() => {
+                            setReturningQuery('9876543210');
+                            setErrorMsg('');
+                          }}
+                        >
+                          ⚡ Ramesh Kumar (9876543210) — TS 04 AB 7890
+                        </button>
+                        <button
+                          type="button"
+                          className="sancharoo-demo-item"
+                          style={{ marginTop: '6px' }}
+                          onClick={() => {
+                            setReturningQuery('9440156789');
+                            setErrorMsg('');
+                          }}
+                        >
+                          ⚡ Suresh Patel (9440156789) — TS 07 EF 1234
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="signin-otp-block page-anim" style={{ marginTop: '10px' }}>
+                      <div className="signin-otp-banner" style={{ marginBottom: '16px' }}>
+                        ✓ 📲 {isTe
+                          ? `లాగిన్ OTP మెసేజ్ సెంట్రల్ ద్వారా +91 ${(loginMatchedOwner?.mobile || returningQuery).replace(/\D/g, '')} కి పంపబడింది!`
+                          : `Login OTP sent via Message Central to +91 ${(loginMatchedOwner?.mobile || returningQuery).replace(/\D/g, '')}!`}
+                      </div>
+
+                      <div className="signin-field-group">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label className="signin-field-label" style={{ fontWeight: 800, margin: 0 }}>
+                            {isTe ? '6-అంకెల SMS లాగిన్ OTP కోడ్ నమోదు చేయండి' : 'Enter 6-Digit SMS Login OTP'}
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              className="signin-change-phone-btn"
+                              onClick={handleSendLoginOtp}
+                              disabled={isSendingLoginOtp}
+                            >
+                              🔄 {isSendingLoginOtp ? '...' : (isTe ? 'మళ్లీ పంపు' : 'Resend OTP')}
+                            </button>
+                            <button
+                              type="button"
+                              className="signin-change-phone-btn"
+                              onClick={() => {
+                                setLoginOtpSent(false);
+                                setLoginVerificationId('');
+                                setLoginOtp('');
+                              }}
+                            >
+                              ✏️ {isTe ? 'నంబర్ మార్చు' : 'Change'}
+                            </button>
+                          </div>
+                        </div>
+
+                        <input
+                          type="text"
+                          maxLength={8}
+                          className="signin-otp-input"
+                          value={loginOtp}
+                          onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, ''))}
+                          placeholder="••••••"
+                          autoFocus
+                        />
+                        {loginOtp && (
+                          <span className="signin-demo-otp-hint">
+                            {isTe ? `సిమ్యులేటర్ ప్రివ్యూ కోడ్: ${loginOtp}` : `Simulator test code: ${loginOtp}`}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="owner-btn-primary-blue"
+                        style={{ marginTop: '14px' }}
+                        disabled={isVerifyingLoginOtp}
+                      >
+                        <span>
+                          {isVerifyingLoginOtp
+                            ? (isTe ? 'OTP ధృవీకరిస్తోంది...' : 'Verifying with Message Central...')
+                            : (isTe ? '🔐 OTP ధృవీకరించి ఓనర్ ఇన్‌బాక్స్‌లోకి వెళ్లండి →' : '🔐 Verify OTP & Enter Owner Inbox →')}
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </form>
               )}
 

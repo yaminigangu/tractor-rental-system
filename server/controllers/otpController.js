@@ -32,11 +32,11 @@ export async function sendOtpHandler(req, res, next) {
 
 /**
  * POST /api/otp/verify
- * Body: { verificationId, code, countryCode }
+ * Body: { verificationId, code, countryCode, mobileNumber, role }
  */
 export async function verifyOtpHandler(req, res, next) {
   try {
-    const { verificationId, code, countryCode, mobileNumber } = req.body;
+    const { verificationId, code, countryCode, mobileNumber, role = 'farmer' } = req.body;
     if (!verificationId) {
       return res.status(400).json({ error: 'verificationId is required' });
     }
@@ -53,27 +53,59 @@ export async function verifyOtpHandler(req, res, next) {
     if (result.success && result.verified) {
       let token = null;
       let farmer = null;
+      let owner = null;
+
       if (mobileNumber) {
         const cleanMobile = String(mobileNumber).replace(/\D/g, '');
-        const dbRes = await query(
-          'SELECT id, name, mobile, village, district, land_area as "landArea" FROM farmers WHERE mobile = $1 OR mobile LIKE $2',
-          [cleanMobile, `%${cleanMobile.slice(-10)}`]
-        );
-        if (dbRes.rows.length > 0) {
-          farmer = dbRes.rows[0];
+
+        if (role === 'owner') {
+          // Look up vehicle owner in PostgreSQL
+          try {
+            const ownerRes = await query(
+              'SELECT id, full_name as "fullName", mobile, village, district, rc_number as "rcNumber", vehicle_number as "vehicleNumber", tractor_model as "tractorModel" FROM vehicle_owners WHERE mobile = $1 OR mobile LIKE $2',
+              [cleanMobile, `%${cleanMobile.slice(-10)}`]
+            );
+            if (ownerRes.rows.length > 0) {
+              owner = ownerRes.rows[0];
+            }
+          } catch (dbErr) {
+            console.warn('Vehicle owner DB query error:', dbErr.message);
+          }
+
+          token = generateToken({
+            id: owner ? owner.id : null,
+            mobile: cleanMobile,
+            name: owner ? owner.fullName : 'Vehicle Owner',
+            role: 'owner'
+          });
+        } else {
+          // Look up farmer in PostgreSQL
+          try {
+            const dbRes = await query(
+              'SELECT id, name, mobile, village, district, land_area as "landArea" FROM farmers WHERE mobile = $1 OR mobile LIKE $2',
+              [cleanMobile, `%${cleanMobile.slice(-10)}`]
+            );
+            if (dbRes.rows.length > 0) {
+              farmer = dbRes.rows[0];
+            }
+          } catch (dbErr) {
+            console.warn('Farmer DB query error:', dbErr.message);
+          }
+
+          token = generateToken({
+            id: farmer ? farmer.id : null,
+            mobile: cleanMobile,
+            name: farmer ? farmer.name : 'Farmer',
+            role: 'farmer'
+          });
         }
-        token = generateToken({
-          id: farmer ? farmer.id : null,
-          mobile: cleanMobile,
-          name: farmer ? farmer.name : 'Farmer',
-          role: 'farmer'
-        });
       }
 
       return res.status(200).json({
         ...result,
         token,
-        farmer
+        farmer,
+        owner
       });
     }
 
@@ -94,7 +126,16 @@ export async function getOtpStatusHandler(req, res) {
     isLive,
     mode: isLive ? 'Production Live SMS' : 'Simulator / Test Mode',
     flowType: process.env.MESSAGE_CENTRAL_FLOW_TYPE || 'SMS',
-    countryCode: process.env.MESSAGE_CENTRAL_COUNTRY_CODE || '91'
+    countryCode: process.env.MESSAGE_CENTRAL_COUNTRY_CODE || '91',
+    testModeAvailable: true,
+    testNumbers: [
+      '9876543210 (Ramesh Kumar - Owner)',
+      '9440156789 (Suresh Patel - Owner)',
+      '9876500001 (Suresh Kumar - Farmer)',
+      '9999999999 (Universal Test)',
+      '9000000000 (Universal Test)'
+    ],
+    universalTestOtps: ['354498', '123456']
   });
 }
 

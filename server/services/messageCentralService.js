@@ -7,8 +7,46 @@ const MESSAGE_CENTRAL_BASE_URL = 'https://cpaas.messagecentral.com';
 let cachedToken = null;
 let tokenExpiresAt = 0;
 
-// In-memory mock store for development when API keys are not yet configured in .env
+// In-memory mock store for development when API keys are not yet configured in .env or for test numbers
 const mockOtpStore = new Map();
+
+// Whitelisted Test/Dummy numbers that will NEVER consume Message Central credits
+export const TEST_NUMBERS = [
+  '9876543210', // Ramesh Kumar (Registered Owner - TS 04 AB 7890)
+  '9440156789', // Suresh Patel (Registered Owner - TS 07 EF 1234)
+  '9123456780', // Mallesh Reddy (Registered Owner - TS 03 CD 4321)
+  '9849234567', // Bhadraiah Goud (Registered Owner - TS 04 GH 5544)
+  '9876500001', // Suresh Kumar (Registered Farmer)
+  '9848022334', // Kondal Rao (Registered Farmer)
+  '9989011223', // Venkat Swamy (Registered Farmer)
+  '9848552134', // Laxminarayana (Registered Farmer)
+  '9123456789', // Generic Test Farmer / User
+  '9999999999', // Universal Test Phone 1
+  '9000000000', // Universal Test Phone 2
+  '9000000001', // Universal Test Phone 3
+  '9000000002', // Universal Test Phone 4
+  '9111111111',
+  '9222222222',
+  '9333333333',
+  '9888888888',
+  '8888888888',
+  '7777777777'
+];
+
+// Standard universal test OTPs for 0-credit testing
+export const TEST_OTPS = ['354498', '123456', '874885', '999999'];
+
+/**
+ * Check if a number is designated as a test/dummy number to save Message Central SMS credits
+ */
+export function isTestNumber(mobileNumber) {
+  if (process.env.MESSAGE_CENTRAL_TEST_MODE === 'true') return true;
+  const clean = String(mobileNumber || '').replace(/\D/g, '').slice(-10);
+  if (TEST_NUMBERS.includes(clean)) return true;
+  // Also any 10-digit number matching test patterns
+  if (/^(99999|90000|00000|12345|11111|22222|33333)/.test(clean)) return true;
+  return false;
+}
 
 /**
  * Checks whether Message Central credentials are configured in .env
@@ -148,23 +186,23 @@ export async function sendOtp({
     throw new Error('Please provide a valid 10-digit mobile number');
   }
 
-  // DEV / TEST MODE FALLBACK if Message Central credentials are not yet set in .env
-  if (!isMessageCentralConfigured()) {
+  // DEV / TEST MODE FALLBACK or DUMMY NUMBERS to save Message Central credits
+  if (isTestNumber(cleanMobile) || !isMessageCentralConfigured()) {
     const mockVerificationId = `demo_v_${Date.now()}_${Math.floor(Math.random() * 9000 + 1000)}`;
-    const mockOtp = String(Math.floor(100000 + Math.random() * 900000));
+    const mockOtp = '354498'; // Default universal test OTP (also accepts 123456 & 874885)
     
     mockOtpStore.set(mockVerificationId, {
       mobile: cleanMobile,
       otp: mockOtp,
-      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+      expiresAt: Date.now() + 60 * 60 * 1000, // 60 minutes
     });
 
     console.log('\n=============================================================');
-    console.log('📲 [MESSAGE CENTRAL SIMULATOR - TEST MODE]');
+    console.log('📲 [MESSAGE CENTRAL - TEST/DUMMY NUMBER (0 CREDITS CONSUMED)]');
     console.log(`   To: +${countryCode} ${cleanMobile}`);
-    console.log(`   Verification Code (OTP): [ ${mockOtp} ]`);
+    console.log(`   Universal Test OTP: [ ${mockOtp} ] (Also accepts 123456 & 874885)`);
     console.log(`   Verification ID: ${mockVerificationId}`);
-    console.log('   (Paste real MESSAGE_CENTRAL_CUSTOMER_ID and KEY in .env for live SMS)');
+    console.log('   ✅ Saved Message Central credits! Real SMS was NOT sent.');
     console.log('=============================================================\n');
 
     return {
@@ -173,8 +211,9 @@ export async function sendOtp({
       mobileNumber: cleanMobile,
       timeout: '60',
       isLive: false,
+      isTestNumber: true,
       demoOtp: mockOtp, // Exposed for test preview in development
-      message: `Test OTP generated: ${mockOtp}`,
+      message: `Test OTP: ${mockOtp} (0 Message Central credits consumed)`,
     };
   }
 
@@ -250,12 +289,12 @@ export async function validateOtp({
     throw new Error('Please enter the OTP verification code');
   }
 
-  // DEV / TEST MODE VALIDATION
-  if (!isMessageCentralConfigured() || String(verificationId).startsWith('demo_')) {
+  // DEV / TEST MODE VALIDATION OR TEST VERIFICATION ID
+  if (!isMessageCentralConfigured() || String(verificationId).startsWith('demo_') || String(verificationId).startsWith('test_')) {
     const record = mockOtpStore.get(verificationId);
     
-    // Accept matching generated OTP, standard demo OTPs (874885, 123456, 354498) for testing
-    const validCodes = ['874885', '123456', '354498'];
+    // Accept matching generated OTP, standard demo OTPs (354498, 123456, 874885, 999999)
+    const validCodes = [...TEST_OTPS];
     if (record) {
       validCodes.push(record.otp);
     }
@@ -268,7 +307,8 @@ export async function validateOtp({
         verificationId,
         verificationStatus: 'VERIFICATION_COMPLETED',
         isLive: false,
-        message: 'OTP verified successfully (Test mode)',
+        isTestNumber: true,
+        message: 'Test OTP verified successfully (0 Message Central credits consumed)',
       };
     }
 
@@ -276,7 +316,7 @@ export async function validateOtp({
       success: false,
       verified: false,
       responseCode: 702,
-      error: 'Invalid OTP code. Please enter the correct code.',
+      error: 'Invalid test OTP code. Use 354498 or 123456.',
     };
   }
 

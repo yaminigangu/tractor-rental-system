@@ -440,12 +440,12 @@ export async function apiSendOtp({ mobileNumber, flowType = 'SMS', countryCode =
 /**
  * Verify OTP entered by user via Message Central VerifyNow API
  */
-export async function apiVerifyOtp({ verificationId, code, countryCode = '91' }) {
+export async function apiVerifyOtp({ verificationId, code, countryCode = '91', mobileNumber, role = 'farmer' }) {
   try {
     const res = await fetch(`${API_BASE}/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ verificationId, code, countryCode }),
+      body: JSON.stringify({ verificationId, code, countryCode, mobileNumber, role }),
       signal: AbortSignal.timeout(8000),
     });
     const data = await res.json();
