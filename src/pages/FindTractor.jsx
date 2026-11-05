@@ -723,8 +723,8 @@ export default function FindTractor({
         {sortedTractors.map((tractor, idx) => {
           const rating = tractor.rating || 4.9;
           const reviewsCount = 24 + idx * 3;
-          const distanceKm = tractor.distanceKm || (idx === 0 ? 1 : 2);
-          const dispatchMins = idx === 0 ? 13 : 15;
+          const rawDist = Number(tractor.distanceKm ?? tractor.distance_km ?? (idx === 0 ? 1 : 2));
+          const approxDistanceKm = Math.max(1, Math.round(rawDist));
           const priceAcre = tractor.priceAcre || (tractor.pricing * 2);
 
           const implementsList = tractor.equipment 
@@ -737,10 +737,10 @@ export default function FindTractor({
 
           return (
             <div key={tractor.id} className="marketplace-tractor-card">
-              {/* Top Dispatch Tag (Screenshot 4: ~1 km away • ~13 mins dispatch) */}
+              {/* Top Proximity Distance Banner (Round figure, dispatch time removed) */}
               <div className="marketplace-dispatch-banner">
                 <span className="dispatch-bolt">⚡</span>
-                <span>~{distanceKm} km away • ~{dispatchMins} mins dispatch</span>
+                <span>~{approxDistanceKm} {isTe ? 'కి.మీ దూరం' : 'km away'}</span>
               </div>
 
               {/* Tractor Photo Container */}

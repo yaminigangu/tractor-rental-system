@@ -5,9 +5,8 @@ export default function TractorCard({
 }) {
   const isTe = language === 'te';
 
-  // Distance formatting
-  const approxDistanceKm = Math.max(1, Math.round(tractor.distance_km || 1));
-  const etaMins = tractor.eta_minutes || Math.max(10, Math.round(approxDistanceKm * 4));
+  // Distance formatting (Round figure, no decimals)
+  const approxDistanceKm = Math.max(1, Math.round(tractor.distance_km || tractor.distanceKm || 1));
 
   // Implements list
   const displayImplements = Array.isArray(tractor.implements) && tractor.implements.length > 0
@@ -30,15 +29,11 @@ export default function TractorCard({
 
   return (
     <div className="native-tractor-card">
-      {/* Proximity ETA Header Bar */}
+      {/* Proximity Distance Header Bar */}
       <div className="proximity-eta-header">
         <span className="bolt-icon">⚡</span>
         <span className="proximity-distance">
           {isTe ? `~${approxDistanceKm} కి.మీ దూరం` : `~${approxDistanceKm} km away`}
-        </span>
-        <span className="proximity-dot">•</span>
-        <span className="proximity-eta">
-          ~{etaMins} {isTe ? 'నిమిషాల్లో రాక' : 'mins dispatch'}
         </span>
       </div>
 
