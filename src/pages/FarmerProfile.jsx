@@ -233,18 +233,6 @@ export default function FarmerProfile({
             <span>🚜</span>
             <span>{isTe ? 'కొత్త ట్రాక్టర్ బుకింగ్' : 'Book New Machinery'}</span>
           </button>
-          <button
-            type="button"
-            className={`farmer-nav-btn ${isEditing ? 'active' : ''}`}
-            onClick={() => {
-              setIsEditing(!isEditing);
-              setSaveSuccessMsg('');
-              setErrorMsg('');
-            }}
-          >
-            <span>{isEditing ? '✕' : '✏️'}</span>
-            <span>{isEditing ? (isTe ? 'సవరణ రద్దు' : 'Cancel Editing') : (isTe ? 'వివరాలు సవరించండి' : 'Edit Details')}</span>
-          </button>
           {onFarmerLogout && (
             <button
               type="button"
