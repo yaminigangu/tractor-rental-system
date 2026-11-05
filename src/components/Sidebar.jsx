@@ -89,11 +89,6 @@ export default function Sidebar({
           id: 'my-bookings', 
           label: isTe ? 'నా బుకింగ్‌లు' : 'My Bookings', 
           icon: '📄' 
-        },
-        { 
-          id: 'farmer-profile', 
-          label: isTe ? 'రైతు ప్రొఫైల్' : 'Farmer Profile', 
-          icon: '👤' 
         }
       );
     } else if (currentOwner) {
