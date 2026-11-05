@@ -5,7 +5,9 @@ import { apiSendOtp, apiVerifyOtp, setStoredAuthToken, apiGetSessionToken } from
 
 export default function FarmerLogin({
   setActivePage,
+  onGoBack,
   setCurrentFarmer,
+  setOnboardingMobile,
   language = 'en',
   setLanguage,
   selectedLocation
@@ -369,7 +371,7 @@ export default function FarmerLogin({
               <button
                 type="button"
                 className="signin-header-back-sq"
-                onClick={() => setActivePage('portal-select')}
+                onClick={onGoBack || (() => setActivePage('portal-select'))}
                 title="Back to portal selection"
                 aria-label="Back"
               >
@@ -401,7 +403,7 @@ export default function FarmerLogin({
               <button
                 type="button"
                 className="signin-back-pill-btn"
-                onClick={() => setActivePage('portal-select')}
+                onClick={onGoBack || (() => setActivePage('portal-select'))}
               >
                 ← {isTe ? 'ఎంపికకి వెనుకకు' : 'Back to Selection'}
               </button>

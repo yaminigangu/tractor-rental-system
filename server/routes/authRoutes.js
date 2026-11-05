@@ -8,3 +8,4 @@ router.post('/token', issueSessionToken);
 router.get('/me', authenticateUser, requireAuth, getCurrentUser);
 
 export default router;
+

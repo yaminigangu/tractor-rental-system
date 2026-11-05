@@ -73,3 +73,4 @@ export async function getCurrentUser(req, res) {
     user: req.user
   });
 }
+

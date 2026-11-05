@@ -7,6 +7,7 @@ export default function MyBookings({
   bookings = [], 
   setBookings, 
   setActivePage,
+  onGoBack,
   onViewSlip,
   language = 'en',
   currentFarmer,
@@ -146,16 +147,27 @@ export default function MyBookings({
     <div className="page-anim my-bookings-page-wrap">
       {/* Page Header */}
       <div className="section-header my-bookings-header">
-        <div>
-          <div className="bookings-title-row">
-            <h2 className="my-bookings-main-title">{t.myBookingsTitle}</h2>
-            {currentFarmer && (
-              <span className="farmer-auth-badge">
-                👨‍🌾 {currentFarmer.name || 'Farmer'} ({isTe ? 'ధృవీకరించబడిన ఖాతా' : 'Verified Session'})
-              </span>
-            )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-outline-white back-nav-btn"
+            onClick={onGoBack || (() => setActivePage(currentFarmer ? 'find-tractor' : 'home'))}
+            title={isTe ? 'వెనుకకు వెళ్ళండి' : 'Go Back'}
+            style={{ padding: '6px 12px', fontSize: '13px', fontWeight: '700' }}
+          >
+            ← {isTe ? 'వెనుకకు' : 'Back'}
+          </button>
+          <div>
+            <div className="bookings-title-row">
+              <h2 className="my-bookings-main-title">{t.myBookingsTitle}</h2>
+              {currentFarmer && (
+                <span className="farmer-auth-badge">
+                  👨‍🌾 {currentFarmer.name || 'Farmer'} ({isTe ? 'ధృవీకరించబడిన ఖాతా' : 'Verified Session'})
+                </span>
+              )}
+            </div>
+            <p className="my-bookings-subtitle">{t.myBookingsSubtitle}</p>
           </div>
-          <p className="my-bookings-subtitle">{t.myBookingsSubtitle}</p>
         </div>
 
         <div className="header-actions-group">

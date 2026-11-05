@@ -3,6 +3,7 @@ import { translations } from '../translations';
 export default function Header({
   activePage,
   setActivePage,
+  onGoBack,
   toggleMobileMenu,
   activeRole,
   setActiveRole,
@@ -66,6 +67,41 @@ export default function Header({
     ? (isTe ? (selectedLocation.villageTe || selectedLocation.village) : selectedLocation.village)
     : 'Hasanparthy';
 
+  const handleDefaultBack = () => {
+    switch (activePage) {
+      case 'farmer-profile':
+      case 'booking-form':
+      case 'my-bookings':
+        setActivePage(currentFarmer ? 'find-tractor' : 'home');
+        break;
+      case 'owner-inbox':
+        setActivePage(currentOwner ? 'find-tractor' : 'portal-select');
+        break;
+      case 'owner-registration':
+      case 'farmer-login':
+      case 'owner-login':
+      case 'admin-login':
+      case 'admin-dashboard':
+        setActivePage('portal-select');
+        break;
+      case 'farmer-onboarding':
+        setActivePage('farmer-login');
+        break;
+      case 'find-tractor':
+        setActivePage('home');
+        break;
+      case 'home':
+        if (currentFarmer || currentOwner) {
+          setActivePage('find-tractor');
+        } else {
+          setActivePage('portal-select');
+        }
+        break;
+      default:
+        setActivePage(currentFarmer ? 'find-tractor' : 'home');
+    }
+  };
+
   return (
     <header className="top-header">
       <div className="header-left">
@@ -73,13 +109,7 @@ export default function Header({
           <button
             type="button"
             className="header-back-btn"
-            onClick={() => {
-              if (activePage === 'farmer-login' || activePage === 'owner-registration' || activePage === 'farmer-onboarding') {
-                setActivePage('portal-select');
-              } else {
-                setActivePage('home');
-              }
-            }}
+            onClick={onGoBack || handleDefaultBack}
             aria-label="Back"
             title={isTe ? "వెనుకకు" : "Back"}
           >

@@ -6,6 +6,7 @@ import { apiSendOtp, apiVerifyOtp } from '../api/apiClient';
 export default function OwnerRegistration({
   setTractors,
   setActivePage,
+  onGoBack,
   language = 'en',
   setLanguage,
   currentOwner,
@@ -427,7 +428,7 @@ export default function OwnerRegistration({
               <button
                 type="button"
                 className="signin-header-back-sq"
-                onClick={() => setActivePage('portal-select')}
+                onClick={onGoBack || (() => setActivePage('portal-select'))}
                 title="Back to selection"
                 aria-label="Back"
               >
@@ -466,7 +467,7 @@ export default function OwnerRegistration({
                 <button
                   type="button"
                   className="signin-back-pill-btn"
-                  onClick={() => setActivePage('portal-select')}
+                  onClick={onGoBack || (() => setActivePage('portal-select'))}
                 >
                   ← {isTe ? 'ఎంపికకి వెనుకకు' : 'Back to Selection'}
                 </button>

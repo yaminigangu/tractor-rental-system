@@ -84,6 +84,53 @@ function App() {
     return 'portal-select'; // Opens dual login entry screen upon entering the web-app
   });
 
+  // Dynamic Navigation History Stack for Accurate Back Navigation
+  const [pageHistory, setPageHistory] = useState([]);
+
+  const handleNavigate = (newPage) => {
+    if (newPage === activePage) return;
+    setPageHistory((prev) => [...prev, activePage]);
+    setActivePage(newPage);
+  };
+
+  const handleGoBack = () => {
+    if (pageHistory.length > 0) {
+      const prevPage = pageHistory[pageHistory.length - 1];
+      setPageHistory((prev) => prev.slice(0, prev.length - 1));
+      setActivePage(prevPage);
+      return;
+    }
+    // Contextual fallback when no history stack is available
+    switch (activePage) {
+      case 'farmer-profile':
+      case 'booking-form':
+      case 'my-bookings':
+        setActivePage(currentFarmer ? 'find-tractor' : 'portal-select');
+        break;
+      case 'owner-inbox':
+        setActivePage(currentOwner ? 'find-tractor' : 'portal-select');
+        break;
+      case 'owner-registration':
+      case 'farmer-login':
+      case 'owner-login':
+      case 'admin-login':
+      case 'admin-dashboard':
+        setActivePage('portal-select');
+        break;
+      case 'farmer-onboarding':
+        setActivePage('farmer-login');
+        break;
+      case 'find-tractor':
+        setActivePage('home');
+        break;
+      case 'home':
+        setActivePage(currentFarmer || currentOwner ? 'find-tractor' : 'portal-select');
+        break;
+      default:
+        setActivePage(currentFarmer ? 'find-tractor' : 'portal-select');
+    }
+  };
+
   const [activeRole, setActiveRole] = useState('farmer'); // 'farmer', 'owner', 'admin'
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [serviceFilter, setServiceFilter] = useState('All');
@@ -343,7 +390,7 @@ function App() {
       case 'portal-select':
         return (
           <DualLoginSelect
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
             language={language}
             setLanguage={setLanguage}
             currentFarmer={currentFarmer}
@@ -355,7 +402,7 @@ function App() {
       case 'home':
         return (
           <Home
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
             setServiceFilter={setServiceFilter}
             language={language}
             selectedLocation={selectedLocation}
@@ -369,7 +416,7 @@ function App() {
           <FindTractor
             tractors={tractors}
             setTractors={setTractors}
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
             setSelectedTractor={setSelectedTractor}
             serviceFilter={serviceFilter}
             setServiceFilter={setServiceFilter}
@@ -389,7 +436,8 @@ function App() {
             selectedTractor={selectedTractor}
             setSelectedTractor={setSelectedTractor}
             setBookings={setBookings}
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
+            onGoBack={handleGoBack}
             onBookingSuccess={(newB) => setReceiptModalBooking(newB)}
             language={language}
             selectedLocation={selectedLocation}
@@ -400,7 +448,8 @@ function App() {
       case 'farmer-onboarding':
         return (
           <FarmerLogin
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
+            onGoBack={handleGoBack}
             setCurrentFarmer={handleSetCurrentFarmer}
             setOnboardingMobile={setOnboardingMobile}
             language={language}
@@ -412,7 +461,8 @@ function App() {
         return (
           <OwnerRegistration
             setTractors={setTractors}
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
+            onGoBack={handleGoBack}
             language={language}
             currentOwner={currentOwner}
             setCurrentOwner={handleSetCurrentOwner}
@@ -436,7 +486,8 @@ function App() {
           <MyBookings
             bookings={bookings}
             setBookings={setBookings}
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
+            onGoBack={handleGoBack}
             onViewSlip={(b) => setReceiptModalBooking(b)}
             language={language}
             currentFarmer={currentFarmer}
@@ -450,7 +501,8 @@ function App() {
             onUpdateFarmer={handleUpdateFarmer}
             onFarmerLogout={handleFarmerLogout}
             onFarmerDeleteAccount={handleFarmerDeleteAccount}
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
+            onGoBack={handleGoBack}
             language={language}
           />
         );
@@ -468,14 +520,15 @@ function App() {
         ) : (
           <AdminLogin
             onLoginSuccess={() => setIsAdminLoggedIn(true)}
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
+            onGoBack={handleGoBack}
             language={language}
           />
         );
       default:
         return (
           <Home
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
             setServiceFilter={setServiceFilter}
             language={language}
             selectedLocation={selectedLocation}
@@ -611,7 +664,7 @@ function App() {
       {showTopHeader && (
         <Sidebar
           activePage={activePage}
-          setActivePage={setActivePage}
+          setActivePage={handleNavigate}
           pendingCount={pendingCount}
           isMobileOpen={isMobileOpen}
           closeMobileMenu={() => setIsMobileOpen(false)}
@@ -641,7 +694,8 @@ function App() {
         {showTopHeader && (
           <Header
             activePage={activePage}
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
+            onGoBack={handleGoBack}
             toggleMobileMenu={() => setIsMobileOpen(prev => !prev)}
             activeRole={activeRole}
             setActiveRole={handleRoleChange}
@@ -686,7 +740,7 @@ function App() {
           onFarmerLogout={handleFarmerLogout}
           onFarmerDeleteAccount={handleFarmerDeleteAccount}
           language={language}
-          onNavigateBookings={() => setActivePage('my-bookings')}
+          onNavigateBookings={() => handleNavigate('my-bookings')}
         />
       )}
 
@@ -703,7 +757,7 @@ function App() {
       {showTopHeader && (
         <MobileBottomNav
           activePage={activePage}
-          setActivePage={setActivePage}
+          setActivePage={handleNavigate}
           pendingCount={pendingCount}
           language={language}
         />

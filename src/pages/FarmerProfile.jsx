@@ -19,6 +19,7 @@ export default function FarmerProfile({
   onFarmerLogout,
   onFarmerDeleteAccount,
   setActivePage,
+  onGoBack,
   language = 'en'
 }) {
   const isTe = language === 'te';
@@ -158,8 +159,8 @@ export default function FarmerProfile({
           <button
             type="button"
             className="back-btn"
-            onClick={() => setActivePage('find-tractor')}
-            title="Back to Machinery Fleet"
+            onClick={onGoBack || (() => setActivePage('find-tractor'))}
+            title={isTe ? "వెనుకకు" : "Back to Machinery Fleet"}
           >
             ← {isTe ? 'వెనుకకు' : 'Back'}
           </button>
@@ -244,7 +245,56 @@ export default function FarmerProfile({
             <span>{isEditing ? '✕' : '✏️'}</span>
             <span>{isEditing ? (isTe ? 'సవరణ రద్దు' : 'Cancel Editing') : (isTe ? 'వివరాలు సవరించండి' : 'Edit Details')}</span>
           </button>
+          {onFarmerLogout && (
+            <button
+              type="button"
+              className="farmer-nav-btn farmer-nav-logout-btn"
+              onClick={onFarmerLogout}
+              title={isTe ? 'ఖాతా నుండి లాగ్అవుట్ అవ్వండి' : 'Sign out of active account'}
+            >
+              <span>🚪</span>
+              <span>{isTe ? 'లాగ్అవుట్' : 'Logout'}</span>
+            </button>
+          )}
+          {onFarmerDeleteAccount && (
+            <button
+              type="button"
+              className="farmer-nav-btn farmer-nav-delete-btn"
+              onClick={() => setShowDeleteConfirm(true)}
+              title={isTe ? 'రైతు ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Farmer Account'}
+            >
+              <span>🗑️</span>
+              <span>{isTe ? 'ఖాతా తొలగించు' : 'Delete Account'}</span>
+            </button>
+          )}
         </div>
+
+        {/* Prompt deletion confirmation banner if triggered from quick action row */}
+        {showDeleteConfirm && (
+          <div className="delete-confirm-box" style={{ marginTop: '14px', marginBottom: '14px', animation: 'fadeIn 0.2s ease-in-out' }}>
+            <p className="delete-confirm-warning">
+              ⚠️ {isTe ? 'ఖచ్చితంగా మీ రైతు ఖాతాను శాశ్వతంగా తొలగించాలనుకుంటున్నారా? మీ వ్యక్తిగత వివరాలు PostgreSQL డేటాబేస్ నుండి తొలగించబడతాయి.' : 'Are you completely sure you want to permanently delete your account? All farmer credentials and records will be erased.'}
+            </p>
+            <div className="delete-confirm-actions">
+              <button
+                type="button"
+                className="delete-final-btn"
+                onClick={() => {
+                  if (onFarmerDeleteAccount) onFarmerDeleteAccount();
+                }}
+              >
+                🗑️ {isTe ? 'అవును, శాశ్వతంగా తొలగించు' : 'Yes, Permanently Delete'}
+              </button>
+              <button
+                type="button"
+                className="delete-cancel-btn"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                {isTe ? 'రద్దు చేయి' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Details Card */}
         <div className="farmer-details-card">

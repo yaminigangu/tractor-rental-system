@@ -12,6 +12,7 @@ export default function TractorBooking({
   setSelectedTractor,
   setBookings,
   setActivePage,
+  onGoBack,
   onBookingSuccess,
   language = 'en',
   selectedLocation,
@@ -135,9 +136,20 @@ export default function TractorBooking({
 
   return (
     <div className="form-card-wrapper page-anim">
-      <div className="form-header">
-        <h3>{t.bookingFormTitle}</h3>
-        <p>{t.bookingFormSubtitle}</p>
+      <div className="form-header-row" style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
+        <button
+          type="button"
+          className="btn btn-outline-white back-nav-btn"
+          onClick={onGoBack || (() => setActivePage('find-tractor'))}
+          title={isTe ? 'ట్రాక్టర్ జాబితాకు తిరిగి వెళ్ళండి' : 'Back to Fleet'}
+          style={{ padding: '7px 14px', fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap' }}
+        >
+          ← {isTe ? 'వెనుకకు' : 'Back'}
+        </button>
+        <div className="form-header" style={{ marginBottom: 0 }}>
+          <h3 style={{ margin: 0 }}>{t.bookingFormTitle}</h3>
+          <p style={{ margin: '4px 0 0 0' }}>{t.bookingFormSubtitle}</p>
+        </div>
       </div>
 
       {validationError && (

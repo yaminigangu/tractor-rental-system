@@ -14228,6 +14228,33 @@ html {
   color: #1d4ed8;
 }
 
+.farmer-nav-btn.farmer-nav-logout-btn {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #ffffff;
+  margin-left: auto;
+}
+
+.farmer-nav-btn.farmer-nav-logout-btn:hover {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.farmer-nav-btn.farmer-nav-delete-btn {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.farmer-nav-btn.farmer-nav-delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+  transform: translateY(-1px);
+}
+
 /* Details Card */
 .farmer-details-card {
   background: #ffffff;

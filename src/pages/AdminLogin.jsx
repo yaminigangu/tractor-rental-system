@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 
-export default function AdminLogin({ onLoginSuccess, setActivePage, language = 'en' }) {
+export default function AdminLogin({ onLoginSuccess, setActivePage, onGoBack, language = 'en' }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -112,9 +112,9 @@ export default function AdminLogin({ onLoginSuccess, setActivePage, language = '
           <button
             type="button"
             style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px' }}
-            onClick={() => setActivePage('home')}
+            onClick={onGoBack || (() => setActivePage('portal-select'))}
           >
-            ← {isTe ? 'హోమ్‌కి తిరిగి వెళ్ళండి' : 'Back to Home'}
+            ← {isTe ? 'వెనుకకు వెళ్ళండి' : 'Go Back'}
           </button>
         </div>
       </div>
