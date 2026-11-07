@@ -24,7 +24,7 @@ export async function getMyBookings(req, res, next) {
              b.farmer_village as "farmerVillage", b.farmer_id as "farmerId",
              b.tractor_id as "tractorId", b.tractor_model as "tractorModel",
              b.tractor_owner as "tractorOwner",
-             COALESCE(b.owner_mobile, t.default_mobile, '9876543210') as "ownerMobile",
+             COALESCE(NULLIF(b.owner_mobile, ''), t.default_mobile, '') as "ownerMobile",
              COALESCE(b.registration_no, 'TS 03 AB 4589') as "registrationNo",
              b.work_type as "workType", b.land_area as "landArea",
              b.booking_date as "bookingDate", b.booking_time as "bookingTime",
@@ -73,7 +73,7 @@ export async function getBookings(req, res, next) {
              b.farmer_village as "farmerVillage", b.farmer_id as "farmerId",
              b.tractor_id as "tractorId", b.tractor_model as "tractorModel",
              b.tractor_owner as "tractorOwner",
-             COALESCE(b.owner_mobile, t.default_mobile, '9876543210') as "ownerMobile",
+             COALESCE(NULLIF(b.owner_mobile, ''), t.default_mobile, '') as "ownerMobile",
              COALESCE(b.registration_no, 'TS 03 AB 4589') as "registrationNo",
              b.work_type as "workType", b.land_area as "landArea",
              b.booking_date as "bookingDate", b.booking_time as "bookingTime",
@@ -137,7 +137,7 @@ export async function getBookingById(req, res, next) {
               b.farmer_village as "farmerVillage", b.farmer_id as "farmerId",
               b.tractor_id as "tractorId", b.tractor_model as "tractorModel",
               b.tractor_owner as "tractorOwner",
-              COALESCE(b.owner_mobile, t.default_mobile, '9876543210') as "ownerMobile",
+              COALESCE(NULLIF(b.owner_mobile, ''), t.default_mobile, '') as "ownerMobile",
               COALESCE(b.registration_no, 'TS 03 AB 4589') as "registrationNo",
               b.work_type as "workType", b.land_area as "landArea",
               b.booking_date as "bookingDate", b.booking_time as "bookingTime",
@@ -194,25 +194,39 @@ export async function createBooking(req, res, next) {
       return res.status(400).json({ error: 'Farmer name and work type are required' });
     }
 
-    // Securely pull farmer identity from verified session token if available
+    // Prioritize the exact farmer contact mobile number typed in the booking form!
     const authUser = req.user;
     const farmerId = authUser?.id || b.farmerId || null;
-    const farmerMobile = authUser?.mobile || b.farmerMobile || '9876543210';
-    const farmerName = authUser?.name || b.farmerName;
+    const typedFarmerMobile = b.farmerMobile ? String(b.farmerMobile).replace(/\D/g, '') : '';
+    const farmerMobile = typedFarmerMobile || (authUser?.mobile ? String(authUser.mobile).replace(/\D/g, '') : '9876543210');
+    const farmerName = (b.farmerName || authUser?.name || 'Farmer').trim();
 
-    // Look up tractor details for photo, registration number, and owner phone
+    // Look up tractor details for photo, registration number, model, owner, and owner phone
     let tractorPhoto = b.tractorPhoto || '';
     let registrationNo = b.registrationNo || 'TS 03 AB 4589';
-    let ownerMobile = b.ownerMobile || '9876543210';
+    let ownerMobile = b.ownerMobile ? String(b.ownerMobile).replace(/\D/g, '') : '';
+    let tractorOwner = b.tractorOwner || '';
+    let tractorModel = b.tractorModel || '';
 
-    if (b.tractorId) {
+    const tractorIdInt = b.tractorId ? parseInt(b.tractorId, 10) : (b.assignedTractorId ? parseInt(b.assignedTractorId, 10) : null);
+
+    if (tractorIdInt) {
       const tRes = await query(
-        'SELECT photo, default_owner, default_mobile FROM tractors WHERE id = $1',
-        [parseInt(b.tractorId, 10)]
+        'SELECT photo, brand, model, default_owner, default_mobile FROM tractors WHERE id = $1',
+        [tractorIdInt]
       );
       if (tRes.rows.length > 0) {
-        tractorPhoto = tractorPhoto || tRes.rows[0].photo;
-        ownerMobile = ownerMobile || tRes.rows[0].default_mobile;
+        const row = tRes.rows[0];
+        tractorPhoto = tractorPhoto || row.photo;
+        if (!ownerMobile && row.default_mobile) {
+          ownerMobile = String(row.default_mobile).replace(/\D/g, '');
+        }
+        if (!tractorOwner && row.default_owner) {
+          tractorOwner = row.default_owner;
+        }
+        if (!tractorModel && row.model) {
+          tractorModel = `${row.brand || ''} ${row.model}`.trim();
+        }
       }
     }
 
@@ -236,12 +250,12 @@ export async function createBooking(req, res, next) {
     const values = [
       id,
       farmerId,
-      farmerName.trim(),
-      String(farmerMobile).replace(/\D/g, ''),
+      farmerName,
+      farmerMobile,
       b.farmerVillage || 'Hasanparthy',
-      b.tractorId ? parseInt(b.tractorId, 10) : null,
-      b.tractorModel || 'Mahindra 575 DI Sarpanch',
-      b.tractorOwner || 'Local Fleet',
+      tractorIdInt,
+      tractorModel || b.tractorModel || 'Assigned Tractor',
+      tractorOwner || b.tractorOwner || 'Local Fleet Owner',
       ownerMobile,
       registrationNo,
       b.workType || 'Ploughing',

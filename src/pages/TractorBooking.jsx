@@ -59,20 +59,32 @@ export default function TractorBooking({
     }
   }, [selectedTractor]);
 
-  const currentTractor = selectedTractor || tractors.find(t => t.id === Number(formData.assignedTractorId)) || tractors[0];
+  // Selected tractor unit strictly resolved from dropdown or prop
+  const selectedUnit = tractors.find(t => t.id === Number(formData.assignedTractorId));
+  const currentTractor = selectedUnit || selectedTractor || tractors[0];
   const hourlyRate = currentTractor ? currentTractor.pricing : 1200;
   // Estimated 1.5 hours per acre for ploughing/rotavator
   const estimatedHours = Math.max(1, Math.round((Number(formData.landArea) || 1) * 1.5));
   const estimatedCost = estimatedHours * hourlyRate;
 
+  // Helper to accurately extract vehicle owner's mobile number
+  const getOwnerPhone = (tractor) => {
+    if (!tractor) return '';
+    return String(tractor.mobile || tractor.defaultMobile || tractor.ownerMobile || '').replace(/\D/g, '');
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    const resolvedOwnerPhone = getOwnerPhone(currentTractor);
+    const typedFarmerMobile = String(formData.farmerMobile || '').trim();
+
     const newBooking = {
       id: Date.now(),
-      farmerName: formData.farmerName,
-      farmerMobile: formData.farmerMobile,
-      farmerVillage: formData.farmerVillage,
+      farmerId: currentFarmer?.id || null,
+      farmerName: formData.farmerName.trim(),
+      farmerMobile: typedFarmerMobile,
+      farmerVillage: formData.farmerVillage.trim(),
       workType: formData.workType === 'Other Agricultural Work'
         ? `Other: ${formData.otherWorkDetails || 'Custom farm work'}`
         : formData.workType,
@@ -81,9 +93,11 @@ export default function TractorBooking({
       estimatedHours,
       estimatedCost,
       status: 'Pending Approval',
-      tractorModel: currentTractor ? `${currentTractor.brand} ${currentTractor.model}` : 'Assigned by Admin',
-      tractorOwner: currentTractor ? currentTractor.owner : 'Pending Allocation',
-      ownerMobile: currentTractor ? currentTractor.mobile : '',
+      tractorId: currentTractor ? currentTractor.id : null,
+      tractorModel: currentTractor ? `${currentTractor.brand} ${currentTractor.model}` : 'Assigned Tractor',
+      tractorOwner: currentTractor ? (currentTractor.owner || currentTractor.defaultOwner || 'Tractor Owner') : 'Tractor Owner',
+      ownerMobile: resolvedOwnerPhone,
+      tractorPhoto: currentTractor ? (currentTractor.photo || '') : '',
       createdAt: new Date().toLocaleString()
     };
 
@@ -92,7 +106,7 @@ export default function TractorBooking({
     // Asynchronously persist work order to PostgreSQL database if backend is running
     apiSaveBooking(newBooking).catch(() => {});
 
-    // Trigger Digital Receipt Slip Modal!
+    // Trigger Digital Receipt Slip Modal with the exact typed farmer mobile!
     if (onBookingSuccess) {
       onBookingSuccess(newBooking);
     }
@@ -107,31 +121,42 @@ export default function TractorBooking({
       return;
     }
     setValidationError('');
-    const targetPhone = currentTractor ? currentTractor.mobile.replace(/\D/g, '') : '9032004060';
+    const targetPhone = getOwnerPhone(currentTractor);
+    const typedFarmerPhone = String(formData.farmerMobile).trim();
+    const ownerDisplayName = currentTractor ? (currentTractor.owner || currentTractor.defaultOwner || 'Tractor Owner') : 'Tractor Owner';
+    const tractorDisplayName = currentTractor ? `${currentTractor.brand} ${currentTractor.model}` : 'Best Available Tractor';
+
     const message = encodeURIComponent(
       isTe
-        ? `🌾 *అగ్రిరెంట్ స్లాట్ లభ్యత అభ్యర్థన*\n` +
+        ? `🌾 *అగ్రిరెంట్ స్లాట్ లభ్యత & బుకింగ్ అభ్యర్థన*\n` +
         `రైతు పేరు: ${formData.farmerName}\n` +
-        `మొబైల్: ${formData.farmerMobile}\n` +
+        `రైతు మొబైల్: ${typedFarmerPhone}\n` +
         `గ్రామం: ${formData.farmerVillage}\n` +
         `పని రకం: ${formData.workType} ${formData.otherWorkDetails ? `(${formData.otherWorkDetails})` : ''}\n` +
         `విస్తీర్ణం: ${formData.landArea} ఎకరాలు\n` +
         `కోరిన తేదీ: ${formData.bookingDate}\n` +
-        `ట్రాక్టర్: ${currentTractor ? `${currentTractor.brand} ${currentTractor.model}` : 'ఉత్తమ అందుబాటులో ఉన్నది'}\n` +
+        `ట్రాక్టర్: ${tractorDisplayName}\n` +
+        `వాహన యజమాని: ${ownerDisplayName}\n` +
         `అంచనా అద్దె: ₹${estimatedCost.toLocaleString()}\n\n` +
-        `👉 ట్రాక్టర్ యజమాని గారు: ఈ తేదీన మీ ట్రాక్టర్ ఖాళీగా ఉందా? దయచేసి అవును (FREE) లేదా కాదు (BUSY) అని చెప్పగలరు.`
-        : `🌾 *AgriRent Slot Availability Request*\n` +
-        `Farmer: ${formData.farmerName}\n` +
-        `Mobile: ${formData.farmerMobile}\n` +
+        `👉 ట్రాక్టర్ యజమాని గారు (${ownerDisplayName}): ఈ తేదీన మీ ట్రాక్టర్ ఖాళీగా ఉందా? దయచేసి అవును (FREE) లేదా కాదు (BUSY) అని రైతు మొబైల్ (+91 ${typedFarmerPhone}) కి చెప్పగలరు.`
+        : `🌾 *AgriRent Slot Availability & Work Request*\n` +
+        `Farmer Name: ${formData.farmerName}\n` +
+        `Farmer Mobile (Contact): ${typedFarmerPhone}\n` +
         `Village: ${formData.farmerVillage}\n` +
         `Operation: ${formData.workType} ${formData.otherWorkDetails ? `(${formData.otherWorkDetails})` : ''}\n` +
         `Land Area: ${formData.landArea} Acres\n` +
         `Requested Date: ${formData.bookingDate}\n` +
-        `Tractor Unit: ${currentTractor ? `${currentTractor.brand} ${currentTractor.model}` : 'Best Available'}\n` +
-        `Estimated Fare: ₹${estimatedCost.toLocaleString()}\n\n` +
-        `👉 Tractor Owner: Please reply whether your tractor is FREE or BUSY for this slot.`
+        `Tractor Unit: ${tractorDisplayName}\n` +
+        `Vehicle Owner: ${ownerDisplayName}\n` +
+        `Estimated Total Fare: ₹${estimatedCost.toLocaleString()}\n\n` +
+        `👉 Tractor Owner (${ownerDisplayName}): Please reply whether your tractor is FREE or BUSY for this slot directly to farmer mobile +91 ${typedFarmerPhone}.`
     );
-    window.open(`https://wa.me/91${targetPhone}?text=${message}`, '_blank');
+
+    if (targetPhone) {
+      window.open(`https://wa.me/91${targetPhone}?text=${message}`, '_blank');
+    } else {
+      window.open(`https://wa.me/?text=${message}`, '_blank');
+    }
   };
 
   return (
@@ -325,7 +350,14 @@ export default function TractorBooking({
           <select
             id="assignedTractorId"
             value={formData.assignedTractorId}
-            onChange={(e) => setFormData({ ...formData, assignedTractorId: e.target.value })}
+            onChange={(e) => {
+              const val = e.target.value;
+              setFormData(prev => ({ ...prev, assignedTractorId: val }));
+              const chosen = tractors.find(t => t.id === Number(val));
+              if (chosen && setSelectedTractor) {
+                setSelectedTractor(chosen);
+              }
+            }}
           >
             {tractors.map((t) => (
               <option key={t.id} value={t.id}>

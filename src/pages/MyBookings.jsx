@@ -68,7 +68,9 @@ export default function MyBookings({
           // Strictly fallback to filtered local bookings
           const filtered = bookings.filter((b) => {
             const bMobile = normalizePhone(b.farmerMobile);
-            return farmerPhone && bMobile && farmerPhone === bMobile;
+            const bId = b.farmerId ? parseInt(b.farmerId, 10) : null;
+            return (farmerPhone && bMobile && farmerPhone === bMobile) ||
+                   (farmerId && bId && farmerId === bId);
           });
           setIsolatedBookings(filtered);
           setIsLoading(false);

@@ -8,18 +8,40 @@ export default function ReceiptModal({ booking, onClose, language = 'en' }) {
   };
 
   const handleShareWhatsApp = () => {
+    const ownerClean = String(booking.ownerMobile || '').replace(/\D/g, '');
+    const farmerClean = String(booking.farmerMobile || '').trim();
+
     const text = encodeURIComponent(
-      `🌾 *AgriRent Official Work Slip*\n` +
-      `Booking ID: #AGRI-${booking.id}\n` +
-      `Farmer: ${booking.farmerName} (${booking.farmerVillage})\n` +
-      `Work: ${booking.workType} for ${booking.landArea} Acres\n` +
-      `Date: ${booking.bookingDate}\n` +
-      `Machinery: ${booking.tractorModel}\n` +
-      `Owner/Operator: ${booking.tractorOwner} (${booking.ownerMobile})\n` +
-      `Estimated Amount: ₹${(booking.estimatedCost || 0).toLocaleString()}\n` +
-      `Status: ${booking.status}`
+      isTe
+        ? `🌾 *అగ్రిరెంట్ అధికారిక పని రసీదు (AgriRent Work Slip)*\n` +
+          `బుకింగ్ ID: #AGRI-${String(booking.id).slice(-6)}\n` +
+          `రైతు పేరు: ${booking.farmerName}\n` +
+          `రైతు మొబైల్: ${farmerClean || '—'}\n` +
+          `గ్రామం: ${booking.farmerVillage}\n` +
+          `పని రకం: ${booking.workType} (${booking.landArea} ఎకరాలు)\n` +
+          `తేదీ: ${booking.bookingDate}\n` +
+          `ట్రాక్టర్: ${booking.tractorModel}\n` +
+          `వాహన యజమాని: ${booking.tractorOwner}\n` +
+          `మొత్తం అంచనా చార్జ్: ₹${(booking.estimatedCost || 0).toLocaleString()}\n` +
+          `స్థితి: ${booking.status}`
+        : `🌾 *AgriRent Official Work Slip / Money Receipt*\n` +
+          `Booking ID: #AGRI-${String(booking.id).slice(-6)}\n` +
+          `Farmer Name: ${booking.farmerName}\n` +
+          `Farmer Mobile: ${farmerClean || '—'}\n` +
+          `Village: ${booking.farmerVillage}\n` +
+          `Operation: ${booking.workType} for ${booking.landArea} Acres\n` +
+          `Date: ${booking.bookingDate}\n` +
+          `Machinery: ${booking.tractorModel}\n` +
+          `Tractor Owner: ${booking.tractorOwner} (${booking.ownerMobile || 'Assigned'})\n` +
+          `Estimated Total: ₹${(booking.estimatedCost || 0).toLocaleString()}\n` +
+          `Status: ${booking.status}`
     );
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+
+    if (ownerClean && ownerClean.length >= 10) {
+      window.open(`https://wa.me/91${ownerClean.slice(-10)}?text=${text}`, '_blank');
+    } else {
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+    }
   };
 
   return (
@@ -129,7 +151,7 @@ export default function ReceiptModal({ booking, onClose, language = 'en' }) {
             🖨️ {isTe ? 'రసీదు ప్రింట్ చేయండి' : 'Print Work Slip'}
           </button>
           <button className="btn btn-whatsapp" onClick={handleShareWhatsApp}>
-            📲 {isTe ? 'వాట్సాప్‌లో పంపండి' : 'Share on WhatsApp'}
+            📲 {isTe ? 'యజమానికి వాట్సాప్‌లో పంపండి' : 'Send Receipt to Owner via WhatsApp'}
           </button>
           <button className="btn btn-call" style={{ background: '#64748b' }} onClick={onClose}>
             ✕ {isTe ? 'మూసివేయి' : 'Close'}

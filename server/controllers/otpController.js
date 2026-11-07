@@ -87,6 +87,19 @@ export async function verifyOtpHandler(req, res, next) {
             );
             if (dbRes.rows.length > 0) {
               farmer = dbRes.rows[0];
+            } else {
+              // Ensure farmer has a persistent database ID for booking associations
+              try {
+                const insRes = await query(
+                  'INSERT INTO farmers (name, mobile, village, district, land_area, is_verified) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, mobile, village, district, land_area as "landArea"',
+                  ['Farmer', cleanMobile, 'Hasanparthy', 'Hanumakonda', 3.0, true]
+                );
+                if (insRes.rows.length > 0) {
+                  farmer = insRes.rows[0];
+                }
+              } catch (insErr) {
+                console.warn('Auto-provision farmer record notice:', insErr.message);
+              }
             }
           } catch (dbErr) {
             console.warn('Farmer DB query error:', dbErr.message);
