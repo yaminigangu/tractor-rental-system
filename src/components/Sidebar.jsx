@@ -89,6 +89,17 @@ export default function Sidebar({
           id: 'my-bookings', 
           label: isTe ? 'నా బుకింగ్‌లు' : 'My Bookings', 
           icon: '📄' 
+        },
+        {
+          id: 'owner-inbox',
+          label: isTe ? 'యజమాని వర్క్ ఇన్‌బాక్స్' : 'Owner Work Inbox',
+          icon: '📮',
+          badge: pendingCount > 0 ? pendingCount : null
+        },
+        {
+          id: 'admin-dashboard',
+          label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard',
+          icon: '🛡️'
         }
       );
     } else if (currentOwner) {
@@ -113,6 +124,11 @@ export default function Sidebar({
           id: 'owner-registration', 
           label: isTe ? 'యంత్రాల KYC వివరాలు' : 'Machinery KYC Specs', 
           icon: '⚙️' 
+        },
+        {
+          id: 'admin-dashboard',
+          label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard',
+          icon: '🛡️'
         }
       );
     } else if (isAdminLoggedIn) {
@@ -131,6 +147,12 @@ export default function Sidebar({
           id: 'my-bookings', 
           label: isTe ? 'అన్ని బుకింగ్‌లు' : 'All Bookings', 
           icon: '📄' 
+        },
+        {
+          id: 'owner-inbox',
+          label: isTe ? 'యజమాని ఇన్‌బాక్స్' : 'Owner Work Inbox',
+          icon: '📮',
+          badge: pendingCount > 0 ? pendingCount : null
         }
       );
     } else {
@@ -144,6 +166,11 @@ export default function Sidebar({
           id: 'booking-form', 
           label: isTe ? 'ట్రాక్టర్ బుకింగ్' : 'Booking Tractor', 
           icon: '📋' 
+        },
+        {
+          id: 'admin-dashboard',
+          label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard',
+          icon: '🛡️'
         }
       );
     }

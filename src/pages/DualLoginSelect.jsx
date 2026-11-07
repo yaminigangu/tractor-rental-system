@@ -139,6 +139,28 @@ export default function DualLoginSelect({
                 {isTe ? 'ట్రాక్టర్ మార్కెట్‌ప్లేస్‌ను అతిథిగా చూడండి →' : 'Explore Tractors Marketplace as Guest →'}
               </button>
             </div>
+
+            {/* Platform Admin Portal Link */}
+            <div style={{ textAlign: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0' }}>
+              <button
+                type="button"
+                onClick={() => setActivePage('admin-dashboard')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#475569',
+                  fontSize: '12.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                🛡️ {isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్ ప్రవేశం (Admin Login)' : 'Platform Administrator Portal →'}
+              </button>
+            </div>
           </div>
 
           {/* Footer Norms Disclaimer */}

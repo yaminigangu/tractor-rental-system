@@ -113,6 +113,22 @@ export default function MyBookings({
     }
   };
 
+  const handleQuickApprove = async (bookingId) => {
+    try {
+      await apiUpdateBookingStatus(bookingId, 'Approved');
+      setIsolatedBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, status: 'Approved' } : b))
+      );
+      if (setBookings) {
+        setBookings((prev) =>
+          prev.map((b) => (b.id === bookingId ? { ...b, status: 'Approved' } : b))
+        );
+      }
+    } catch (err) {
+      setCancelError(err.message || 'Failed to approve booking.');
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Approved':
@@ -192,6 +208,55 @@ export default function MyBookings({
       {cancelError && (
         <div className="alert-box error" style={{ marginBottom: '16px' }}>
           ⚠️ {cancelError}
+        </div>
+      )}
+
+      {/* Pending Approval Explanation & Quick Action Banner */}
+      {!isLoading && isolatedBookings.some(b => b.status === 'Pending Approval') && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fffde7 0%, #fff8e1 100%)',
+          border: '1.5px solid #ffe082',
+          borderRadius: '10px',
+          padding: '14px 20px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '14px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <span style={{ fontSize: '28px' }}>⏳</span>
+            <div>
+              <strong style={{ color: '#b78103', fontSize: '15px' }}>
+                {isTe ? 'బుకింగ్‌లు ఆమోదం కోసం వేచి ఉన్నాయి (Pending Approval)' : 'Bookings are Waiting for Confirmation / Approval'}
+              </strong>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#5d4037', lineHeight: 1.4 }}>
+                {isTe
+                  ? 'మీ అభ్యర్థన వాహన యజమానికి పంపబడింది. యజమాని తన ఇన్‌బాక్స్‌లో లేదా ప్లాట్‌ఫారమ్ అడ్మిన్ డ్యాష్‌బోర్డ్‌లో దీనిని ఆమోదించవచ్చు.'
+                  : 'Your request was dispatched to the vehicle owner. The owner approves it from their Work Inbox, or you can approve it in the Admin Dashboard.'}
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setActivePage('admin-dashboard')}
+              style={{ padding: '8px 16px', fontSize: '13px', fontWeight: '700', background: '#1b5e20' }}
+            >
+              🛡️ {isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్ తెరవండి' : 'Open Admin Dashboard'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline-white"
+              onClick={() => setActivePage('owner-inbox')}
+              style={{ padding: '8px 16px', fontSize: '13px', fontWeight: '700', color: '#2e7d32', borderColor: '#2e7d32', background: '#fff' }}
+            >
+              📮 {isTe ? 'యజమాని ఇన్‌బాక్స్ తెరవండి' : 'Open Owner Inbox'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -358,16 +423,36 @@ export default function MyBookings({
                             </a>
                           )}
 
-                          {/* Cancel Option for Pending Approval */}
+                          {/* Quick Approve or Cancel Option for Pending Approval */}
                           {b.status === 'Pending Approval' && (
-                            <button 
-                              type="button"
-                              className="btn btn-call cancel-booking-btn" 
-                              onClick={() => handleCancelBooking(b.id)}
-                              title={isTe ? 'అభ్యర్థనను రద్దు చేయండి' : 'Cancel Request'}
-                            >
-                              ✕
-                            </button>
+                            <>
+                              <button 
+                                type="button"
+                                className="btn" 
+                                style={{
+                                  background: '#e8f5e9',
+                                  color: '#2e7d32',
+                                  border: '1px solid #a5d6a7',
+                                  fontWeight: '700',
+                                  fontSize: '12px',
+                                  padding: '6px 10px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => handleQuickApprove(b.id)}
+                                title={isTe ? 'స్లాట్‌ను తక్షణమే ఆమోదించండి' : 'Quick Approve this Booking Slot'}
+                              >
+                                ✓ {isTe ? 'ఆమోదించు' : 'Approve'}
+                              </button>
+                              <button 
+                                type="button"
+                                className="btn btn-call cancel-booking-btn" 
+                                onClick={() => handleCancelBooking(b.id)}
+                                title={isTe ? 'అభ్యర్థనను రద్దు చేయండి' : 'Cancel Request'}
+                              >
+                                ✕
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
