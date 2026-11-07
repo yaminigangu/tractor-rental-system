@@ -3,10 +3,14 @@ import gsap from 'gsap';
 import WeatherBar from '../components/WeatherBar';
 import TractorFarmerScene, { TRACTOR_MODELS } from '../components/TractorFarmerScene';
 import { translations } from '../translations';
+import { apiSaveTractor, apiUploadImage } from '../api/apiClient';
 
 // Returns 100% accurate matching photo corresponding to the specific tractor model and brand
 export const getAccurateTractorPhoto = (tractor) => {
   if (!tractor) return '/tractor1.jpeg';
+  if (tractor.photo && (tractor.photo.startsWith('/uploads') || tractor.photo.startsWith('http'))) {
+    return tractor.photo;
+  }
   const brand = (tractor.brand || '').toLowerCase();
   const model = (tractor.model || tractor.tractorModel || '').toLowerCase();
   const photo = tractor.photo || '';
@@ -405,6 +409,11 @@ export default function FindTractor({
     if (setTractors) {
       setTractors(prev => [createdTractor, ...(Array.isArray(prev) ? prev : [])]);
     }
+
+    // Persist new tractor directly to PostgreSQL database
+    apiSaveTractor(createdTractor).catch((err) => {
+      console.warn('Failed to sync new machine to PostgreSQL:', err);
+    });
 
     setIsListModalOpen(false);
     setListSuccessToast(
@@ -1117,7 +1126,45 @@ export default function FindTractor({
               </div>
 
               <div className="list-form-group">
-                <label className="list-form-label">{isTe ? 'యంత్రం ఫోటో ఎంచుకోండి' : 'Choose Machinery Photo'}</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label className="list-form-label" style={{ margin: 0 }}>{isTe ? 'యంత్రం ఫోటో ఎంచుకోండి' : 'Choose Machinery Photo'}</label>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: 'var(--primary-700)',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: '#e8f5e9',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #c8e6c9'
+                    }}
+                  >
+                    📷 {isTe ? 'ఫోటో అప్‌లోడ్' : 'Upload Image'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const res = await apiUploadImage(file);
+                        if (res && res.path) {
+                          setNewMachineForm(prev => ({ ...prev, photo: res.path }));
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                {newMachineForm.photo && newMachineForm.photo.startsWith('/uploads') && (
+                  <div style={{ marginBottom: '10px', padding: '8px', background: '#f1f8e9', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <img src={newMachineForm.photo} alt="Uploaded" style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#2e7d32' }}>✅ {isTe ? 'అప్‌లోడ్ అయిన ఫోటో ఎంపికైంది' : 'Custom photo selected'}</span>
+                  </div>
+                )}
                 <div className="list-photos-picker">
                   {selectablePhotos.map((p) => {
                     const isSelected = newMachineForm.photo === p.src;

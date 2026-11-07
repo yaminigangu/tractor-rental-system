@@ -1,21 +1,40 @@
 import { useState } from 'react';
 import { translations } from '../translations';
+import { apiAdminLogin } from '../api/apiClient';
 
 export default function AdminLogin({ onLoginSuccess, setActivePage, onGoBack, language = 'en' }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (username.trim().toLowerCase() === 'admin' && password === 'admin123') {
-      setErrorMsg('');
-      onLoginSuccess();
-    } else {
-      setErrorMsg(t.invalidCreds);
+    setIsSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await apiAdminLogin({ username, password });
+      if (res && res.success && res.token) {
+        onLoginSuccess();
+        return;
+      }
+      // Local fallback if offline
+      if (username.trim().toLowerCase() === 'admin' && password === 'admin123') {
+        onLoginSuccess();
+        return;
+      }
+      setErrorMsg(res?.error || t.invalidCreds);
+    } catch {
+      if (username.trim().toLowerCase() === 'admin' && password === 'admin123') {
+        onLoginSuccess();
+      } else {
+        setErrorMsg(t.invalidCreds);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

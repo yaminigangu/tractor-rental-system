@@ -1,16 +1,38 @@
+import { useState } from 'react';
+import { apiUpdateBookingStatus } from '../api/apiClient';
+
 export default function ReceiptModal({ booking, onClose, language = 'en' }) {
   if (!booking) return null;
 
   const isTe = language === 'te';
+  const [paymentStatus, setPaymentStatus] = useState(booking.paymentStatus || 'Pending Cash on Service');
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+
+  const ownerClean = String(booking.ownerMobile || '9440123456').replace(/\D/g, '').slice(-10);
+  const farmerClean = String(booking.farmerMobile || '').trim();
+  const upiVpa = `${ownerClean}@ybl`;
+  const upiAmount = booking.estimatedCost || 0;
+  const upiUri = `upi://pay?pa=${upiVpa}&pn=${encodeURIComponent(booking.tractorOwner || 'Tractor Owner')}&am=${upiAmount}&tn=AgriRent_${booking.id}&cu=INR`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=6&data=${encodeURIComponent(upiUri)}`;
 
   const handlePrint = () => {
     window.print();
   };
 
-  const handleShareWhatsApp = () => {
-    const ownerClean = String(booking.ownerMobile || '').replace(/\D/g, '');
-    const farmerClean = String(booking.farmerMobile || '').trim();
+  const handleMarkPayment = async (newStatus) => {
+    setIsUpdatingPayment(true);
+    try {
+      await apiUpdateBookingStatus(booking.id, booking.status, newStatus);
+      setPaymentStatus(newStatus);
+      booking.paymentStatus = newStatus;
+    } catch (err) {
+      console.warn('Failed to update payment status:', err);
+    } finally {
+      setIsUpdatingPayment(false);
+    }
+  };
 
+  const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
       isTe
         ? `🌾 *అగ్రిరెంట్ అధికారిక పని రసీదు (AgriRent Work Slip)*\n` +
@@ -22,7 +44,9 @@ export default function ReceiptModal({ booking, onClose, language = 'en' }) {
           `తేదీ: ${booking.bookingDate}\n` +
           `ట్రాక్టర్: ${booking.tractorModel}\n` +
           `వాహన యజమాని: ${booking.tractorOwner}\n` +
+          `చెల్లింపు స్థితి: ${paymentStatus}\n` +
           `మొత్తం అంచనా చార్జ్: ₹${(booking.estimatedCost || 0).toLocaleString()}\n` +
+          `యజమాని UPI: ${upiVpa}\n` +
           `స్థితి: ${booking.status}`
         : `🌾 *AgriRent Official Work Slip / Money Receipt*\n` +
           `Booking ID: #AGRI-${String(booking.id).slice(-6)}\n` +
@@ -33,12 +57,14 @@ export default function ReceiptModal({ booking, onClose, language = 'en' }) {
           `Date: ${booking.bookingDate}\n` +
           `Machinery: ${booking.tractorModel}\n` +
           `Tractor Owner: ${booking.tractorOwner} (${booking.ownerMobile || 'Assigned'})\n` +
+          `Payment Status: ${paymentStatus}\n` +
           `Estimated Total: ₹${(booking.estimatedCost || 0).toLocaleString()}\n` +
+          `Owner UPI: ${upiVpa}\n` +
           `Status: ${booking.status}`
     );
 
     if (ownerClean && ownerClean.length >= 10) {
-      window.open(`https://wa.me/91${ownerClean.slice(-10)}?text=${text}`, '_blank');
+      window.open(`https://wa.me/91${ownerClean}?text=${text}`, '_blank');
     } else {
       window.open(`https://wa.me/?text=${text}`, '_blank');
     }
@@ -66,6 +92,16 @@ export default function ReceiptModal({ booking, onClose, language = 'en' }) {
 
           <div className="slip-status-banner">
             <span>● {isTe ? 'బుకింగ్ స్థితి:' : 'Order Status:'} <strong>{booking.status}</strong></span>
+            <span style={{
+              background: paymentStatus === 'Paid' ? '#2e7d32' : '#e65100',
+              color: '#fff',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontWeight: '700',
+              fontSize: '11px'
+            }}>
+              💳 {isTe ? (paymentStatus === 'Paid' ? 'చెల్లించబడింది' : 'పెండింగ్') : paymentStatus}
+            </span>
             <span>📅 {booking.bookingDate}</span>
           </div>
 
@@ -115,43 +151,70 @@ export default function ReceiptModal({ booking, onClose, language = 'en' }) {
             </div>
           </div>
 
-          {/* Footer with QR Stamp */}
+          {/* Footer with Dynamic Real UPI QR Stamp */}
           <div className="slip-footer">
-            <div className="slip-qr-box">
-              <svg width="60" height="60" viewBox="0 0 100 100" fill="#1b5e20">
-                <rect x="5" y="5" width="30" height="30" rx="4" />
-                <rect x="10" y="10" width="20" height="20" fill="#fff" />
-                <rect x="15" y="15" width="10" height="10" />
-
-                <rect x="65" y="5" width="30" height="30" rx="4" />
-                <rect x="70" y="10" width="20" height="20" fill="#fff" />
-                <rect x="75" y="15" width="10" height="10" />
-
-                <rect x="5" y="65" width="30" height="30" rx="4" />
-                <rect x="10" y="70" width="20" height="20" fill="#fff" />
-                <rect x="15" y="75" width="10" height="10" />
-
-                <rect x="45" y="15" width="10" height="25" />
-                <rect x="45" y="50" width="25" height="10" />
-                <rect x="55" y="65" width="20" height="20" />
-              </svg>
-              <span>Scan to verify order</span>
+            <div className="slip-qr-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textAlign: 'center' }}>
+              <img
+                src={qrCodeUrl}
+                alt="UPI QR Code"
+                style={{ width: '80px', height: '80px', borderRadius: '4px', border: '1px solid #c8e6c9', background: '#fff' }}
+              />
+              <span style={{ fontSize: '10px', fontWeight: '700', color: '#1b5e20' }}>
+                {isTe ? 'UPI స్కాన్ చేసి చెల్లించండి' : 'Scan to Pay via UPI'}
+              </span>
+              <span style={{ fontSize: '9px', color: '#555', wordBreak: 'break-all' }}>{upiVpa}</span>
             </div>
 
             <div className="slip-signature">
               <span className="verified-stamp">✓ VERIFIED LOCALITY PASS</span>
               <small>AgriRent Rural Coordination System</small>
+              <div style={{ marginTop: '8px' }}>
+                <a
+                  href={upiUri}
+                  style={{
+                    display: 'inline-block',
+                    padding: '6px 12px',
+                    background: '#e8f5e9',
+                    color: '#2e7d32',
+                    borderRadius: '6px',
+                    fontWeight: '700',
+                    fontSize: '11px',
+                    textDecoration: 'none',
+                    border: '1px solid #a5d6a7'
+                  }}
+                >
+                  🚀 {isTe ? 'UPI యాప్ తెరవండి (PhonePe / GPay)' : 'Pay via UPI App'}
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="receipt-modal-actions">
+        <div className="receipt-modal-actions" style={{ flexWrap: 'wrap', gap: '8px' }}>
+          <button
+            className="btn"
+            style={{
+              background: paymentStatus === 'Paid' ? '#2e7d32' : '#e65100',
+              color: '#fff',
+              fontWeight: '700'
+            }}
+            onClick={() => handleMarkPayment(paymentStatus === 'Paid' ? 'Pending Cash on Service' : 'Paid')}
+            disabled={isUpdatingPayment}
+          >
+            {isUpdatingPayment
+              ? '⏳...'
+              : (paymentStatus === 'Paid'
+                ? `✓ ${isTe ? 'చెల్లించబడింది (Paid)' : 'Payment Received (Paid)'}`
+                : `💵 ${isTe ? 'చెల్లించినట్లు మార్క్ చేయండి (Cash/UPI)' : 'Mark Paid (Cash / UPI)'}`
+              )
+            }
+          </button>
           <button className="btn btn-primary" onClick={handlePrint}>
             🖨️ {isTe ? 'రసీదు ప్రింట్ చేయండి' : 'Print Work Slip'}
           </button>
           <button className="btn btn-whatsapp" onClick={handleShareWhatsApp}>
-            📲 {isTe ? 'యజమానికి వాట్సాప్‌లో పంపండి' : 'Send Receipt to Owner via WhatsApp'}
+            📲 {isTe ? 'వాట్సాప్‌లో పంపండి' : 'Send via WhatsApp'}
           </button>
           <button className="btn btn-call" style={{ background: '#64748b' }} onClick={onClose}>
             ✕ {isTe ? 'మూసివేయి' : 'Close'}

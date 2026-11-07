@@ -275,6 +275,25 @@ export async function apiGetSessionToken(user) {
   return null;
 }
 
+export async function apiAdminLogin({ username, password }) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/admin-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+      signal: AbortSignal.timeout(4000),
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      setStoredAuthToken(data.token);
+    }
+    return data;
+  } catch (err) {
+    console.warn('apiAdminLogin network error:', err);
+    return { success: false, error: 'Network error connecting to backend' };
+  }
+}
+
 // =====================================================================
 // BOOKINGS
 // =====================================================================
@@ -299,6 +318,40 @@ export async function apiGetMyBookings(user = null) {
     }
   } catch (err) {
     console.warn('apiGetMyBookings failed:', err);
+  }
+  return null;
+}
+
+export async function apiGetOwnerBookings(ownerMobile) {
+  try {
+    const clean = String(ownerMobile || '').replace(/\D/g, '');
+    const res = await fetch(`${API_BASE}/bookings?ownerMobile=${encodeURIComponent(clean)}`, {
+      signal: AbortSignal.timeout(3500)
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('apiGetOwnerBookings error:', err);
+  }
+  return null;
+}
+
+// =====================================================================
+// FILE / MEDIA UPLOADS
+// =====================================================================
+export async function apiUploadImage(file) {
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('apiUploadImage failed:', err);
   }
   return null;
 }

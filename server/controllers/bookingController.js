@@ -19,6 +19,29 @@ export async function getMyBookings(req, res, next) {
     const cleanMobile = String(user.mobile).replace(/\D/g, '');
     const userId = user.id ? parseInt(user.id, 10) : null;
 
+    const isOwnerRole = user.role === 'owner';
+    let whereClause = '';
+    const params = [userId, cleanMobile, `%${cleanMobile.slice(-10)}`];
+
+    if (isOwnerRole) {
+      whereClause = `
+        WHERE (
+          b.owner_mobile = $2
+          OR b.owner_mobile LIKE $3
+          OR t.default_mobile = $2
+          OR t.default_mobile LIKE $3
+        )
+      `;
+    } else {
+      whereClause = `
+        WHERE (
+          (b.farmer_id IS NOT NULL AND b.farmer_id = $1)
+          OR b.farmer_mobile = $2
+          OR b.farmer_mobile LIKE $3
+        )
+      `;
+    }
+
     const sql = `
       SELECT b.id, b.farmer_name as "farmerName", b.farmer_mobile as "farmerMobile",
              b.farmer_village as "farmerVillage", b.farmer_id as "farmerId",
@@ -38,19 +61,9 @@ export async function getMyBookings(req, res, next) {
              COALESCE(t.default_owner, b.tractor_owner, 'Local Owner') as "ownerFullName"
       FROM bookings b
       LEFT JOIN tractors t ON b.tractor_id = t.id
-      WHERE (
-        (b.farmer_id IS NOT NULL AND b.farmer_id = $1)
-        OR b.farmer_mobile = $2
-        OR b.farmer_mobile LIKE $3
-      )
+      ${whereClause}
       ORDER BY b.id DESC
     `;
-
-    const params = [
-      userId,
-      cleanMobile,
-      `%${cleanMobile.slice(-10)}`,
-    ];
 
     const result = await query(sql, params);
     res.json(result.rows);
@@ -66,7 +79,7 @@ export async function getMyBookings(req, res, next) {
  */
 export async function getBookings(req, res, next) {
   try {
-    const { farmerMobile, tractorId, status, date, village } = req.query;
+    const { farmerMobile, ownerMobile, tractorId, status, date, village } = req.query;
 
     let sql = `
       SELECT b.id, b.farmer_name as "farmerName", b.farmer_mobile as "farmerMobile",
@@ -94,6 +107,12 @@ export async function getBookings(req, res, next) {
       const cleanMobile = String(farmerMobile).replace(/\D/g, '');
       params.push(`%${cleanMobile.slice(-10)}`);
       sql += ` AND b.farmer_mobile LIKE $${params.length}`;
+    }
+
+    if (ownerMobile) {
+      const cleanOwner = String(ownerMobile).replace(/\D/g, '');
+      params.push(`%${cleanOwner.slice(-10)}`);
+      sql += ` AND (b.owner_mobile LIKE $${params.length} OR t.default_mobile LIKE $${params.length})`;
     }
 
     if (tractorId) {

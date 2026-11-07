@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
+import multer from 'multer';
 
 import { query } from './db.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -60,6 +62,53 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Ensure static uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(uploadsDir));
+
+// Multer Storage Configuration
+const uploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+    cb(null, `${base}-${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage: uploadStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPEG, PNG, WEBP, GIF) are allowed'));
+    }
+  }
+});
+
+// Single Image Upload Endpoint
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: 'No image file uploaded' });
+  }
+  const host = req.get('host') || `localhost:${PORT}`;
+  const protocol = req.protocol || 'http';
+  const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+  res.json({
+    success: true,
+    filename: req.file.filename,
+    url: fileUrl,
+    path: `/uploads/${req.file.filename}`
+  });
+});
+
 // ---------------------------------------------------------------------
 // REST API ROUTE MODULES
 // ---------------------------------------------------------------------
@@ -71,7 +120,19 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/auth', authRoutes);
 
-// Root Welcome Endpoint
+// Production single-port serving: serve static dist assets and index.html
+const distDir = path.join(__dirname, '../dist');
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir));
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      return res.sendFile(path.join(distDir, 'index.html'));
+    }
+    next();
+  });
+}
+
+// Root Welcome Endpoint (when not in full SPA build mode)
 app.get('/', (req, res) => {
   res.json({
     message: 'Welcome to AgriRent Tractor & Farm Machinery Rental REST API',
@@ -85,6 +146,7 @@ app.get('/', (req, res) => {
       bookings: 'GET, POST /api/bookings | GET, PUT, DELETE /api/bookings/:id | PATCH /api/bookings/:id/status',
       stats: 'GET /api/stats',
       otp: 'POST /api/otp/send | POST /api/otp/verify | GET /api/otp/status (Message Central)',
+      upload: 'POST /api/upload',
     }
   });
 });

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { translations } from '../translations';
-import { apiUpdateBookingStatus } from '../api/apiClient';
+import { apiUpdateBookingStatus, apiGetOwnerBookings, apiGetMyBookings } from '../api/apiClient';
 
 export default function OwnerInbox({ 
   bookings = [], 
@@ -14,12 +14,47 @@ export default function OwnerInbox({
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
 
-  // Default selected tractor to the first tractor
-  const [selectedOwnerId, setSelectedOwnerId] = useState(tractors[0]?.id || 'all');
+  // Default selected tractor to current owner's tractor if matched, else first tractor
+  const [selectedOwnerId, setSelectedOwnerId] = useState(() => {
+    if (currentOwner?.mobile) {
+      const match = tractors.find(tr => 
+        (tr.mobile && tr.mobile.replace(/\D/g, '').slice(-10) === currentOwner.mobile.replace(/\D/g, '').slice(-10)) ||
+        (tr.owner && (tr.owner === currentOwner.fullName || tr.owner === currentOwner.owner))
+      );
+      if (match) return match.id;
+    }
+    return tractors[0]?.id || 'all';
+  });
   const [statusFilter, setStatusFilter] = useState('All');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // In-App Permanent Confirmation Modal (NEVER auto-dismisses!)
   const [slotModal, setSlotModal] = useState(null);
+
+  // Fetch live bookings from PostgreSQL on mount and whenever currentOwner changes
+  const fetchLiveOwnerBookings = async () => {
+    if (!currentOwner?.mobile) return;
+    setIsRefreshing(true);
+    try {
+      const fetched = await apiGetOwnerBookings(currentOwner.mobile);
+      if (Array.isArray(fetched) && fetched.length > 0) {
+        setBookings(prev => {
+          const map = new Map();
+          (Array.isArray(prev) ? prev : []).forEach(b => map.set(b.id, b));
+          fetched.forEach(b => map.set(b.id, { ...map.get(b.id), ...b }));
+          return Array.from(map.values());
+        });
+      }
+    } catch (e) {
+      console.warn('Live owner bookings fetch failed:', e);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveOwnerBookings();
+  }, [currentOwner?.mobile]);
 
   const selectedTractor = tractors.find(tr => tr.id === Number(selectedOwnerId));
 
@@ -27,10 +62,17 @@ export default function OwnerInbox({
   const ownerBookings = bookings.filter((b) => {
     if (selectedOwnerId !== 'all') {
       const matchesTractor = 
+        (selectedTractor && b.tractorId && b.tractorId === selectedTractor.id) ||
         (selectedTractor && b.tractorModel?.includes(selectedTractor.model)) ||
-        (selectedTractor && b.ownerMobile === selectedTractor.mobile) ||
+        (selectedTractor && b.ownerMobile && selectedTractor.mobile && (b.ownerMobile === selectedTractor.mobile || b.ownerMobile.slice(-10) === selectedTractor.mobile.slice(-10))) ||
         (selectedTractor && b.tractorOwner?.includes(selectedTractor.owner));
       if (!matchesTractor) return false;
+    } else if (currentOwner?.mobile) {
+      const cleanOwner = currentOwner.mobile.replace(/\D/g, '').slice(-10);
+      const matchesOwner =
+        (b.ownerMobile && b.ownerMobile.replace(/\D/g, '').slice(-10) === cleanOwner) ||
+        (b.tractorOwner && (b.tractorOwner === currentOwner.fullName || b.tractorOwner === currentOwner.owner));
+      if (!matchesOwner) return false;
     }
 
     if (statusFilter === 'All') return true;
@@ -149,6 +191,25 @@ export default function OwnerInbox({
                   </option>
                 ))}
               </select>
+              <button
+                type="button"
+                onClick={fetchLiveOwnerBookings}
+                disabled={isRefreshing}
+                style={{
+                  marginLeft: '8px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-light)',
+                  background: '#f1f8e9',
+                  color: '#2e7d32',
+                  cursor: isRefreshing ? 'wait' : 'pointer',
+                  fontWeight: '600',
+                  fontSize: '12px'
+                }}
+                title={isTe ? 'డేటాబేస్ నుండి లైవ్ ఆర్డర్లు రీఫ్రెష్ చేయండి' : 'Sync live bookings from database'}
+              >
+                {isRefreshing ? '⏳...' : '🔄 ' + (isTe ? 'రీఫ్రెష్' : 'Sync DB')}
+              </button>
             </div>
           </div>
 

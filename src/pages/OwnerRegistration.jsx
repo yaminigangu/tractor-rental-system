@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredOwner, findOwnerByIdentifier } from '../data/userData';
-import { apiSendOtp, apiVerifyOtp, setStoredAuthToken } from '../api/apiClient';
+import { apiSendOtp, apiVerifyOtp, setStoredAuthToken, apiSaveTractor, apiSaveOwner, apiUploadImage } from '../api/apiClient';
 
 export default function OwnerRegistration({
   setTractors,
@@ -55,6 +55,26 @@ export default function OwnerRegistration({
   const [loginMatchedOwner, setLoginMatchedOwner] = useState(null);
   const [isSendingLoginOtp, setIsSendingLoginOtp] = useState(false);
   const [isVerifyingLoginOtp, setIsVerifyingLoginOtp] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingPhoto(true);
+    try {
+      const res = await apiUploadImage(file);
+      if (res && res.success && res.path) {
+        handleInputChange('selectedPhoto', res.path);
+        handleInputChange('photoName', 'custom_uploaded');
+      } else {
+        alert(isTe ? 'ఫోటో అప్‌లోడ్ విఫలమైంది.' : 'Photo upload failed. Please try again.');
+      }
+    } catch (err) {
+      console.warn('Upload error:', err);
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   // Form State (Exact match to Screenshots 1 - 4)
   const [formData, setFormData] = useState({
@@ -533,6 +553,14 @@ export default function OwnerRegistration({
       if (setTractors) {
         setTractors(prev => [newTractorEntry, ...(Array.isArray(prev) ? prev : [])]);
       }
+
+      // Persist newly registered tractor and owner directly into PostgreSQL database
+      apiSaveTractor(newTractorEntry).catch((err) => {
+        console.warn('Failed to save new tractor to PostgreSQL:', err);
+      });
+      apiSaveOwner(newOwnerRecord).catch((err) => {
+        console.warn('Failed to save new owner to PostgreSQL:', err);
+      });
 
       if (setCurrentOwner) {
         setCurrentOwner(newOwnerRecord);
@@ -1196,12 +1224,49 @@ export default function OwnerRegistration({
 
                       {/* Machinery Photo */}
                       <div className="signin-field-group">
-                        <label className="signin-field-label">
-                          {isTe ? 'యంత్రం ఫోటో' : 'Machinery Photo'}
-                        </label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <label className="signin-field-label" style={{ margin: 0 }}>
+                            {isTe ? 'యంత్రం ఫోటో' : 'Machinery Photo'}
+                          </label>
+                          <label
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              color: 'var(--primary-700)',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: '#e8f5e9',
+                              padding: '5px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid #c8e6c9'
+                            }}
+                          >
+                            📷 {isUploadingPhoto ? (isTe ? 'అప్‌లోడ్ అవుతోంది...' : 'Uploading...') : (isTe ? 'అసలు ఫోటో అప్‌లోడ్ చేయండి' : 'Upload Real Tractor Photo')}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={handlePhotoUpload}
+                              disabled={isUploadingPhoto}
+                            />
+                          </label>
+                        </div>
+
+                        {formData.selectedPhoto && formData.selectedPhoto.startsWith('/uploads') && (
+                          <div style={{ marginBottom: '12px', padding: '10px 14px', background: '#f1f8e9', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '14px', border: '1px solid #c8e6c9' }}>
+                            <img src={formData.selectedPhoto} alt="Uploaded Tractor" style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '6px' }} />
+                            <div>
+                              <div style={{ fontWeight: '700', fontSize: '13px', color: '#2e7d32' }}>✅ {isTe ? 'మీ అసలు ట్రాక్టర్ ఫోటో అప్‌లోడ్ అయింది' : 'Custom Tractor Photo Uploaded'}</div>
+                              <div style={{ fontSize: '11px', color: '#666' }}>{formData.selectedPhoto}</div>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="owner-photos-horizontal">
                           {photoOptions.map((photo) => {
-                            const isSelected = formData.photoName === photo.id;
+                            const isSelected = formData.photoName === photo.id && !formData.selectedPhoto.startsWith('/uploads');
                             return (
                               <div
                                 key={photo.id}

@@ -74,3 +74,39 @@ export async function getCurrentUser(req, res) {
   });
 }
 
+/**
+ * POST /api/auth/admin-login
+ * Authenticate administrator with credentials and issue a verified admin JWT token
+ */
+export async function adminLogin(req, res, next) {
+  try {
+    const { username, password } = req.body;
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
+
+    if (username && username.trim().toLowerCase() === adminUser.toLowerCase() && password === adminPass) {
+      const payload = {
+        id: 0,
+        name: 'Platform Administrator',
+        role: 'admin',
+        mobile: '9999999999'
+      };
+
+      const token = generateToken(payload);
+
+      return res.json({
+        success: true,
+        token,
+        user: payload
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid administrator credentials'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+

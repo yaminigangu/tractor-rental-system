@@ -3,7 +3,7 @@ import StatCard from '../components/StatCard';
 import { translations } from '../translations';
 import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
 import { getRegisteredFarmers, getRegisteredOwners, deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from '../data/userData';
-import { checkBackendHealth, apiUpdateBookingStatus } from '../api/apiClient';
+import { checkBackendHealth, apiUpdateBookingStatus, apiGetBookings } from '../api/apiClient';
 
 export default function Dashboard({
   bookings = [],
@@ -25,6 +25,17 @@ export default function Dashboard({
 
   useEffect(() => {
     checkBackendHealth().then((status) => setPgStatus(status));
+    // Fetch live bookings from PostgreSQL
+    apiGetBookings().then(dbOrders => {
+      if (Array.isArray(dbOrders) && dbOrders.length > 0) {
+        setBookings(prev => {
+          const map = new Map();
+          (Array.isArray(prev) ? prev : []).forEach(b => map.set(b.id, b));
+          dbOrders.forEach(b => map.set(b.id, { ...map.get(b.id), ...b }));
+          return Array.from(map.values());
+        });
+      }
+    }).catch(() => {});
   }, [activeTab]);
 
   const t = translations[language] || translations.en;

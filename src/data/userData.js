@@ -5,7 +5,8 @@ import {
   apiDeleteFarmer,
   apiGetOwners,
   apiSaveOwner,
-  apiDeleteOwner
+  apiDeleteOwner,
+  apiGetTractors
 } from '../api/apiClient';
 
 export const DEFAULT_FARMERS = [
@@ -351,9 +352,14 @@ export function deleteRegisteredOwner(identifier) {
 // Bi-directional synchronizer with PostgreSQL database
 export async function syncUserDataWithPostgres() {
   try {
-    const [pgFarmers, pgOwners] = await Promise.all([apiGetFarmers(), apiGetOwners()]);
+    const [pgFarmers, pgOwners, pgTractors] = await Promise.all([
+      apiGetFarmers(),
+      apiGetOwners(),
+      apiGetTractors()
+    ]);
     let syncedFarmers = 0;
     let syncedOwners = 0;
+    let syncedTractors = 0;
 
     if (Array.isArray(pgFarmers) && pgFarmers.length > 0) {
       localStorage.setItem("agri_registered_farmers", JSON.stringify(pgFarmers));
@@ -363,11 +369,19 @@ export async function syncUserDataWithPostgres() {
       localStorage.setItem("agri_registered_owners", JSON.stringify(pgOwners));
       syncedOwners = pgOwners.length;
     }
+    if (Array.isArray(pgTractors) && pgTractors.length > 0) {
+      const customTractors = pgTractors.filter(t => t.id > 20);
+      if (customTractors.length > 0) {
+        localStorage.setItem("agri_custom_tractors", JSON.stringify(customTractors));
+      }
+      syncedTractors = pgTractors.length;
+    }
 
     return {
       success: true,
       farmersCount: syncedFarmers,
-      ownersCount: syncedOwners
+      ownersCount: syncedOwners,
+      tractorsCount: syncedTractors
     };
   } catch (err) {
     console.warn("PostgreSQL sync skipped (server offline):", err);
