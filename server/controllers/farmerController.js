@@ -9,8 +9,9 @@ export async function getFarmers(req, res, next) {
   try {
     const { village, district, search } = req.query;
     let sql = `
-      SELECT id, name, mobile, village, district, land_area as "landArea",
+      SELECT id, name, mobile, email, village, district, land_area as "landArea",
              crops, passbook_no as "passbookNo", is_verified as "isVerified",
+             COALESCE(role, 'FARMER') as role, COALESCE(is_active, TRUE) as "isActive",
              registered_at as "registeredAt", created_at as "createdAt"
       FROM farmers
       WHERE 1=1
@@ -202,3 +203,35 @@ export async function deleteFarmer(req, res, next) {
     next(err);
   }
 }
+
+/**
+ * PATCH /api/farmers/:id/status
+ * Toggle or set farmer active status (Admin only)
+ */
+export async function toggleFarmerStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const result = await query(
+      `UPDATE farmers
+       SET is_active = COALESCE($1, NOT is_active)
+       WHERE id = $2
+       RETURNING id, name, mobile, is_active as "isActive", role`,
+      [isActive !== undefined ? Boolean(isActive) : null, parseInt(id, 10)]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Farmer not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `Farmer account ${result.rows[0].isActive ? 'activated' : 'deactivated'} successfully.`,
+      farmer: result.rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+

@@ -1,6 +1,7 @@
 import { query } from '../db.js';
 import { createInAppNotification } from './notificationController.js';
 import { sendWhatsAppNotification } from '../services/whatsAppService.js';
+import { normalizeRole } from '../middleware/auth.js';
 
 /**
  * Generate a unique standardized Booking Code e.g. TRC1025
@@ -105,11 +106,15 @@ export async function getMyBookings(req, res, next) {
 
     const cleanMobile = String(user.mobile).replace(/\D/g, '');
     const userId = user.id ? parseInt(user.id, 10) : null;
-    const isOwnerRole = user.role === 'owner';
+    const userRole = normalizeRole(user.role);
+    const isOwnerRole = userRole === 'VEHICLE_OWNER';
+    const isAdminRole = userRole === 'ADMIN';
     const params = [userId, cleanMobile, `%${cleanMobile.slice(-10)}`];
 
     let whereClause = '';
-    if (isOwnerRole) {
+    if (isAdminRole) {
+      whereClause = '';
+    } else if (isOwnerRole) {
       whereClause = `
         WHERE (
           b.owner_mobile = $2
@@ -152,16 +157,31 @@ export async function getBookings(req, res, next) {
     let sql = `${BOOKINGS_SELECT} WHERE 1=1`;
     const params = [];
 
-    if (farmerMobile) {
-      const cleanMobile = String(farmerMobile).replace(/\D/g, '');
-      params.push(`%${cleanMobile.slice(-10)}`);
-      sql += ` AND b.farmer_mobile LIKE $${params.length}`;
-    }
+    // RBAC: Non-admin users are strictly scoped to their own data
+    const user = req.user;
+    const userRole = user ? normalizeRole(user.role) : null;
 
-    if (ownerMobile) {
-      const cleanOwner = String(ownerMobile).replace(/\D/g, '');
-      params.push(`%${cleanOwner.slice(-10)}`);
+    if (userRole === 'FARMER') {
+      const cleanUserPhone = String(user.mobile).replace(/\D/g, '');
+      params.push(`%${cleanUserPhone.slice(-10)}`);
+      sql += ` AND (b.farmer_mobile LIKE $${params.length}${user.id ? ` OR b.farmer_id = ${parseInt(user.id, 10)}` : ''})`;
+    } else if (userRole === 'VEHICLE_OWNER') {
+      const cleanUserPhone = String(user.mobile).replace(/\D/g, '');
+      params.push(`%${cleanUserPhone.slice(-10)}`);
       sql += ` AND (b.owner_mobile LIKE $${params.length} OR t.default_mobile LIKE $${params.length})`;
+    } else {
+      // Admin or guest query filters
+      if (farmerMobile) {
+        const cleanMobile = String(farmerMobile).replace(/\D/g, '');
+        params.push(`%${cleanMobile.slice(-10)}`);
+        sql += ` AND b.farmer_mobile LIKE $${params.length}`;
+      }
+
+      if (ownerMobile) {
+        const cleanOwner = String(ownerMobile).replace(/\D/g, '');
+        params.push(`%${cleanOwner.slice(-10)}`);
+        sql += ` AND (b.owner_mobile LIKE $${params.length} OR t.default_mobile LIKE $${params.length})`;
+      }
     }
 
     if (tractorId) {
@@ -217,18 +237,32 @@ export async function getBookingById(req, res, next) {
 
     const booking = result.rows[0];
 
-    // IDOR Protection: If requester is authenticated as a farmer, ensure they own the booking
-    if (req.user && req.user.role === 'farmer') {
-      const userPhone = String(req.user.mobile).replace(/\D/g, '').slice(-10);
-      const bookingPhone = String(booking.farmerMobile).replace(/\D/g, '').slice(-10);
-      const isOwner = (userPhone && bookingPhone && userPhone === bookingPhone) ||
-                      (req.user.id && booking.farmerId && req.user.id === booking.farmerId);
+    // IDOR Protection: Scoped data privacy
+    if (req.user) {
+      const userRole = normalizeRole(req.user.role);
+      const userPhone = String(req.user.mobile || '').replace(/\D/g, '').slice(-10);
 
-      if (!isOwner) {
-        return res.status(403).json({
-          error: "Forbidden: You are not authorized to view another farmer's booking order (IDOR Protection).",
-          code: 'IDOR_ACCESS_DENIED'
-        });
+      if (userRole === 'FARMER') {
+        const bookingPhone = String(booking.farmerMobile || '').replace(/\D/g, '').slice(-10);
+        const isOwner = (userPhone && bookingPhone && userPhone === bookingPhone) ||
+                        (req.user.id && booking.farmerId && req.user.id === booking.farmerId);
+
+        if (!isOwner) {
+          return res.status(403).json({
+            error: "Forbidden: You are not authorized to view another customer's booking order.",
+            code: 'IDOR_ACCESS_DENIED'
+          });
+        }
+      } else if (userRole === 'VEHICLE_OWNER') {
+        const ownerPhone = String(booking.ownerMobile || '').replace(/\D/g, '').slice(-10);
+        const isOwner = userPhone && ownerPhone && userPhone === ownerPhone;
+
+        if (!isOwner) {
+          return res.status(403).json({
+            error: "Forbidden: You are not authorized to view another vehicle owner's booking order.",
+            code: 'IDOR_ACCESS_DENIED'
+          });
+        }
       }
     }
 
@@ -511,6 +545,36 @@ export async function updateBookingStatus(req, res, next) {
     const booking = checkRes.rows[0];
     const targetStatus = status || booking.status;
 
+    // RBAC Permissions enforcement on booking status transitions
+    if (req.user) {
+      const userRole = normalizeRole(req.user.role);
+      const userPhone = String(req.user.mobile || '').replace(/\D/g, '').slice(-10);
+
+      if (userRole === 'FARMER') {
+        if (targetStatus !== 'Cancelled') {
+          return res.status(403).json({
+            error: 'Forbidden: Customers cannot confirm, reject, or complete bookings.',
+            code: 'FORBIDDEN'
+          });
+        }
+        const bookingFarmerPhone = String(booking.farmerMobile || '').replace(/\D/g, '').slice(-10);
+        if (userPhone !== bookingFarmerPhone && (!req.user.id || req.user.id !== booking.farmerId)) {
+          return res.status(403).json({
+            error: "Forbidden: You cannot cancel another customer's booking.",
+            code: 'FORBIDDEN'
+          });
+        }
+      } else if (userRole === 'VEHICLE_OWNER') {
+        const bookingOwnerPhone = String(booking.ownerMobile || '').replace(/\D/g, '').slice(-10);
+        if (userPhone && bookingOwnerPhone && userPhone !== bookingOwnerPhone) {
+          return res.status(403).json({
+            error: "Forbidden: You cannot modify bookings assigned to another tractor owner.",
+            code: 'FORBIDDEN'
+          });
+        }
+      }
+    }
+
     let activity = Array.isArray(booking.activityLog) ? booking.activityLog : [];
     activity.push({
       timestamp: new Date().toISOString(),
@@ -635,6 +699,22 @@ export async function deleteBooking(req, res, next) {
     );
     if (checkRes.rowCount === 0) {
       return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (req.user) {
+      const userRole = normalizeRole(req.user.role);
+      if (userRole !== 'ADMIN') {
+        const userPhone = String(req.user.mobile || '').replace(/\D/g, '').slice(-10);
+        const bookingFarmerPhone = String(checkRes.rows[0].farmerMobile || '').replace(/\D/g, '').slice(-10);
+        const isOwner = (userPhone && bookingFarmerPhone && userPhone === bookingFarmerPhone) ||
+                        (req.user.id && checkRes.rows[0].farmerId && req.user.id === checkRes.rows[0].farmerId);
+        if (!isOwner) {
+          return res.status(403).json({
+            error: "Forbidden: You are not authorized to delete another user's booking.",
+            code: 'FORBIDDEN'
+          });
+        }
+      }
     }
 
     const result = await query(

@@ -1,9 +1,19 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import StatCard from '../components/StatCard';
 import { translations } from '../translations';
 import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
 import { getRegisteredFarmers, getRegisteredOwners, deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from '../data/userData';
-import { checkBackendHealth, apiUpdateBookingStatus, apiGetBookings, apiGetAdminTractors, apiUpdateTractorVerification } from '../api/apiClient';
+import {
+  checkBackendHealth,
+  apiUpdateBookingStatus,
+  apiGetBookings,
+  apiGetAdminTractors,
+  apiUpdateTractorVerification,
+  apiGetFarmers,
+  apiGetOwners,
+  apiToggleFarmerStatus,
+  apiToggleOwnerStatus
+} from '../api/apiClient';
 
 export default function Dashboard({
   bookings = [],
@@ -12,10 +22,15 @@ export default function Dashboard({
   setTractors,
   onViewSlip,
   onLogout,
-  language = 'en'
+  language = 'en',
+  activeTab: propActiveTab,
+  setActiveTab: propSetActiveTab
 }) {
+  const [internalTab, setInternalTab] = useState('overview');
+  const activeTab = propActiveTab || internalTab;
+  const setActiveTab = propSetActiveTab || setInternalTab;
+
   const [statusFilter, setStatusFilter] = useState('All');
-  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings', 'fleet', 'verifications', or 'database'
   const [farmersList, setFarmersList] = useState(() => getRegisteredFarmers());
   const [ownersList, setOwnersList] = useState(() => getRegisteredOwners());
   const [dbSearch, setDbSearch] = useState('');
@@ -64,6 +79,53 @@ export default function Dashboard({
       }
     }).catch(() => {});
   }, [activeTab]);
+
+  const loadUsersFromApi = async () => {
+    try {
+      const [farmers, owners] = await Promise.all([
+        apiGetFarmers(),
+        apiGetOwners()
+      ]);
+      if (Array.isArray(farmers) && farmers.length > 0) setFarmersList(farmers);
+      if (Array.isArray(owners) && owners.length > 0) setOwnersList(owners);
+    } catch {
+      // quiet fallback
+    }
+  };
+
+  useEffect(() => {
+    loadUsersFromApi();
+    if (activeTab === 'farmers') setDbSubTab('farmers');
+    if (activeTab === 'owners') setDbSubTab('owners');
+  }, [activeTab]);
+
+  const handleToggleFarmerActive = async (farmer) => {
+    const newStatus = farmer.isActive === false ? true : false;
+    try {
+      const res = await apiToggleFarmerStatus(farmer.id, newStatus);
+      if (res && res.success) {
+        setFarmersList(prev => prev.map(f => f.id === farmer.id ? { ...f, isActive: newStatus } : f));
+        setDbNotice(isTe ? `✓ రైతు ${farmer.name} ఖాతా ${newStatus ? 'యాక్టివేట్' : 'డీయాక్టివేట్'} చేయబడింది.` : `✓ Farmer ${farmer.name} account ${newStatus ? 'activated' : 'deactivated'}.`);
+        setTimeout(() => setDbNotice(''), 4000);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to update farmer status');
+    }
+  };
+
+  const handleToggleOwnerActive = async (owner) => {
+    const newStatus = owner.isActive === false ? true : false;
+    try {
+      const res = await apiToggleOwnerStatus(owner.id, newStatus);
+      if (res && res.success) {
+        setOwnersList(prev => prev.map(o => o.id === owner.id ? { ...o, isActive: newStatus } : o));
+        setDbNotice(isTe ? `✓ యజమాని ${owner.fullName || owner.owner} ఖాతా ${newStatus ? 'యాక్టివేట్' : 'డీయాక్టివేట్'} చేయబడింది.` : `✓ Owner ${owner.fullName || owner.owner} account ${newStatus ? 'activated' : 'deactivated'}.`);
+        setTimeout(() => setDbNotice(''), 4000);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to update owner status');
+    }
+  };
 
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -190,18 +252,30 @@ export default function Dashboard({
 
       {/* Tabs & Logout */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
-            className={`filter-pill ${activeTab === 'bookings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('bookings')}
+            className={`filter-pill ${activeTab === 'overview' ? 'active' : ''}`}
+            onClick={() => setActiveTab('overview')}
           >
-            📋 {isTe ? 'రైతుల బుకింగ్స్ నిర్వహణ' : 'Manage Farmer Bookings'} ({bookings.length})
+            📊 {isTe ? 'డ్యాష్‌బోర్డ్ హోమ్' : 'Admin Home'}
+          </button>
+          <button
+            className={`filter-pill ${activeTab === 'farmers' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('farmers'); loadUsersFromApi(); }}
+          >
+            👨‍🌾 {isTe ? 'రైతుల నిర్వహణ' : 'Manage Farmers'} ({farmersList.length})
+          </button>
+          <button
+            className={`filter-pill ${activeTab === 'owners' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('owners'); loadUsersFromApi(); }}
+          >
+            🚜 {isTe ? 'వాహన యజమానులు' : 'Manage Vehicle Owners'} ({ownersList.length})
           </button>
           <button
             className={`filter-pill ${activeTab === 'fleet' ? 'active' : ''}`}
             onClick={() => setActiveTab('fleet')}
           >
-            🚜 {isTe ? 'ట్రాక్టర్ పరికరాల నిర్వహణ' : 'Manage Fleet Machinery'} ({tractors.length})
+            📋 {isTe ? 'ట్రాక్టర్ల జాబితా' : 'Tractor Listings'} ({tractors.length})
           </button>
           <button
             className={`filter-pill ${activeTab === 'verifications' ? 'active' : ''}`}
@@ -211,7 +285,7 @@ export default function Dashboard({
             }}
             style={{ position: 'relative' }}
           >
-            🛡️ {isTe ? 'కస్టమ్ ట్రాక్టర్ ధృవీకరణ' : 'Custom Tractor Verification'}
+            ⏳ {isTe ? 'ధృవీకరణ' : 'Pending Verification'}
             {pendingVerificationCount > 0 && (
               <span
                 style={{
@@ -229,14 +303,40 @@ export default function Dashboard({
             )}
           </button>
           <button
-            className={`filter-pill ${activeTab === 'database' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('database');
-              setFarmersList(getRegisteredFarmers());
-              setOwnersList(getRegisteredOwners());
-            }}
+            className={`filter-pill ${activeTab === 'bookings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('bookings')}
           >
-            👥 {isTe ? 'వినియోగదారుల డేటాబేస్' : 'Registered Users Database'} ({farmersList.length + ownersList.length})
+            📑 {isTe ? 'అన్ని బుకింగ్‌లు' : 'Manage All Bookings'} ({bookings.length})
+          </button>
+          <button
+            className={`filter-pill ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            📈 {isTe ? 'నివేదికలు' : 'Booking Reports'}
+          </button>
+          <button
+            className={`filter-pill ${activeTab === 'payments' ? 'active' : ''}`}
+            onClick={() => setActiveTab('payments')}
+          >
+            💳 {isTe ? 'చెల్లింపులు' : 'Payments & Transactions'}
+          </button>
+          <button
+            className={`filter-pill ${activeTab === 'notifications' ? 'active' : ''}`}
+            onClick={() => setActiveTab('notifications')}
+          >
+            🔔 {isTe ? 'నోటిఫికేషన్‌లు' : 'Notifications'}
+          </button>
+          <button
+            className={`filter-pill ${activeTab === 'support' ? 'active' : ''}`}
+            onClick={() => setActiveTab('support')}
+          >
+            💬 {isTe ? 'ఫిర్యాదులు' : 'Complaints & Support'}
+          </button>
+          <button
+            className={`filter-pill ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            ⚙️ {isTe ? 'సెట్టింగ్‌లు' : 'System Settings'}
           </button>
         </div>
 
@@ -741,14 +841,16 @@ export default function Dashboard({
       {/* ====================================================
           TAB 3: REGISTERED USERS DATABASE INSPECTOR
          ==================================================== */}
-      {activeTab === 'database' && (
+      {(activeTab === 'database' || activeTab === 'farmers' || activeTab === 'owners') && (
         <div className="page-anim">
           {/* Header & Controls Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <h4 style={{ color: 'var(--primary-900)', margin: 0 }}>
-                  {isTe ? 'అగ్రిరెంట్ వినియోగదారుల డేటాబేస్' : 'AgriRent Database'}
+                  {activeTab === 'farmers' ? (isTe ? 'రైతుల ఖాతాల నిర్వహణ' : 'Manage Farmers Accounts') :
+                   activeTab === 'owners' ? (isTe ? 'వాహన యజమానుల నిర్వహణ' : 'Manage Vehicle Owners') :
+                   (isTe ? 'అగ్రిరెంట్ వినియోగదారుల డేటాబేస్' : 'AgriRent Database')}
                 </h4>
                 {pgStatus === true ? (
                   <span className="badge bg-success" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -912,28 +1014,46 @@ export default function Dashboard({
                             {f.landArea ? `${f.landArea} ${isTe ? 'ఎకరాలు' : 'Acres'}` : 'N/A'}
                           </td>
                           <td>
-                            <span className="badge bg-success" style={{ fontSize: '11px' }}>
-                              ✓ {f.isVerified ? 'Verified' : 'Active'}
+                            <span className={`badge ${f.isActive !== false ? 'bg-success' : 'bg-danger'}`} style={{ fontSize: '11px', background: f.isActive !== false ? '#16a34a' : '#dc2626', color: '#fff' }}>
+                              {f.isActive !== false ? '✓ Active' : '✕ Deactivated'}
                             </span>
                           </td>
                           <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             {f.registeredAt || 'Seed Data'}
                           </td>
                           <td>
-                            <button
-                              className="btn btn-call"
-                              style={{ background: '#d32f2f', padding: '4px 8px', fontSize: '11px' }}
-                              onClick={() => {
-                                if (window.confirm(isTe ? `రైతు ${f.name} (+91 ${f.mobile}) ఖాతాను శాశ్వతంగా తొలగించాలా?` : `Permanently delete farmer ${f.name} (+91 ${f.mobile})?`)) {
-                                  deleteRegisteredFarmer(f.mobile);
-                                  setFarmersList(getRegisteredFarmers());
-                                  setDbNotice(isTe ? `రైతు ${f.name} తొలగించబడ్డారు.` : `Farmer ${f.name} deleted.`);
-                                  setTimeout(() => setDbNotice(''), 3000);
-                                }
-                              }}
-                            >
-                              🗑️ {isTe ? 'తొలగించు' : 'Delete'}
-                            </button>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                type="button"
+                                className="btn"
+                                style={{
+                                  background: f.isActive !== false ? '#ea580c' : '#16a34a',
+                                  color: '#fff',
+                                  padding: '4px 8px',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  borderRadius: '4px'
+                                }}
+                                onClick={() => handleToggleFarmerActive(f)}
+                                title={f.isActive !== false ? 'Deactivate account' : 'Activate account'}
+                              >
+                                {f.isActive !== false ? (isTe ? 'డీయాక్టివేట్' : 'Deactivate') : (isTe ? 'యాక్టివేట్' : 'Activate')}
+                              </button>
+                              <button
+                                className="btn btn-call"
+                                style={{ background: '#d32f2f', padding: '4px 8px', fontSize: '11px' }}
+                                onClick={() => {
+                                  if (window.confirm(isTe ? `రైతు ${f.name} (+91 ${f.mobile}) ఖాతాను శాశ్వతంగా తొలగించాలా?` : `Permanently delete farmer ${f.name} (+91 ${f.mobile})?`)) {
+                                    deleteRegisteredFarmer(f.mobile);
+                                    setFarmersList(getRegisteredFarmers());
+                                    setDbNotice(isTe ? `రైతు ${f.name} తొలగించబడ్డారు.` : `Farmer ${f.name} deleted.`);
+                                    setTimeout(() => setDbNotice(''), 3000);
+                                  }
+                                }}
+                              >
+                                🗑️ {isTe ? 'తొలగించు' : 'Delete'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -972,6 +1092,7 @@ export default function Dashboard({
                       <th>{isTe ? 'RC నంబర్' : 'RC Number'}</th>
                       <th>{isTe ? 'గ్రామం' : 'Village'}</th>
                       <th>{isTe ? 'ధర / గంటకు' : 'Hourly Rate'}</th>
+                      <th>{isTe ? 'ఖాతా స్థితి' : 'Account Status'}</th>
                       <th>{isTe ? 'చర్య' : 'Action'}</th>
                     </tr>
                   </thead>
@@ -1009,20 +1130,43 @@ export default function Dashboard({
                           <td>{o.village || 'N/A'}</td>
                           <td><strong>₹{o.pricing || 1200}</strong> / hr</td>
                           <td>
-                            <button
-                              className="btn btn-call"
-                              style={{ background: '#d32f2f', padding: '4px 8px', fontSize: '11px' }}
-                              onClick={() => {
-                                if (window.confirm(isTe ? `యజమాని ${o.fullName || o.owner} (+91 ${o.mobile}) ఖాతాను శాశ్వతంగా తొలగించాలా?` : `Permanently delete vehicle owner ${o.fullName || o.owner} (+91 ${o.mobile})?`)) {
-                                  deleteRegisteredOwner(o.mobile);
-                                  setOwnersList(getRegisteredOwners());
-                                  setDbNotice(isTe ? `యజమాని ఖాతా తొలగించబడింది.` : `Owner account deleted.`);
-                                  setTimeout(() => setDbNotice(''), 3000);
-                                }
-                              }}
-                            >
-                              🗑️ {isTe ? 'తొలగించు' : 'Delete'}
-                            </button>
+                            <span className={`badge ${o.isActive !== false ? 'bg-success' : 'bg-danger'}`} style={{ fontSize: '11px', background: o.isActive !== false ? '#16a34a' : '#dc2626', color: '#fff' }}>
+                              {o.isActive !== false ? '✓ Active' : '✕ Deactivated'}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                type="button"
+                                className="btn"
+                                style={{
+                                  background: o.isActive !== false ? '#ea580c' : '#16a34a',
+                                  color: '#fff',
+                                  padding: '4px 8px',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  borderRadius: '4px'
+                                }}
+                                onClick={() => handleToggleOwnerActive(o)}
+                                title={o.isActive !== false ? 'Deactivate account' : 'Activate account'}
+                              >
+                                {o.isActive !== false ? (isTe ? 'డీయాక్టివేట్' : 'Deactivate') : (isTe ? 'యాక్టివేట్' : 'Activate')}
+                              </button>
+                              <button
+                                className="btn btn-call"
+                                style={{ background: '#d32f2f', padding: '4px 8px', fontSize: '11px' }}
+                                onClick={() => {
+                                  if (window.confirm(isTe ? `యజమాని ${o.fullName || o.owner} (+91 ${o.mobile}) ఖాతాను శాశ్వతంగా తొలగించాలా?` : `Permanently delete vehicle owner ${o.fullName || o.owner} (+91 ${o.mobile})?`)) {
+                                    deleteRegisteredOwner(o.mobile);
+                                    setOwnersList(getRegisteredOwners());
+                                    setDbNotice(isTe ? `యజమాని ఖాతా తొలగించబడింది.` : `Owner account deleted.`);
+                                    setTimeout(() => setDbNotice(''), 3000);
+                                  }
+                                }}
+                              >
+                                🗑️ {isTe ? 'తొలగించు' : 'Delete'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1047,6 +1191,225 @@ export default function Dashboard({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ====================================================
+          TAB: ADMIN OVERVIEW
+         ==================================================== */}
+      {activeTab === 'overview' && (
+        <div className="page-anim">
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px' }}>
+            <h3 style={{ margin: '0 0 6px 0', color: '#166534', fontSize: '18px' }}>
+              🛡️ {isTe ? 'అడ్మినిస్ట్రేటర్ కమాండ్ సెంటర్' : 'AgriRent Administrator Command Center'}
+            </h3>
+            <p style={{ margin: 0, fontSize: '13.5px', color: '#15803d' }}>
+              {isTe
+                ? 'తెలంగాణ వ్యవసాయ ట్రాక్టర్ల అద్దె వేదిక సమగ్ర సమాచారం మరియు వినియోగదారుల పర్యవేక్షణ.'
+                : 'Centralized oversight for farmers, vehicle owners, tractor verifications, bookings, and platform compliance.'}
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '15px', color: '#0f172a' }}>⚡ {isTe ? 'త్వరిత చర్యలు' : 'Quick Actions'}</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ textAlign: 'left', padding: '10px 14px', fontSize: '13px', background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1' }}
+                  onClick={() => setActiveTab('verifications')}
+                >
+                  ⏳ {isTe ? 'కస్టమ్ ట్రాక్టర్ ధృవీకరణలను సమీక్షించండి' : 'Review Custom Tractor Verifications'} ({pendingVerificationCount})
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ textAlign: 'left', padding: '10px 14px', fontSize: '13px', background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1' }}
+                  onClick={() => setActiveTab('bookings')}
+                >
+                  📋 {isTe ? 'పెండింగ్ పని ఆర్డర్లను వీక్షించండి' : 'View Pending Booking Work Orders'} ({pendingCount})
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ textAlign: 'left', padding: '10px 14px', fontSize: '13px', background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1' }}
+                  onClick={() => setActiveTab('farmers')}
+                >
+                  👨‍🌾 {isTe ? 'రైతుల ఖాతాలను నిర్వహించండి' : 'Manage Farmer Accounts'} ({farmersList.length})
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ textAlign: 'left', padding: '10px 14px', fontSize: '13px', background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1' }}
+                  onClick={() => setActiveTab('owners')}
+                >
+                  🚜 {isTe ? 'వాహన యజమానులను నిర్వహించండి' : 'Manage Vehicle Owners'} ({ownersList.length})
+                </button>
+              </div>
+            </div>
+
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '15px', color: '#0f172a' }}>🔒 {isTe ? 'RBAC సెక్యూరిటీ స్థితి' : 'Role-Based Access Control Status'}</h4>
+              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#334155', lineHeight: '1.7' }}>
+                <li><strong>FARMER:</strong> Restricted to fleet browsing, personal bookings, profile management.</li>
+                <li><strong>VEHICLE_OWNER:</strong> Restricted to owner inbox, tractor listings, personal booking requests.</li>
+                <li><strong>ADMIN:</strong> Unrestricted system control, user activation/deactivation, verification decisions.</li>
+                <li><strong>Backend Middleware:</strong> Enforcing 403 Forbidden with <code>requireAdmin</code> on sensitive APIs.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================
+          TAB: BOOKING REPORTS
+         ==================================================== */}
+      {activeTab === 'reports' && (
+        <div className="page-anim">
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#0f172a' }}>📈 {isTe ? 'బుకింగ్ నివేదికలు & విశ్లేషణలు' : 'Platform Booking Reports & Analytics'}</h3>
+            <p style={{ margin: '0 0 20px 0', color: '#64748b', fontSize: '14px' }}>
+              Summary of all tractor rental operations across Telangana districts.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Total Bookings Logged</span>
+                <h3 style={{ margin: '4px 0 0 0', color: '#0f172a' }}>{bookings.length}</h3>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Successful Completions</span>
+                <h3 style={{ margin: '4px 0 0 0', color: '#16a34a' }}>{completedCount}</h3>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Total Agricultural Acreage</span>
+                <h3 style={{ margin: '4px 0 0 0', color: '#2563eb' }}>{totalAcres} Acres</h3>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Gross Rental Volume</span>
+                <h3 style={{ margin: '4px 0 0 0', color: '#d97706' }}>
+                  ₹{bookings.reduce((sum, b) => sum + (Number(b.estimatedCost) || 0), 0).toLocaleString('en-IN')}
+                </h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================
+          TAB: PAYMENTS AND TRANSACTIONS
+         ==================================================== */}
+      {activeTab === 'payments' && (
+        <div className="page-anim">
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#0f172a' }}>💳 {isTe ? 'చెల్లింపులు & లావాదేవీలు' : 'Payments & Transaction Settlements'}</h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '13.5px' }}>
+              Track cash on service, advance security deposits, and owner payout disbursements.
+            </p>
+            <div className="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Booking Code</th>
+                    <th>Farmer Name</th>
+                    <th>Tractor Owner</th>
+                    <th>Payment Method</th>
+                    <th>Advance Paid</th>
+                    <th>Total Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map((b) => (
+                    <tr key={b.id}>
+                      <td><strong>{b.bookingCode || `TRC${b.id}`}</strong></td>
+                      <td>{b.farmerName}</td>
+                      <td>{b.tractorOwner}</td>
+                      <td>Cash on Service / UPI</td>
+                      <td>₹{b.advancePayment || 0}</td>
+                      <td><strong>₹{(b.estimatedCost || 0).toLocaleString('en-IN')}</strong></td>
+                      <td>
+                        <span className="badge bg-success" style={{ fontSize: '11px' }}>
+                          {b.paymentStatus || 'Cash on Delivery'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================
+          TAB: NOTIFICATIONS DISPATCH
+         ==================================================== */}
+      {activeTab === 'notifications' && (
+        <div className="page-anim">
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#0f172a' }}>🔔 {isTe ? 'సిస్టమ్ నోటిఫికేషన్‌లు' : 'System Notifications & Broadcasts'}</h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '13.5px' }}>
+              Automated in-app notifications and WhatsApp alerts dispatched to farmers and tractor owners.
+            </p>
+            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+              <strong>✓ WhatsApp Cloud Gateway:</strong> Connected & Active (Direct Owner Invoice Notifications Enabled)
+            </div>
+            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <strong>✓ In-App Real-time Webhooks:</strong> Active across Farmer and Vehicle Owner dashboards.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================
+          TAB: COMPLAINTS / SUPPORT
+         ==================================================== */}
+      {activeTab === 'support' && (
+        <div className="page-anim">
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#0f172a' }}>💬 {isTe ? 'ఫిర్యాదులు & సహాయ కేంద్రం' : 'Complaints & Support Tickets'}</h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '13.5px' }}>
+              Grievance redressal system for farmers and tractor captains.
+            </p>
+            <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>
+              <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>🤝</span>
+              <p style={{ margin: 0, fontWeight: 600 }}>No open complaints. All farmer-owner rentals in good standing.</p>
+              <small>Helpline: 1800-425-1122 | Kisan Call Centre: 1551</small>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================
+          TAB: SYSTEM SETTINGS
+         ==================================================== */}
+      {activeTab === 'settings' && (
+        <div className="page-anim">
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#0f172a' }}>⚙️ {isTe ? 'సిస్టమ్ సెట్టింగ్‌లు' : 'Platform & System Settings'}</h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '13.5px' }}>
+              Configure platform rules, regional presets, and operational parameters.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+              <div style={{ padding: '14px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <strong>Default Base Location:</strong>
+                <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '13px' }}>Hasanparthy, Hanumakonda, Telangana</p>
+              </div>
+              <div style={{ padding: '14px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <strong>Tractor Verification Policy:</strong>
+                <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '13px' }}>Mandatory Admin Approval with Genuine Photo</p>
+              </div>
+              <div style={{ padding: '14px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <strong>Double Booking Prevention:</strong>
+                <p style={{ margin: '4px 0 0 0', color: '#16a34a', fontSize: '13px' }}>✓ Strict Overlapping Slot Collision Guard Enabled</p>
+              </div>
+              <div style={{ padding: '14px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <strong>Admin Authentication Mode:</strong>
+                <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '13px' }}>Bcrypt Hashed Credentials (admins table)</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

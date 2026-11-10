@@ -86,9 +86,37 @@ function App() {
 
   // Dynamic Navigation History Stack for Accurate Back Navigation
   const [pageHistory, setPageHistory] = useState([]);
+  const [adminActiveTab, setAdminActiveTab] = useState('overview');
+  const [unauthorizedNotice, setUnauthorizedNotice] = useState('');
 
   const handleNavigate = (newPage) => {
     if (newPage === activePage) return;
+
+    // Strict RBAC Client-Side Route Guards
+    if (newPage === 'admin-dashboard' || newPage.startsWith('admin-')) {
+      if (!isAdminLoggedIn) {
+        if (currentFarmer) {
+          setUnauthorizedNotice('You are not authorized to access this page.');
+          setTimeout(() => setUnauthorizedNotice(''), 5000);
+          setActivePage('find-tractor');
+          return;
+        } else if (currentOwner) {
+          setUnauthorizedNotice('You are not authorized to access this page.');
+          setTimeout(() => setUnauthorizedNotice(''), 5000);
+          setActivePage('owner-inbox');
+          return;
+        }
+      }
+    }
+
+    // Farmer attempting to access Vehicle Owner Dashboard
+    if (newPage === 'owner-inbox' && currentFarmer && !currentOwner && !isAdminLoggedIn) {
+      setUnauthorizedNotice('You are not authorized to access this page.');
+      setTimeout(() => setUnauthorizedNotice(''), 5000);
+      setActivePage('find-tractor');
+      return;
+    }
+
     setPageHistory((prev) => [...prev, activePage]);
     setActivePage(newPage);
   };
@@ -535,23 +563,65 @@ function App() {
           />
         );
       case 'admin-dashboard':
-        return isAdminLoggedIn ? (
+        if (!isAdminLoggedIn) {
+          if (currentFarmer) {
+            return (
+              <FindTractor
+                tractors={tractors}
+                setTractors={setTractors}
+                setActivePage={handleNavigate}
+                setSelectedTractor={setSelectedTractor}
+                serviceFilter={serviceFilter}
+                setServiceFilter={setServiceFilter}
+                language={language}
+                selectedLocation={selectedLocation}
+                weatherData={weatherData}
+                isLoadingWeather={isLoadingWeather}
+                onOpenLocationPicker={() => setIsLocationModalOpen(true)}
+                isUserLoggedIn={isUserLoggedIn}
+                currentOwner={currentOwner}
+              />
+            );
+          }
+          if (currentOwner) {
+            return (
+              <OwnerInbox
+                bookings={bookings}
+                setBookings={setBookings}
+                tractors={tractors}
+                setTractors={setTractors}
+                selectedLocation={selectedLocation}
+                onViewSlip={(b) => setReceiptModalBooking(b)}
+                language={language}
+                currentOwner={currentOwner}
+                onOwnerDeleteAccount={handleOwnerDeleteAccount}
+              />
+            );
+          }
+          return (
+            <AdminLogin
+              onLoginSuccess={() => {
+                setIsAdminLoggedIn(true);
+                setActivePage('admin-dashboard');
+              }}
+              setActivePage={handleNavigate}
+              onGoBack={handleGoBack}
+              language={language}
+              setLanguage={setLanguage}
+            />
+          );
+        }
+        return (
           <Dashboard
             bookings={bookings}
             setBookings={setBookings}
             tractors={tractors}
             setTractors={setTractors}
             onViewSlip={(b) => setReceiptModalBooking(b)}
-            onLogout={() => setIsAdminLoggedIn(false)}
+            onLogout={handleAdminLogout}
             language={language}
-          />
-        ) : (
-          <AdminLogin
-            onLoginSuccess={() => setIsAdminLoggedIn(true)}
-            setActivePage={handleNavigate}
-            onGoBack={handleGoBack}
-            language={language}
-            setLanguage={setLanguage}
+            activeTab={adminActiveTab}
+            setActiveTab={setAdminActiveTab}
           />
         );
       default:
@@ -711,9 +781,36 @@ function App() {
           onOwnerDeleteAccount={handleOwnerDeleteAccount}
           isAdminLoggedIn={isAdminLoggedIn}
           onAdminLogout={handleAdminLogout}
+          adminActiveTab={adminActiveTab}
+          setAdminActiveTab={setAdminActiveTab}
           isInstalled={pwa.isInstalled}
           onInstallApp={pwa.promptInstall}
         />
+      )}
+
+      {/* Unauthorized Access Notification Toast */}
+      {unauthorizedNotice && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 999999,
+          background: '#b91c1c',
+          color: '#ffffff',
+          padding: '12px 24px',
+          borderRadius: '10px',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+          fontWeight: '700',
+          fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          border: '1.5px solid #f87171'
+        }}>
+          <span style={{ fontSize: '18px' }}>🚫</span>
+          <span>{unauthorizedNotice}</span>
+        </div>
       )}
 
       {/* Main Content Area */}

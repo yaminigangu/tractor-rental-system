@@ -4,16 +4,21 @@ import {
   getFarmerByMobile,
   createOrUpdateFarmer,
   updateFarmer,
-  deleteFarmer
+  deleteFarmer,
+  toggleFarmerStatus
 } from '../controllers/farmerController.js';
+import { authenticateUser, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', getFarmers);
+// Protected admin endpoint
+router.get('/', authenticateUser, requireAdmin, getFarmers);
+
 router.get('/:mobile', getFarmerByMobile);
 router.post('/', createOrUpdateFarmer);
 router.put('/:mobile', updateFarmer);
-router.delete('/:mobile', deleteFarmer);
+router.patch('/:id/status', authenticateUser, requireAdmin, toggleFarmerStatus);
+router.delete('/:mobile', authenticateUser, deleteFarmer);
 
 export default router;
 

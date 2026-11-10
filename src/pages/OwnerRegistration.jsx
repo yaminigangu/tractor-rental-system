@@ -581,8 +581,8 @@ export default function OwnerRegistration({
         }
       }
 
-      // Direct into Marketplace Fleet (Screenshot 5)
-      setActivePage('find-tractor');
+      // Direct into Vehicle Owner Dashboard (Owner Work Inbox)
+      setActivePage('owner-inbox');
     };
 
     // Instant 1-Tap Login for recognized returning owner

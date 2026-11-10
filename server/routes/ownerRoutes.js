@@ -4,16 +4,21 @@ import {
   getOwnerByMobile,
   createOrUpdateOwner,
   updateOwner,
-  deleteOwner
+  deleteOwner,
+  toggleOwnerStatus
 } from '../controllers/ownerController.js';
+import { authenticateUser, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', getOwners);
+// Protected admin-only endpoint
+router.get('/', authenticateUser, requireAdmin, getOwners);
+
 router.get('/:mobile', getOwnerByMobile);
 router.post('/', createOrUpdateOwner);
 router.put('/:mobile', updateOwner);
-router.delete('/:mobile', deleteOwner);
+router.patch('/:id/status', authenticateUser, requireAdmin, toggleOwnerStatus);
+router.delete('/:mobile', authenticateUser, deleteOwner);
 
 export default router;
 

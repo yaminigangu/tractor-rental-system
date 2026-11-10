@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
+import bcrypt from 'bcryptjs';
 
 import { query } from './db.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -212,6 +213,39 @@ async function ensureBookingsSchema() {
       CREATE INDEX IF NOT EXISTS idx_notifications_mobile ON notifications(user_mobile);
       CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
 
+      -- Role-Based Access Control (RBAC) Columns
+      ALTER TABLE farmers ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'FARMER';
+      ALTER TABLE farmers ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+      UPDATE farmers SET role = 'FARMER' WHERE role IS NULL;
+
+      ALTER TABLE vehicle_owners ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'VEHICLE_OWNER';
+      ALTER TABLE vehicle_owners ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+      UPDATE vehicle_owners SET role = 'VEHICLE_OWNER' WHERE role IS NULL;
+
+      -- Admins Authentication Table
+      CREATE TABLE IF NOT EXISTS admins (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(150) UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'ADMIN',
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        last_login TIMESTAMP WITH TIME ZONE
+      );
+
+      -- Admin Activity Logs Table
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        user_role VARCHAR(50) DEFAULT 'ADMIN',
+        action VARCHAR(100) NOT NULL,
+        details JSONB DEFAULT '{}'::jsonb,
+        ip_address VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at);
+
       -- Custom Tractor Verification & Listings Columns
       ALTER TABLE tractors ADD COLUMN IF NOT EXISTS owner_id INTEGER;
       ALTER TABLE tractors ADD COLUMN IF NOT EXISTS owner_mobile VARCHAR(20);
@@ -227,6 +261,20 @@ async function ensureBookingsSchema() {
       CREATE INDEX IF NOT EXISTS idx_tractors_verification_status ON tractors(verification_status);
       CREATE INDEX IF NOT EXISTS idx_tractors_owner_mobile ON tractors(owner_mobile);
     `);
+
+    // Seed initial administrator account if not existing
+    const adminCheck = await query("SELECT id FROM admins WHERE LOWER(username) = 'admin' LIMIT 1");
+    if (adminCheck.rows.length === 0) {
+      const defaultAdminPass = process.env.ADMIN_PASSWORD || 'admin123';
+      const hashedPass = await bcrypt.hash(defaultAdminPass, 10);
+      await query(
+        `INSERT INTO admins (username, email, password_hash, role, is_active)
+         VALUES ($1, $2, $3, 'ADMIN', TRUE)`,
+        ['admin', 'admin@agrirent.com', hashedPass]
+      );
+      console.log('🛡️ Initial Administrator account seeded (Username: admin, Role: ADMIN).');
+    }
+
     console.log('✅ PostgreSQL full schema verified & migrated.');
   } catch (err) {
     console.warn('PostgreSQL schema migration check warning:', err.message);

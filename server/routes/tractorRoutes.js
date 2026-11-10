@@ -9,12 +9,14 @@ import {
   updateTractor,
   deleteTractor
 } from '../controllers/tractorController.js';
+import { authenticateUser, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
 router.get('/', getTractors);
 router.post('/custom', createCustomTractor);
-router.patch('/:id/verification', updateTractorVerification);
+// Protected admin verification
+router.patch('/:id/verification', authenticateUser, requireAdmin, updateTractorVerification);
 router.put('/:id/custom', resubmitCustomTractor);
 router.get('/:id', getTractorById);
 router.post('/', createTractor);

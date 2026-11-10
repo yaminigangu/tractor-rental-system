@@ -18,6 +18,9 @@ export default function Sidebar({
   onOwnerDeleteAccount,
   isAdminLoggedIn,
   onAdminLogout,
+  adminActiveTab,
+  setAdminActiveTab,
+  onOpenNotifications,
   isInstalled = false,
   onInstallApp
 }) {
@@ -31,10 +34,90 @@ export default function Sidebar({
   };
 
   const handleNavClick = (id) => {
-    setActivePage(id);
     if (closeMobileMenu) {
       closeMobileMenu();
     }
+
+    // Role-specific action intercepts
+    if (id === 'farmer-profile') {
+      if (onOpenFarmerProfile) onOpenFarmerProfile();
+      else setActivePage('farmer-profile');
+      return;
+    }
+
+    if (id === 'farmer-notifications' || id === 'owner-notifications') {
+      if (onOpenNotifications) {
+        onOpenNotifications();
+      } else {
+        setActivePage(currentFarmer ? 'my-bookings' : 'owner-inbox');
+      }
+      return;
+    }
+
+    if (id === 'farmer-logout') {
+      if (onFarmerLogout) onFarmerLogout();
+      return;
+    }
+
+    if (id === 'owner-logout') {
+      if (onOwnerLogout) onOwnerLogout();
+      return;
+    }
+
+    if (id === 'admin-logout') {
+      if (onAdminLogout) onAdminLogout();
+      return;
+    }
+
+    // Owner specific sub-navigation routes
+    if (id === 'owner-listings') {
+      setActivePage('owner-inbox');
+      return;
+    }
+
+    if (id === 'owner-requests') {
+      setActivePage('owner-inbox');
+      return;
+    }
+
+    if (id === 'owner-history') {
+      setActivePage('owner-inbox');
+      return;
+    }
+
+    if (id === 'owner-kyc') {
+      setActivePage('owner-registration');
+      return;
+    }
+
+    if (id === 'owner-profile') {
+      setActivePage('owner-inbox');
+      return;
+    }
+
+    // Admin dashboard sub-tabs
+    if (id.startsWith('admin-')) {
+      setActivePage('admin-dashboard');
+      if (setAdminActiveTab) {
+        const tabMap = {
+          'admin-dashboard': 'overview',
+          'admin-farmers': 'farmers',
+          'admin-owners': 'owners',
+          'admin-tractors': 'fleet',
+          'admin-verification': 'verifications',
+          'admin-bookings': 'bookings',
+          'admin-reports': 'reports',
+          'admin-payments': 'payments',
+          'admin-notifications': 'notifications',
+          'admin-support': 'support',
+          'admin-settings': 'settings'
+        };
+        setAdminActiveTab(tabMap[id] || 'overview');
+      }
+      return;
+    }
+
+    setActivePage(id);
   };
 
   const handleSignOut = () => {
@@ -62,120 +145,61 @@ export default function Sidebar({
   };
 
   // Build role-tailored navigation menu items:
-  // - Strictly 1 icon per menu item (NO duplicate emojis)
-  // - No redundant "Login Portals" links for already logged-in users
+  // Strictly adhering to RBAC separation:
+  // 1. FARMER: Home, Explore Fleet, My Bookings, Booking History, Notifications, My Profile, Logout
+  // 2. VEHICLE_OWNER: Home, Owner Work Inbox, My Tractor Listings, Add New Tractor, Booking Requests, Booking History, Machinery KYC / Verification Status, Notifications, My Profile, Logout
+  // 3. ADMIN: Admin Home / Dashboard, Manage Farmers, Manage Vehicle Owners, Manage Tractor Listings, Pending Tractor Verification, Manage All Bookings, Booking Reports, Payments and Transactions, Notifications, Complaints / Support, System Settings, Logout
   const menuItems = (() => {
-    const items = [
-      { 
-        id: 'home', 
-        label: isTe ? 'హోమ్' : 'Home', 
-        icon: '🏡' 
-      }
-    ];
-
     if (currentFarmer) {
-      items.push(
-        { 
-          id: 'find-tractor', 
-          label: isTe ? 'ట్రాక్టర్లను కనుగొనండి' : 'Find Tractor', 
-          icon: '🔍' 
-        },
-        { 
-          id: 'booking-form', 
-          label: isTe ? 'ట్రాక్టర్ బుకింగ్' : 'Booking Tractor', 
-          icon: '📋' 
-        },
-        { 
-          id: 'my-bookings', 
-          label: isTe ? 'నా బుకింగ్‌లు' : 'My Bookings', 
-          icon: '📄' 
-        },
-        {
-          id: 'owner-inbox',
-          label: isTe ? 'యజమాని వర్క్ ఇన్‌బాక్స్' : 'Owner Work Inbox',
-          icon: '📮',
-          badge: pendingCount > 0 ? pendingCount : null
-        },
-        {
-          id: 'admin-dashboard',
-          label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard',
-          icon: '🛡️'
-        }
-      );
-    } else if (currentOwner) {
-      items.push(
-        { 
-          id: 'owner-inbox', 
-          label: isTe ? 'యజమాని వర్క్ ఇన్‌బాక్స్' : 'Owner Work Inbox', 
-          icon: '📮', 
-          badge: pendingCount > 0 ? pendingCount : null 
-        },
-        { 
-          id: 'find-tractor', 
-          label: isTe ? 'ట్రాక్టర్ మార్కెట్‌ప్లేస్' : 'Explore Fleet', 
-          icon: '🚜' 
-        },
-        { 
-          id: 'my-bookings', 
-          label: isTe ? 'బుకింగ్ చరిత్ర' : 'Booking History', 
-          icon: '📄' 
-        },
-        { 
-          id: 'owner-registration', 
-          label: isTe ? 'యంత్రాల KYC వివరాలు' : 'Machinery KYC Specs', 
-          icon: '⚙️' 
-        },
-        {
-          id: 'admin-dashboard',
-          label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard',
-          icon: '🛡️'
-        }
-      );
-    } else if (isAdminLoggedIn) {
-      items.push(
-        { 
-          id: 'admin-dashboard', 
-          label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard', 
-          icon: '🛡️' 
-        },
-        { 
-          id: 'find-tractor', 
-          label: isTe ? 'అన్ని ట్రాక్టర్లు' : 'All Fleet', 
-          icon: '🚜' 
-        },
-        { 
-          id: 'my-bookings', 
-          label: isTe ? 'అన్ని బుకింగ్‌లు' : 'All Bookings', 
-          icon: '📄' 
-        },
-        {
-          id: 'owner-inbox',
-          label: isTe ? 'యజమాని ఇన్‌బాక్స్' : 'Owner Work Inbox',
-          icon: '📮',
-          badge: pendingCount > 0 ? pendingCount : null
-        }
-      );
-    } else {
-      items.push(
-        { 
-          id: 'find-tractor', 
-          label: isTe ? 'ట్రాక్టర్లను కనుగొనండి' : 'Find Tractor', 
-          icon: '🔍' 
-        },
-        { 
-          id: 'booking-form', 
-          label: isTe ? 'ట్రాక్టర్ బుకింగ్' : 'Booking Tractor', 
-          icon: '📋' 
-        },
-        {
-          id: 'admin-dashboard',
-          label: isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard',
-          icon: '🛡️'
-        }
-      );
+      return [
+        { id: 'home', label: isTe ? 'హోమ్' : 'Home', icon: '🏡' },
+        { id: 'find-tractor', label: isTe ? 'ఫ్లీట్‌ను అన్వేషించండి' : 'Explore Fleet', icon: '🚜' },
+        { id: 'my-bookings', label: isTe ? 'నా బుకింగ్‌లు' : 'My Bookings', icon: '📋' },
+        { id: 'booking-form', label: isTe ? 'ట్రాక్టర్ బుకింగ్' : 'Book a Tractor', icon: '📝' },
+        { id: 'farmer-notifications', label: isTe ? 'నోటిఫికేషన్‌లు' : 'Notifications', icon: '🔔' },
+        { id: 'farmer-profile', label: isTe ? 'నా ప్రొఫైల్' : 'My Profile', icon: '👤' },
+        { id: 'farmer-logout', label: isTe ? 'లాగ్‌అవుట్' : 'Logout', icon: '🚪' }
+      ];
+    }
+    
+    if (currentOwner) {
+      return [
+        { id: 'home', label: isTe ? 'హోమ్' : 'Home', icon: '🏡' },
+        { id: 'owner-inbox', label: isTe ? 'యజమాని వర్క్ ఇన్‌బాక్స్' : 'Owner Work Inbox', icon: '📮', badge: pendingCount > 0 ? pendingCount : null },
+        { id: 'owner-listings', label: isTe ? 'నా ట్రాక్టర్ల జాబితా' : 'My Tractor Listings', icon: '🚜' },
+        { id: 'owner-registration', label: isTe ? 'కొత్త ట్రాక్టర్‌ను జోడించండి' : 'Add New Tractor', icon: '➕' },
+        { id: 'owner-requests', label: isTe ? 'బుకింగ్ అభ్యర్థనలు' : 'Booking Requests', icon: '📩', badge: pendingCount > 0 ? pendingCount : null },
+        { id: 'owner-history', label: isTe ? 'బుకింగ్ చరిత్ర' : 'Booking History', icon: '📜' },
+        { id: 'owner-kyc', label: isTe ? 'యంత్రాల KYC / ధృవీకరణ స్థితి' : 'Machinery KYC / Status', icon: '🛡️' },
+        { id: 'owner-notifications', label: isTe ? 'నోటిఫికేషన్‌లు' : 'Notifications', icon: '🔔' },
+        { id: 'owner-profile', label: isTe ? 'నా ప్రొఫైల్' : 'My Profile', icon: '👤' },
+        { id: 'owner-logout', label: isTe ? 'లాగ్‌అవుట్' : 'Logout', icon: '🚪' }
+      ];
+    }
+    
+    if (isAdminLoggedIn) {
+      return [
+        { id: 'admin-dashboard', label: isTe ? 'అడ్మిన్ హోమ్ / డ్యాష్‌బోర్డ్' : 'Admin Home / Dashboard', icon: '📊' },
+        { id: 'admin-farmers', label: isTe ? 'రైతుల నిర్వహణ' : 'Manage Farmers', icon: '👨‍🌾' },
+        { id: 'admin-owners', label: isTe ? 'వాహన యజమానుల నిర్వహణ' : 'Manage Vehicle Owners', icon: '🚜' },
+        { id: 'admin-tractors', label: isTe ? 'ట్రాక్టర్ల జాబితా నిర్వహణ' : 'Manage Tractor Listings', icon: '🚜' },
+        { id: 'admin-verification', label: isTe ? 'పెండింగ్ ట్రాక్టర్ ధృవీకరణ' : 'Pending Tractor Verification', icon: '⏳' },
+        { id: 'admin-bookings', label: isTe ? 'అన్ని బుకింగ్‌ల నిర్వహణ' : 'Manage All Bookings', icon: '📑' },
+        { id: 'admin-reports', label: isTe ? 'బుకింగ్ నివేదికలు' : 'Booking Reports', icon: '📈' },
+        { id: 'admin-payments', label: isTe ? 'చెల్లింపులు & లావాదేవీలు' : 'Payments & Transactions', icon: '💳' },
+        { id: 'admin-notifications', label: isTe ? 'నోటిఫికేషన్‌లు' : 'Notifications', icon: '🔔' },
+        { id: 'admin-support', label: isTe ? 'ఫిర్యాదులు / సపోర్ట్' : 'Complaints / Support', icon: '💬' },
+        { id: 'admin-settings', label: isTe ? 'సిస్టమ్ సెట్టింగ్‌లు' : 'System Settings', icon: '⚙️' },
+        { id: 'admin-logout', label: isTe ? 'లాగ్‌అవుట్' : 'Logout', icon: '🚪' }
+      ];
     }
 
-    return items;
+    // Guest / Public Browser
+    return [
+      { id: 'home', label: isTe ? 'హోమ్' : 'Home', icon: '🏡' },
+      { id: 'find-tractor', label: isTe ? 'ఫ్లీట్‌ను అన్వేషించండి' : 'Explore Fleet', icon: '🚜' },
+      { id: 'portal-select', label: isTe ? 'సైన్ ఇన్' : 'Sign In Portal', icon: '🔑' }
+    ];
   })();
 
   const villageName = selectedLocation

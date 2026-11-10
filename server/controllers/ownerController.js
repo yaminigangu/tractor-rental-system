@@ -16,7 +16,8 @@ export async function getOwners(req, res, next) {
              pricing, village, district, dl_number as "dlNumber", rc_number as "rcNumber",
              aadhaar_number as "aadhaarNumber", bank_account as "bankAccount",
              ifsc_code as "ifscCode", upi_id as "upiId", photo, selfie_photo as "selfiePhoto",
-             is_verified as "isVerified", registered_at as "registeredAt", created_at as "createdAt"
+             is_verified as "isVerified", COALESCE(role, 'VEHICLE_OWNER') as role, COALESCE(is_active, TRUE) as "isActive",
+             registered_at as "registeredAt", created_at as "createdAt"
       FROM vehicle_owners
       WHERE 1=1
     `;
@@ -229,6 +230,37 @@ export async function deleteOwner(req, res, next) {
     res.json({
       message: `Vehicle owner "${result.rows[0].full_name}" permanently deleted from database`,
       deleted: result.rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PATCH /api/owners/:id/status
+ * Toggle or set owner active status (Admin only)
+ */
+export async function toggleOwnerStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const result = await query(
+      `UPDATE vehicle_owners
+       SET is_active = COALESCE($1, NOT is_active)
+       WHERE id = $2
+       RETURNING id, full_name as "fullName", mobile, is_active as "isActive", role`,
+      [isActive !== undefined ? Boolean(isActive) : null, parseInt(id, 10)]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Vehicle owner not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `Vehicle owner account ${result.rows[0].isActive ? 'activated' : 'deactivated'} successfully.`,
+      owner: result.rows[0]
     });
   } catch (err) {
     next(err);

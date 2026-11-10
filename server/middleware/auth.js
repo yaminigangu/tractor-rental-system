@@ -119,10 +119,61 @@ export function authenticateUser(req, res, next) {
 export function requireAuth(req, res, next) {
   if (!req.user) {
     return res.status(401).json({
-      error: 'Unauthorized: Valid authentication token is required to access your booking records.',
+      success: false,
+      error: 'Unauthorized: Valid authentication token is required.',
       code: 'AUTH_REQUIRED'
     });
   }
   next();
 }
+
+/**
+ * Standardize user role to canonical uppercase: 'FARMER', 'VEHICLE_OWNER', 'ADMIN'
+ */
+export function normalizeRole(role) {
+  if (!role) return '';
+  const r = String(role).toUpperCase().trim();
+  if (r === 'OWNER' || r === 'VEHICLE_OWNER' || r === 'CAPTAIN') return 'VEHICLE_OWNER';
+  if (r === 'FARMER' || r === 'CUSTOMER') return 'FARMER';
+  if (r === 'ADMIN' || r === 'ADMINISTRATOR') return 'ADMIN';
+  return r;
+}
+
+/**
+ * Role-Based Access Control (RBAC) middleware
+ * Returns 403 Forbidden if user role is not authorized
+ */
+export function requireRole(...allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized: Authentication required.',
+        code: 'AUTH_REQUIRED'
+      });
+    }
+
+    const userRole = normalizeRole(req.user.role);
+    const normalizedAllowed = allowedRoles.map(r => normalizeRole(r));
+
+    if (!normalizedAllowed.includes(userRole)) {
+      const isAdminOnly = normalizedAllowed.length === 1 && normalizedAllowed[0] === 'ADMIN';
+      return res.status(403).json({
+        success: false,
+        error: isAdminOnly
+          ? 'Forbidden: Admin access required'
+          : 'Forbidden: You do not have permission to access this resource or perform this action.',
+        code: 'FORBIDDEN',
+        requiredRole: allowedRoles.join(', '),
+        userRole: req.user.role
+      });
+    }
+
+    next();
+  };
+}
+
+export const requireAdmin = requireRole('ADMIN');
+export const requireFarmer = requireRole('FARMER');
+export const requireOwner = requireRole('VEHICLE_OWNER');
 

@@ -116,9 +116,13 @@ export async function apiSubmitCustomTractor(tractorData) {
 
 export async function apiUpdateTractorVerification(id, status, remarks = '') {
   try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/tractors/${id}/verification`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ status, remarks }),
       signal: AbortSignal.timeout(6000),
     });
@@ -176,14 +180,36 @@ export async function apiGetAdminTractors(status = 'all') {
 // =====================================================================
 export async function apiGetFarmers(filters = {}) {
   try {
+    const token = getStoredAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => v && params.append(k, v));
     const url = `${API_BASE}/farmers${params.toString() ? `?${params.toString()}` : ''}`;
 
-    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(3000) });
     if (res.ok) return await res.json();
   } catch {}
   return null;
+}
+
+export async function apiToggleFarmerStatus(id, isActive) {
+  try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/farmers/${id}/status`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ isActive }),
+      signal: AbortSignal.timeout(4000),
+    });
+    return await res.json();
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 }
 
 export async function apiGetFarmerByMobile(mobile) {
@@ -241,14 +267,36 @@ export async function apiDeleteFarmer(mobile) {
 // =====================================================================
 export async function apiGetOwners(filters = {}) {
   try {
+    const token = getStoredAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => v && params.append(k, v));
     const url = `${API_BASE}/owners${params.toString() ? `?${params.toString()}` : ''}`;
 
-    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(3000) });
     if (res.ok) return await res.json();
   } catch {}
   return null;
+}
+
+export async function apiToggleOwnerStatus(id, isActive) {
+  try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/owners/${id}/status`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ isActive }),
+      signal: AbortSignal.timeout(4000),
+    });
+    return await res.json();
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 }
 
 export async function apiGetOwnerByMobile(mobile) {
@@ -680,7 +728,11 @@ export async function apiDeleteBooking(id) {
 // =====================================================================
 export async function apiGetStats() {
   try {
-    const res = await fetch(`${API_BASE}/stats`, { signal: AbortSignal.timeout(3000) });
+    const token = getStoredAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/stats`, { headers, signal: AbortSignal.timeout(3000) });
     if (res.ok) return await res.json();
   } catch {}
   return null;

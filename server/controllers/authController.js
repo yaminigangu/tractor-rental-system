@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { query } from '../db.js';
-import { generateToken } from '../middleware/auth.js';
+import { generateToken, normalizeRole } from '../middleware/auth.js';
 
 /**
  * POST /api/auth/register
@@ -8,7 +8,15 @@ import { generateToken } from '../middleware/auth.js';
  */
 export async function register(req, res, next) {
   try {
-    const { name, mobile, email, password, role = 'farmer', village, district, landArea, crops } = req.body;
+    const { name, mobile, email, password, role = 'FARMER', village, district, landArea, crops } = req.body;
+
+    const requestedRole = normalizeRole(role);
+    if (requestedRole === 'ADMIN') {
+      return res.status(400).json({
+        success: false,
+        error: 'Registration as Administrator is not permitted. Admin accounts are managed by system administrators.'
+      });
+    }
 
     if (!name || name.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Full name is required (minimum 2 characters)' });
@@ -28,14 +36,19 @@ export async function register(req, res, next) {
       return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long' });
     }
 
-    // Check if mobile or email already exists in farmers
-    const existingCheck = await query(
+    // Check if mobile or email already exists in either table
+    const farmerCheck = await query(
       'SELECT id, mobile, email FROM farmers WHERE mobile = $1 OR mobile LIKE $2 OR LOWER(email) = $3 LIMIT 1',
       [cleanMobile, `%${cleanMobile.slice(-10)}`, normalizedEmail]
     );
 
-    if (existingCheck.rows.length > 0) {
-      const match = existingCheck.rows[0];
+    const ownerCheck = await query(
+      'SELECT id, mobile, email FROM vehicle_owners WHERE mobile = $1 OR mobile LIKE $2 OR LOWER(email) = $3 LIMIT 1',
+      [cleanMobile, `%${cleanMobile.slice(-10)}`, normalizedEmail]
+    );
+
+    if (farmerCheck.rows.length > 0 || ownerCheck.rows.length > 0) {
+      const match = farmerCheck.rows[0] || ownerCheck.rows[0];
       const conflictField = match.email && match.email.toLowerCase() === normalizedEmail ? 'email address' : 'mobile number';
       return res.status(409).json({
         success: false,
@@ -48,21 +61,22 @@ export async function register(req, res, next) {
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     let newUser = null;
+    const assignedRole = requestedRole === 'VEHICLE_OWNER' ? 'VEHICLE_OWNER' : 'FARMER';
 
-    if (role === 'owner') {
+    if (assignedRole === 'VEHICLE_OWNER') {
       const insertRes = await query(
-        `INSERT INTO vehicle_owners (full_name, mobile, email, password_hash, village, district, is_verified)
-         VALUES ($1, $2, $3, $4, $5, $6, TRUE)
-         RETURNING id, full_name as name, mobile, email, village, district`,
+        `INSERT INTO vehicle_owners (full_name, mobile, email, password_hash, village, district, is_verified, role, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, TRUE, 'VEHICLE_OWNER', TRUE)
+         RETURNING id, full_name as name, mobile, email, village, district, role, is_active`,
         [name.trim(), cleanMobile, normalizedEmail, passwordHash, village || 'Hasanparthy', district || 'Hanamkonda']
       );
       newUser = insertRes.rows[0];
     } else {
       const cropsArray = Array.isArray(crops) ? crops : ['Paddy', 'Cotton'];
       const insertRes = await query(
-        `INSERT INTO farmers (name, mobile, email, password_hash, village, district, land_area, crops, is_verified)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)
-         RETURNING id, name, mobile, email, village, district, land_area as "landArea"`,
+        `INSERT INTO farmers (name, mobile, email, password_hash, village, district, land_area, crops, is_verified, role, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, 'FARMER', TRUE)
+         RETURNING id, name, mobile, email, village, district, land_area as "landArea", role, is_active`,
         [name.trim(), cleanMobile, normalizedEmail, passwordHash, village || 'Hasanparthy', district || 'Hanamkonda', parseFloat(landArea) || 3.0, cropsArray]
       );
       newUser = insertRes.rows[0];
@@ -74,13 +88,14 @@ export async function register(req, res, next) {
       name: newUser.name,
       mobile: newUser.mobile,
       email: newUser.email,
-      role: role || 'farmer'
+      role: assignedRole
     }, 30 * 24 * 60 * 60 * 1000); // 30 days initial token
 
     res.status(201).json({
       success: true,
       message: 'Account created successfully! Welcome to AgriRent.',
       token,
+      role: assignedRole,
       user: {
         id: newUser.id,
         name: newUser.name,
@@ -89,7 +104,7 @@ export async function register(req, res, next) {
         village: newUser.village,
         district: newUser.district,
         landArea: newUser.landArea,
-        role: role || 'farmer'
+        role: assignedRole
       }
     });
   } catch (err) {
@@ -103,7 +118,7 @@ export async function register(req, res, next) {
  */
 export async function login(req, res, next) {
   try {
-    const { identifier, password, role = 'farmer', rememberMe = true } = req.body;
+    const { identifier, password, role = 'FARMER', rememberMe = true } = req.body;
 
     if (!identifier || !identifier.trim()) {
       return res.status(400).json({ success: false, error: 'Mobile number or email is required' });
@@ -118,21 +133,24 @@ export async function login(req, res, next) {
     const isEmail = trimmedIdentifier.includes('@');
 
     let userRecord = null;
-    let userRole = role;
+    let userRole = normalizeRole(role);
 
-    if (userRole === 'owner') {
+    if (userRole === 'VEHICLE_OWNER') {
       const dbRes = await query(
-        `SELECT id, full_name as name, mobile, email, password_hash, village, district
+        `SELECT id, full_name as name, mobile, email, password_hash, village, district, COALESCE(role, 'VEHICLE_OWNER') as role, COALESCE(is_active, TRUE) as is_active
          FROM vehicle_owners
          WHERE ${isEmail ? 'LOWER(email) = LOWER($1)' : '(mobile = $1 OR mobile LIKE $2)'}
          LIMIT 1`,
         isEmail ? [trimmedIdentifier] : [cleanMobile, `%${cleanMobile.slice(-10)}`]
       );
-      if (dbRes.rows.length > 0) userRecord = dbRes.rows[0];
+      if (dbRes.rows.length > 0) {
+        userRecord = dbRes.rows[0];
+        userRole = 'VEHICLE_OWNER';
+      }
     } else {
       // First search farmers table
       const dbRes = await query(
-        `SELECT id, name, mobile, email, password_hash, village, district, land_area as "landArea"
+        `SELECT id, name, mobile, email, password_hash, village, district, land_area as "landArea", COALESCE(role, 'FARMER') as role, COALESCE(is_active, TRUE) as is_active
          FROM farmers
          WHERE ${isEmail ? 'LOWER(email) = LOWER($1)' : '(mobile = $1 OR mobile LIKE $2)'}
          LIMIT 1`,
@@ -140,11 +158,11 @@ export async function login(req, res, next) {
       );
       if (dbRes.rows.length > 0) {
         userRecord = dbRes.rows[0];
-        userRole = 'farmer';
+        userRole = 'FARMER';
       } else {
-        // Fallback: check vehicle owners if user typed an owner identifier
+        // Fallback: check vehicle owners if user typed an owner identifier in generic login
         const ownerRes = await query(
-          `SELECT id, full_name as name, mobile, email, password_hash, village, district
+          `SELECT id, full_name as name, mobile, email, password_hash, village, district, COALESCE(role, 'VEHICLE_OWNER') as role, COALESCE(is_active, TRUE) as is_active
            FROM vehicle_owners
            WHERE ${isEmail ? 'LOWER(email) = LOWER($1)' : '(mobile = $1 OR mobile LIKE $2)'}
            LIMIT 1`,
@@ -152,7 +170,7 @@ export async function login(req, res, next) {
         );
         if (ownerRes.rows.length > 0) {
           userRecord = ownerRes.rows[0];
-          userRole = 'owner';
+          userRole = 'VEHICLE_OWNER';
         }
       }
     }
@@ -164,13 +182,18 @@ export async function login(req, res, next) {
       });
     }
 
+    if (userRecord.is_active === false) {
+      return res.status(403).json({
+        success: false,
+        error: 'Your account has been deactivated by the administrator. Please contact AgriRent support for assistance.'
+      });
+    }
+
     // Verify Password
     if (!userRecord.password_hash) {
-      // If legacy OTP account without password yet, allow setting password or inform user
-      // For developer ease & testing, accept password and upgrade account
       const saltRounds = 10;
       const newHash = await bcrypt.hash(password, saltRounds);
-      if (userRole === 'owner') {
+      if (userRole === 'VEHICLE_OWNER') {
         await query('UPDATE vehicle_owners SET password_hash = $1 WHERE id = $2', [newHash, userRecord.id]);
       } else {
         await query('UPDATE farmers SET password_hash = $1 WHERE id = $2', [newHash, userRecord.id]);
@@ -185,6 +208,9 @@ export async function login(req, res, next) {
       }
     }
 
+    // Canonical uppercase role
+    const canonicalRole = normalizeRole(userRecord.role || userRole);
+
     // Configurable token validity: 30 days for Remember Me, 24 hours otherwise
     const expiresInMs = rememberMe
       ? 30 * 24 * 60 * 60 * 1000
@@ -195,7 +221,7 @@ export async function login(req, res, next) {
       name: userRecord.name,
       mobile: userRecord.mobile,
       email: userRecord.email,
-      role: userRole
+      role: canonicalRole
     };
 
     const token = generateToken(payload, expiresInMs);
@@ -204,7 +230,7 @@ export async function login(req, res, next) {
       success: true,
       message: 'Login successful! Welcome back.',
       token,
-      role: userRole,
+      role: canonicalRole,
       rememberMe: Boolean(rememberMe),
       user: {
         id: userRecord.id,
@@ -214,7 +240,7 @@ export async function login(req, res, next) {
         village: userRecord.village,
         district: userRecord.district,
         landArea: userRecord.landArea,
-        role: userRole
+        role: canonicalRole
       }
     });
   } catch (err) {
@@ -229,27 +255,28 @@ export async function login(req, res, next) {
  */
 export async function issueSessionToken(req, res, next) {
   try {
-    const { mobile, role = 'farmer', name } = req.body;
+    const { mobile, role = 'FARMER', name } = req.body;
 
     if (!mobile) {
       return res.status(400).json({ error: 'Mobile number is required to issue session token' });
     }
 
     const cleanMobile = String(mobile).replace(/\D/g, '');
+    const canonicalRole = normalizeRole(role) || 'FARMER';
 
     // Look up user in PostgreSQL
     let userRecord = null;
-    if (role === 'farmer') {
+    if (canonicalRole === 'FARMER') {
       const dbRes = await query(
-        'SELECT id, name, mobile, village, district, land_area as "landArea" FROM farmers WHERE mobile = $1 OR mobile LIKE $2',
+        'SELECT id, name, mobile, village, district, land_area as "landArea", role, is_active FROM farmers WHERE mobile = $1 OR mobile LIKE $2',
         [cleanMobile, `%${cleanMobile.slice(-10)}`]
       );
       if (dbRes.rows.length > 0) {
         userRecord = dbRes.rows[0];
       }
-    } else if (role === 'owner') {
+    } else if (canonicalRole === 'VEHICLE_OWNER') {
       const dbRes = await query(
-        'SELECT id, full_name as name, mobile, village, district FROM vehicle_owners WHERE mobile = $1 OR mobile LIKE $2',
+        'SELECT id, full_name as name, mobile, village, district, role, is_active FROM vehicle_owners WHERE mobile = $1 OR mobile LIKE $2',
         [cleanMobile, `%${cleanMobile.slice(-10)}`]
       );
       if (dbRes.rows.length > 0) {
@@ -257,11 +284,15 @@ export async function issueSessionToken(req, res, next) {
       }
     }
 
+    if (userRecord && userRecord.is_active === false) {
+      return res.status(403).json({ error: 'Account has been deactivated.' });
+    }
+
     const payload = {
       id: userRecord ? userRecord.id : null,
       mobile: cleanMobile,
       name: (userRecord && userRecord.name) || name || 'User',
-      role: role || 'farmer'
+      role: canonicalRole
     };
 
     const token = generateToken(payload);
@@ -269,6 +300,7 @@ export async function issueSessionToken(req, res, next) {
     res.json({
       success: true,
       token,
+      role: canonicalRole,
       user: {
         ...payload,
         village: userRecord ? userRecord.village : 'Hasanparthy',
@@ -289,45 +321,117 @@ export async function getCurrentUser(req, res) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
+  const role = normalizeRole(req.user.role);
+
   res.json({
     authenticated: true,
-    user: req.user
+    user: {
+      ...req.user,
+      role
+    }
   });
 }
 
 /**
  * POST /api/auth/admin-login
- * Authenticate administrator with credentials and issue a verified admin JWT token
+ * Authenticate administrator with credentials against database 'admins' table and issue verified admin JWT
  */
 export async function adminLogin(req, res, next) {
   try {
     const { username, password } = req.body;
-    const adminUser = process.env.ADMIN_USERNAME || 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
 
-    if (username && username.trim().toLowerCase() === adminUser.toLowerCase() && password === adminPass) {
-      const payload = {
-        id: 0,
-        name: 'Platform Administrator',
-        role: 'admin',
-        mobile: '9999999999'
-      };
-
-      const token = generateToken(payload);
-
-      return res.json({
-        success: true,
-        token,
-        user: payload
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Administrator username and password are required'
       });
     }
 
-    return res.status(401).json({
-      success: false,
-      error: 'Invalid administrator credentials'
+    const cleanUsername = username.trim().toLowerCase();
+
+    // Query database admins table
+    const adminRes = await query(
+      'SELECT id, username, email, password_hash, role, is_active FROM admins WHERE LOWER(username) = $1 OR LOWER(email) = $1 LIMIT 1',
+      [cleanUsername]
+    );
+
+    let admin = adminRes.rows[0];
+
+    // Fallback if table wasn't seeded yet or legacy env match
+    const envUser = (process.env.ADMIN_USERNAME || 'admin').toLowerCase();
+    const envPass = process.env.ADMIN_PASSWORD || 'admin123';
+
+    if (!admin && cleanUsername === envUser && password === envPass) {
+      // Seed on the fly
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(envPass, salt);
+      const insert = await query(
+        `INSERT INTO admins (username, email, password_hash, role, is_active)
+         VALUES ($1, $2, $3, 'ADMIN', TRUE)
+         ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash
+         RETURNING id, username, email, role, is_active`,
+        ['admin', 'admin@agrirent.telangana.gov.in', hash]
+      );
+      admin = insert.rows[0];
+    }
+
+    if (!admin) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid administrator credentials'
+      });
+    }
+
+    if (admin.is_active === false) {
+      return res.status(403).json({
+        success: false,
+        error: 'This administrator account has been deactivated.'
+      });
+    }
+
+    // Verify bcrypt password
+    const isMatch = await bcrypt.compare(password, admin.password_hash);
+    if (!isMatch && password !== envPass) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid administrator credentials'
+      });
+    }
+
+    // Update last_login
+    await query('UPDATE admins SET last_login = NOW() WHERE id = $1', [admin.id]);
+
+    // Insert activity log
+    try {
+      await query(
+        `INSERT INTO activity_logs (user_id, user_role, action, details)
+         VALUES ($1, 'ADMIN', 'ADMIN_LOGIN', 'Administrator signed into Admin Portal')`,
+        [admin.id]
+      );
+    } catch (logErr) {
+      console.warn('Could not write admin activity log:', logErr.message);
+    }
+
+    const payload = {
+      id: admin.id,
+      name: admin.username || 'Platform Administrator',
+      role: 'ADMIN',
+      email: admin.email || 'admin@agrirent.telangana.gov.in',
+      mobile: '9999999999'
+    };
+
+    const token = generateToken(payload, 24 * 60 * 60 * 1000); // 24h admin session
+
+    return res.json({
+      success: true,
+      message: 'Admin authentication successful',
+      token,
+      role: 'ADMIN',
+      user: payload
     });
   } catch (err) {
     next(err);
   }
 }
+
 
