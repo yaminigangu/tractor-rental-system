@@ -463,6 +463,7 @@ function App() {
             onGoBack={handleGoBack}
             onBookingSuccess={(newB) => setReceiptModalBooking(newB)}
             language={language}
+            setLanguage={setLanguage}
             selectedLocation={selectedLocation}
             currentFarmer={currentFarmer}
           />
@@ -476,6 +477,7 @@ function App() {
             setCurrentFarmer={handleSetCurrentFarmer}
             setOnboardingMobile={setOnboardingMobile}
             language={language}
+            setLanguage={setLanguage}
             selectedLocation={selectedLocation}
           />
         );
@@ -487,6 +489,7 @@ function App() {
             setActivePage={handleNavigate}
             onGoBack={handleGoBack}
             language={language}
+            setLanguage={setLanguage}
             currentOwner={currentOwner}
             setCurrentOwner={handleSetCurrentOwner}
             selectedLocation={selectedLocation}
@@ -546,6 +549,7 @@ function App() {
             setActivePage={handleNavigate}
             onGoBack={handleGoBack}
             language={language}
+            setLanguage={setLanguage}
           />
         );
       default:
