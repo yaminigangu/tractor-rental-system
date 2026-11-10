@@ -232,21 +232,11 @@ export default function OwnerInbox({
 
   return (
     <div className="page-anim">
-      <div className="section-header" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+      <div className="section-header" style={{ marginBottom: '20px' }}>
         <div>
           <h3>{t.ownerInboxTitle}</h3>
           <p>{t.ownerInboxSubtitle}</p>
         </div>
-        {currentOwner && onOwnerDeleteAccount && (
-          <button
-            type="button"
-            className="danger-account-btn"
-            onClick={onOwnerDeleteAccount}
-            title={isTe ? 'వాహన యజమాని ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Vehicle Owner Account'}
-          >
-            🗑️ {isTe ? 'యజమాని ఖాతా తొలగించండి' : 'Delete Owner Account'}
-          </button>
-        )}
       </div>
 
       {/* Top View Selector: Farmer Bookings vs My Tractor Listings */}

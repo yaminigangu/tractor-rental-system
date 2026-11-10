@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import StatCard from '../components/StatCard';
 import { translations } from '../translations';
 import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';

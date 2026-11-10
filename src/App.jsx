@@ -161,6 +161,7 @@ function App() {
 
   const [activeRole, setActiveRole] = useState('farmer'); // 'farmer', 'owner', 'admin'
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [serviceFilter, setServiceFilter] = useState('All');
   const [selectedTractor, setSelectedTractor] = useState(null);
   const [receiptModalBooking, setReceiptModalBooking] = useState(null);
@@ -760,7 +761,7 @@ function App() {
   const showTopHeader = isUserLoggedIn && !isAuthPage;
 
   return (
-    <div className={`app-layout ${!showTopHeader ? 'auth-mode' : ''}`}>
+    <div className={`app-layout ${!showTopHeader ? 'auth-mode' : ''} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {/* Sidebar Navigation: Only shown after logging in */}
       {showTopHeader && (
         <Sidebar
@@ -769,6 +770,8 @@ function App() {
           pendingCount={pendingCount}
           isMobileOpen={isMobileOpen}
           closeMobileMenu={() => setIsMobileOpen(false)}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
           language={language}
           setLanguage={setLanguage}
           selectedLocation={selectedLocation}
@@ -783,8 +786,6 @@ function App() {
           onAdminLogout={handleAdminLogout}
           adminActiveTab={adminActiveTab}
           setAdminActiveTab={setAdminActiveTab}
-          isInstalled={pwa.isInstalled}
-          onInstallApp={pwa.promptInstall}
         />
       )}
 
@@ -814,7 +815,7 @@ function App() {
       )}
 
       {/* Main Content Area */}
-      <div className={`main-content ${!showTopHeader ? 'full-width' : ''}`}>
+      <div className={`main-content ${!showTopHeader ? 'full-width' : ''} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         {/* Offline / Online Network Detection Status Bar */}
         <OfflineNotificationBanner language={language} />
 
@@ -825,6 +826,8 @@ function App() {
             setActivePage={handleNavigate}
             onGoBack={handleGoBack}
             toggleMobileMenu={() => setIsMobileOpen(prev => !prev)}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
             activeRole={activeRole}
             setActiveRole={handleRoleChange}
             language={language}

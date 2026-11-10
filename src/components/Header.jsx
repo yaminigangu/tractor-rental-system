@@ -23,7 +23,9 @@ export default function Header({
   onOwnerLogout,
   onOwnerDeleteAccount,
   isInstalled = false,
-  onInstallApp
+  onInstallApp,
+  isCollapsed = false,
+  onToggleCollapse
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
@@ -33,6 +35,10 @@ export default function Header({
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
+
+  // Minimalist Profile Dropdown
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef(null);
 
   const fetchNotifications = async () => {
     try {
@@ -56,6 +62,9 @@ export default function Header({
     function handleClickOutside(e) {
       if (notifRef.current && !notifRef.current.contains(e.target)) {
         setIsNotifOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setIsProfileOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -249,6 +258,17 @@ export default function Header({
           <span className="header-menu-icon">☰</span>
           <span className="header-menu-text">{isTe ? "మెనూ" : "Menu"}</span>
         </button>
+        {onToggleCollapse && (
+          <button
+            type="button"
+            className="header-collapse-toggle-btn"
+            onClick={onToggleCollapse}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={isCollapsed ? (isTe ? "సైడ్‌బార్ విస్తరించండి" : "Expand Sidebar") : (isTe ? "సైడ్‌బార్ కుదించండి" : "Collapse Sidebar")}
+          >
+            {isCollapsed ? '⇥' : '⇤'}
+          </button>
+        )}
         <div className="header-mobile-brand">
           <span className="brand-icon">🌾</span>
           <span className="brand-title">{t.brandName}</span>
@@ -437,74 +457,174 @@ export default function Header({
           <span className="lang-text-mobile">{language === 'en' ? 'తెలుగు' : 'EN'}</span>
         </button>
 
-        {/* Farmer Profile Badge Chip Button (Opens Full Profile Modal & Edit Form) */}
-        {currentFarmer && (
-          <div className="header-logged-in-user">
+        {/* Single Minimalistic Profile Icon Button & Dropdown */}
+        {(currentFarmer || currentOwner || isAdminLoggedIn) && (
+          <div ref={profileRef} className="header-profile-menu-wrapper">
             <button
               type="button"
-              className="header-user-badge farmer-badge farmer-profile-chip-btn"
-              onClick={onOpenFarmerProfile || (() => setActivePage && setActivePage('farmer-profile'))}
-              title={isTe ? 'రైతు ప్రొఫైల్ వివరాలు, సవరణ & ఖాతా సెట్టింగ్‌లు' : 'Farmer Profile, Edit Details & Settings'}
-              aria-label="Open Farmer Profile"
+              className={`header-profile-btn ${isProfileOpen ? 'active' : ''}`}
+              onClick={() => setIsProfileOpen(prev => !prev)}
+              aria-label={isTe ? "ప్రొఫైల్ మెనూ" : "User Profile & Account"}
+              aria-expanded={isProfileOpen}
+              title={isTe ? "ప్రొఫైల్ మరియు ఖాతా మెనూ" : "Profile & Account"}
             >
-              <span className="user-badge-avatar">👨‍🌾</span>
-              <span className="user-badge-name">
-                {currentFarmer.name ? currentFarmer.name.split(' ')[0] : (isTe ? 'రైతు' : 'Farmer')}
+              <span className="profile-btn-avatar">
+                {currentFarmer ? '👨‍🌾' : (currentOwner ? '🚜' : '🛡️')}
               </span>
-              <span className="farmer-badge-role-tag">
-                <span className="badge-status-dot">●</span>
-                {isTe ? 'ప్రొఫైల్' : 'Profile'}
-              </span>
-              <span className="user-badge-chevron">▾</span>
+              <span className="profile-btn-chevron">▾</span>
             </button>
-          </div>
-        )}
 
-        {!currentFarmer && currentOwner && (
-          <div className="header-logged-in-user">
-            <div className="header-user-badge owner-badge">
-              <span className="user-badge-avatar">🚜</span>
-              <span className="user-badge-name">{currentOwner.fullName ? currentOwner.fullName.split(' ')[0] : 'Owner'}</span>
-              <span className="user-badge-role">({isTe ? 'వాహన యజమాని' : 'Vehicle Owner'})</span>
-            </div>
-            {onOwnerLogout && (
-              <button
-                type="button"
-                className="header-logout-btn"
-                onClick={onOwnerLogout}
-                title={isTe ? "లాగ్అవుట్" : "Logout"}
-              >
-                🚪 <span className="header-btn-text">{isTe ? 'లాగ్అవుట్' : 'Logout'}</span>
-              </button>
-            )}
-            {onOwnerDeleteAccount && (
-              <button
-                type="button"
-                className="header-delete-btn"
-                onClick={onOwnerDeleteAccount}
-                title={isTe ? "వాహన యజమాని ఖాతాను శాశ్వతంగా తొలగించండి" : "Permanently Delete Vehicle Owner Account"}
-              >
-                🗑️ <span className="header-btn-text">{isTe ? 'ఖాతా తొలగించు' : 'Delete Account'}</span>
-              </button>
-            )}
-          </div>
-        )}
+            {isProfileOpen && (
+              <div className="profile-dropdown-menu">
+                {/* User Summary Header */}
+                <div className="dropdown-user-header">
+                  <div className="dropdown-avatar-circle">
+                    {currentFarmer ? '👨‍🌾' : (currentOwner ? '🚜' : '🛡️')}
+                  </div>
+                  <div className="dropdown-user-meta">
+                    <strong className="dropdown-user-name">
+                      {currentFarmer
+                        ? currentFarmer.name || (isTe ? 'రైతు' : 'Farmer')
+                        : currentOwner
+                        ? currentOwner.fullName || currentOwner.owner || (isTe ? 'వాహన యజమాని' : 'Vehicle Owner')
+                        : 'System Admin'}
+                    </strong>
+                    <div className="dropdown-role-pill">
+                      <span className="dropdown-status-dot">●</span>
+                      <span>
+                        {currentFarmer
+                          ? (isTe ? 'రైతు' : 'Farmer')
+                          : currentOwner
+                          ? (isTe ? 'వాహన యజమాని' : 'Vehicle Owner')
+                          : (isTe ? 'అడ్మినిస్ట్రేటర్' : 'Administrator')}
+                      </span>
+                    </div>
+                    <span className="dropdown-subtext">
+                      {currentFarmer
+                        ? (currentFarmer.mobile ? `+91 ${currentFarmer.mobile}` : (currentFarmer.village || 'Telangana'))
+                        : currentOwner
+                        ? (currentOwner.mobile ? `+91 ${currentOwner.mobile}` : (currentOwner.rcNumber || 'Owner'))
+                        : 'admin@agrirent.local'}
+                    </span>
+                  </div>
+                </div>
 
-        {!currentFarmer && !currentOwner && isAdminLoggedIn && (
-          <div className="header-logged-in-user">
-            <div className="header-user-badge admin-badge">
-              <span className="user-badge-avatar">🛡️</span>
-              <span className="user-badge-name">Admin</span>
-            </div>
-            {onAdminLogout && (
-              <button
-                type="button"
-                className="header-logout-btn"
-                onClick={onAdminLogout}
-                title={isTe ? "లాగ్అవుట్" : "Logout"}
-              >
-                🚪 {isTe ? 'లాగ్అవుట్' : 'Logout'}
-              </button>
+                <div className="dropdown-divider" />
+
+                {/* Profile & Settings Links */}
+                <div className="dropdown-items-group">
+                  {currentFarmer && (
+                    <button
+                      type="button"
+                      className="dropdown-menu-item"
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        if (onOpenFarmerProfile) onOpenFarmerProfile();
+                        else if (setActivePage) setActivePage('farmer-profile');
+                      }}
+                    >
+                      <span className="dropdown-item-icon">👤</span>
+                      <span>{isTe ? 'నా ప్రొఫైల్' : 'My Profile'}</span>
+                    </button>
+                  )}
+
+                  {currentOwner && (
+                    <button
+                      type="button"
+                      className="dropdown-menu-item"
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        if (setActivePage) setActivePage('owner-inbox');
+                      }}
+                    >
+                      <span className="dropdown-item-icon">👤</span>
+                      <span>{isTe ? 'నా ప్రొఫైల్ / వివరాలు' : 'My Profile & Details'}</span>
+                    </button>
+                  )}
+
+                  {isAdminLoggedIn && (
+                    <button
+                      type="button"
+                      className="dropdown-menu-item"
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        if (setActivePage) setActivePage('admin-dashboard');
+                      }}
+                    >
+                      <span className="dropdown-item-icon">📊</span>
+                      <span>{isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard'}</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className="dropdown-menu-item"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      if (currentFarmer) {
+                        if (onOpenFarmerProfile) onOpenFarmerProfile();
+                        else if (setActivePage) setActivePage('farmer-profile');
+                      } else if (currentOwner) {
+                        if (setActivePage) setActivePage('owner-registration');
+                      } else if (isAdminLoggedIn) {
+                        if (setActivePage) setActivePage('admin-dashboard');
+                      }
+                    }}
+                  >
+                    <span className="dropdown-item-icon">⚙️</span>
+                    <span>{isTe ? 'ఖాతా సెట్టింగ్‌లు' : 'Account Settings'}</span>
+                  </button>
+                </div>
+
+                <div className="dropdown-divider" />
+
+                {/* Logout & Delete Account Danger Actions */}
+                <div className="dropdown-items-group">
+                  <button
+                    type="button"
+                    className="dropdown-menu-item dropdown-logout-item"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      if (currentFarmer && onFarmerLogout) onFarmerLogout();
+                      else if (currentOwner && onOwnerLogout) onOwnerLogout();
+                      else if (isAdminLoggedIn && onAdminLogout) onAdminLogout();
+                    }}
+                  >
+                    <span className="dropdown-item-icon">🚪</span>
+                    <span>{isTe ? 'లాగ్‌అవుట్' : 'Logout'}</span>
+                  </button>
+
+                  {currentFarmer && onFarmerDeleteAccount && (
+                    <button
+                      type="button"
+                      className="dropdown-menu-item dropdown-danger-item"
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        onFarmerDeleteAccount();
+                      }}
+                      title={isTe ? 'రైతు ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Farmer Account'}
+                    >
+                      <span className="dropdown-item-icon">🗑️</span>
+                      <span>{isTe ? 'ఖాతా తొలగించు' : 'Delete Account'}</span>
+                    </button>
+                  )}
+
+                  {!currentFarmer && currentOwner && onOwnerDeleteAccount && (
+                    <button
+                      type="button"
+                      className="dropdown-menu-item dropdown-danger-item"
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        onOwnerDeleteAccount();
+                      }}
+                      title={isTe ? 'వాహన యజమాని ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Vehicle Owner Account'}
+                    >
+                      <span className="dropdown-item-icon">🗑️</span>
+                      <span>{isTe ? 'ఖాతా తొలగించు' : 'Delete Account'}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}

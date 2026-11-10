@@ -178,29 +178,12 @@ export default function MyBookings({
             ← {isTe ? 'వెనుకకు' : 'Back'}
           </button>
           <div>
-            <div className="bookings-title-row">
-              <h2 className="my-bookings-main-title">{t.myBookingsTitle}</h2>
-              {currentFarmer && (
-                <span className="farmer-auth-badge">
-                  👨‍🌾 {currentFarmer.name || 'Farmer'} ({isTe ? 'ధృవీకరించబడిన ఖాతా' : 'Verified Session'})
-                </span>
-              )}
-            </div>
+            <h2 className="my-bookings-main-title">{t.myBookingsTitle}</h2>
             <p className="my-bookings-subtitle">{t.myBookingsSubtitle}</p>
           </div>
         </div>
 
         <div className="header-actions-group">
-          {currentFarmer && onFarmerDeleteAccount && (
-            <button
-              type="button"
-              className="danger-account-btn"
-              onClick={onFarmerDeleteAccount}
-              title={isTe ? 'రైతు ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Farmer Account'}
-            >
-              🗑️ {isTe ? 'రైతు ఖాతా తొలగించండి' : 'Delete Farmer Account'}
-            </button>
-          )}
           <button className="btn btn-primary" onClick={() => setActivePage('booking-form')}>
             {t.btnNewBooking}
           </button>
