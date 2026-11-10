@@ -32,9 +32,13 @@ export default function Sidebar({
     }
 
     // Role-specific action intercepts
-    if (id === 'farmer-profile') {
-      if (onOpenFarmerProfile) onOpenFarmerProfile();
-      else setActivePage('farmer-profile');
+    if (id === 'farmer-profile' || id === 'profile') {
+      setActivePage('profile');
+      return;
+    }
+
+    if (id === 'account-settings') {
+      setActivePage('account-settings');
       return;
     }
 
@@ -207,18 +211,20 @@ export default function Sidebar({
           })}
         </nav>
 
-        {/* Minimalist Bottom Footer */}
-        <div className="sidebar-footer">
-          <div className="helpline-compact" title={`Toll-Free Helpline: ${helplineNum} (${villageName})`}>
-            <span className="helpline-icon">📞</span>
-            {!isCollapsed && (
-              <div className="helpline-text-block">
-                <span className="helpline-label">{isTe ? 'హెల్ప్‌లైన్' : 'Helpline'}</span>
-                <span className="helpline-number">{helplineNum}</span>
-              </div>
-            )}
+        {/* Minimalist Bottom Footer - Excluded from Vehicle Owner per requirement 3 */}
+        {!currentOwner && (
+          <div className="sidebar-footer">
+            <div className="helpline-compact" title={`Toll-Free Helpline: ${helplineNum} (${villageName})`}>
+              <span className="helpline-icon">📞</span>
+              {!isCollapsed && (
+                <div className="helpline-text-block">
+                  <span className="helpline-label">{isTe ? 'హెల్ప్‌లైన్' : 'Helpline'}</span>
+                  <span className="helpline-number">{helplineNum}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </aside>
     </>
   );

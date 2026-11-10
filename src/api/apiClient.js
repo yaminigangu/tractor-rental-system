@@ -801,3 +801,81 @@ export async function apiGetOtpStatus() {
   } catch {}
   return { isLive: false, mode: 'Offline / Simulator' };
 }
+
+// =====================================================================
+// PROFILE & ACCOUNT SETTINGS
+// =====================================================================
+export async function apiGetProfile(params = {}) {
+  try {
+    const token = getStoredAuthToken();
+    const query = new URLSearchParams(params).toString();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/auth/profile?${query}`, {
+      headers,
+      signal: AbortSignal.timeout(6000)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('apiGetProfile error:', err);
+    return { success: false, error: 'Network error fetching profile' };
+  }
+}
+
+export async function apiUpdateProfile(profileData) {
+  try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/auth/profile`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(profileData),
+      signal: AbortSignal.timeout(6000)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('apiUpdateProfile error:', err);
+    return { success: false, error: 'Network error updating profile' };
+  }
+}
+
+export async function apiChangePassword({ currentPassword, newPassword, confirmPassword, role, mobile, email }) {
+  try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/auth/change-password`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword, role, mobile, email }),
+      signal: AbortSignal.timeout(6000)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('apiChangePassword error:', err);
+    return { success: false, error: 'Network error changing password' };
+  }
+}
+
+export async function apiDeleteAccount({ role, mobile, email } = {}) {
+  try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/auth/delete-account`, {
+      method: 'DELETE',
+      headers,
+      body: JSON.stringify({ role, mobile, email }),
+      signal: AbortSignal.timeout(6000)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('apiDeleteAccount error:', err);
+    return { success: false, error: 'Network error deleting account' };
+  }
+}

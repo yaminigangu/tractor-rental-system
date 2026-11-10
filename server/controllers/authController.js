@@ -434,4 +434,297 @@ export async function adminLogin(req, res, next) {
   }
 }
 
+/**
+ * Helper to resolve user from req.user or request context
+ */
+async function resolveUserFromReq(req) {
+  let role = req.user ? normalizeRole(req.user.role) : null;
+  let id = req.user ? req.user.id : null;
+  let mobile = req.user ? req.user.mobile : null;
+  let email = req.user ? req.user.email : null;
+
+  // Fallback to request query or headers if JWT was not provided
+  if (!id && !mobile && !email) {
+    role = normalizeRole(req.query.role || req.headers['x-user-role'] || req.body.role) || 'FARMER';
+    mobile = req.query.mobile || req.headers['x-user-mobile'] || req.body.mobile || null;
+    email = req.query.email || req.headers['x-user-email'] || req.body.email || null;
+    id = req.query.id || req.body.id || null;
+  }
+
+  const cleanMobile = mobile ? String(mobile).replace(/\D/g, '') : null;
+
+  if (role === 'ADMIN') {
+    let dbRes;
+    if (id) {
+      dbRes = await query('SELECT * FROM admins WHERE id = $1 LIMIT 1', [id]);
+    } else if (email) {
+      dbRes = await query('SELECT * FROM admins WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1) LIMIT 1', [email]);
+    } else {
+      dbRes = await query('SELECT * FROM admins LIMIT 1');
+    }
+    return dbRes.rows[0] ? { ...dbRes.rows[0], role: 'ADMIN' } : null;
+  }
+
+  if (role === 'VEHICLE_OWNER') {
+    let dbRes;
+    if (id) {
+      dbRes = await query('SELECT * FROM vehicle_owners WHERE id = $1 LIMIT 1', [id]);
+    } else if (cleanMobile) {
+      dbRes = await query('SELECT * FROM vehicle_owners WHERE mobile = $1 OR mobile LIKE $2 LIMIT 1', [cleanMobile, `%${cleanMobile.slice(-10)}`]);
+    } else if (email) {
+      dbRes = await query('SELECT * FROM vehicle_owners WHERE LOWER(email) = LOWER($1) LIMIT 1', [email]);
+    }
+    return dbRes?.rows[0] ? { ...dbRes.rows[0], role: 'VEHICLE_OWNER' } : null;
+  }
+
+  // Default: Farmer
+  let dbRes;
+  if (id) {
+    dbRes = await query('SELECT * FROM farmers WHERE id = $1 LIMIT 1', [id]);
+  } else if (cleanMobile) {
+    dbRes = await query('SELECT * FROM farmers WHERE mobile = $1 OR mobile LIKE $2 LIMIT 1', [cleanMobile, `%${cleanMobile.slice(-10)}`]);
+  } else if (email) {
+    dbRes = await query('SELECT * FROM farmers WHERE LOWER(email) = LOWER($1) LIMIT 1', [email]);
+  }
+  return dbRes?.rows[0] ? { ...dbRes.rows[0], role: 'FARMER' } : null;
+}
+
+/**
+ * GET /api/auth/profile
+ * Retrieves genuine user profile details from PostgreSQL database
+ */
+export async function getUserProfile(req, res, next) {
+  try {
+    const user = await resolveUserFromReq(req);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User profile not found in database' });
+    }
+
+    if (user.role === 'ADMIN') {
+      return res.json({
+        success: true,
+        profile: {
+          id: user.id,
+          name: user.full_name || user.username || 'System Administrator',
+          username: user.username,
+          email: user.email || 'admin@agrirent.telangana.gov.in',
+          mobile: user.mobile || '9999999999',
+          role: 'ADMIN',
+          district: user.district || 'Hanumakonda',
+          mandal: user.mandal || 'Hasanparthy',
+          address: user.district ? `${user.mandal || ''}, ${user.district}` : 'Telangana Secretariat',
+          profilePhoto: user.profile_photo || null,
+          registrationDate: user.created_at || new Date().toISOString()
+        }
+      });
+    }
+
+    if (user.role === 'VEHICLE_OWNER') {
+      return res.json({
+        success: true,
+        profile: {
+          id: user.id,
+          name: user.full_name || 'Vehicle Owner',
+          email: user.email || '',
+          mobile: user.mobile || '',
+          role: 'VEHICLE_OWNER',
+          district: user.district || 'Hanumakonda',
+          mandal: user.mandal || user.village || 'Hasanparthy',
+          address: user.village || '',
+          rcNumber: user.rc_number || '',
+          tractorModel: user.tractor_model || '',
+          profilePhoto: user.profile_photo || user.photo || null,
+          registrationDate: user.registered_at || user.created_at || new Date().toISOString()
+        }
+      });
+    }
+
+    // Farmer
+    return res.json({
+      success: true,
+      profile: {
+        id: user.id,
+        name: user.name || 'Farmer',
+        email: user.email || '',
+        mobile: user.mobile || '',
+        role: 'FARMER',
+        district: user.district || 'Hanumakonda',
+        mandal: user.mandal || user.village || 'Hasanparthy',
+        address: user.village || '',
+        landArea: user.land_area || '3.0',
+        crops: user.crops || ['Paddy'],
+        passbookNo: user.passbook_no || '',
+        profilePhoto: user.profile_photo || null,
+        registrationDate: user.registered_at || user.created_at || new Date().toISOString()
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PUT /api/auth/profile
+ * Updates user profile information and persists directly to PostgreSQL
+ */
+export async function updateUserProfile(req, res, next) {
+  try {
+    const user = await resolveUserFromReq(req);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User profile not found in database' });
+    }
+
+    const { name, email, mobile, district, mandal, address, village, profilePhoto, landArea, crops } = req.body;
+
+    if (!name || name.trim().length < 2) {
+      return res.status(400).json({ success: false, error: 'Name must be at least 2 characters long' });
+    }
+
+    const cleanMobile = mobile ? String(mobile).replace(/\D/g, '') : user.mobile;
+    if (cleanMobile && cleanMobile.length < 10) {
+      return res.status(400).json({ success: false, error: 'Mobile number must be at least 10 digits' });
+    }
+
+    const normEmail = email ? email.trim().toLowerCase() : user.email;
+    if (normEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normEmail)) {
+      return res.status(400).json({ success: false, error: 'Invalid email address format' });
+    }
+
+    const targetVillage = address || village || user.village || 'Hasanparthy';
+    const targetDistrict = district || user.district || 'Hanumakonda';
+    const targetMandal = mandal || user.mandal || targetVillage;
+
+    let updatedUser = null;
+
+    if (user.role === 'ADMIN') {
+      const result = await query(
+        `UPDATE admins 
+         SET full_name = $1, email = $2, mobile = $3, district = $4, mandal = $5, profile_photo = COALESCE($6, profile_photo)
+         WHERE id = $7
+         RETURNING id, username, full_name, email, mobile, district, mandal, profile_photo, role`,
+        [name.trim(), normEmail, cleanMobile, targetDistrict, targetMandal, profilePhoto || null, user.id]
+      );
+      updatedUser = result.rows[0];
+    } else if (user.role === 'VEHICLE_OWNER') {
+      const result = await query(
+        `UPDATE vehicle_owners
+         SET full_name = $1, email = $2, mobile = $3, village = $4, district = $5, mandal = $6, profile_photo = COALESCE($7, profile_photo)
+         WHERE id = $8
+         RETURNING id, full_name as name, email, mobile, village, district, mandal, profile_photo, role`,
+        [name.trim(), normEmail, cleanMobile, targetVillage, targetDistrict, targetMandal, profilePhoto || null, user.id]
+      );
+      updatedUser = result.rows[0];
+    } else {
+      // Farmer
+      const cropsArray = Array.isArray(crops) ? crops : user.crops || ['Paddy'];
+      const result = await query(
+        `UPDATE farmers
+         SET name = $1, email = $2, mobile = $3, village = $4, district = $5, mandal = $6, land_area = COALESCE($7, land_area), crops = $8, profile_photo = COALESCE($9, profile_photo)
+         WHERE id = $10
+         RETURNING id, name, email, mobile, village, district, mandal, land_area as "landArea", crops, profile_photo, role`,
+        [name.trim(), normEmail, cleanMobile, targetVillage, targetDistrict, targetMandal, parseFloat(landArea) || null, cropsArray, profilePhoto || null, user.id]
+      );
+      updatedUser = result.rows[0];
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully!',
+      user: {
+        ...updatedUser,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/auth/change-password
+ * Changes the user's password with current password verification and bcrypt hashing
+ */
+export async function changePassword(req, res, next) {
+  try {
+    const user = await resolveUserFromReq(req);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User account not found' });
+    }
+
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({ success: false, error: 'Current password is required' });
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ success: false, error: 'New password must be at least 6 characters long' });
+    }
+
+    if (confirmPassword && newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, error: 'New password and confirmation do not match' });
+    }
+
+    // Verify current password
+    if (user.password_hash) {
+      const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!isMatch) {
+        return res.status(400).json({ success: false, error: 'Current password is incorrect' });
+      }
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const newHash = await bcrypt.hash(newPassword, saltRounds);
+
+    if (user.role === 'ADMIN') {
+      await query('UPDATE admins SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
+    } else if (user.role === 'VEHICLE_OWNER') {
+      await query('UPDATE vehicle_owners SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
+    } else {
+      await query('UPDATE farmers SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
+    }
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully! Please use your new password next time you log in.'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * DELETE /api/auth/delete-account
+ * Permanently deletes or deactivates the user account
+ */
+export async function deleteAccount(req, res, next) {
+  try {
+    const user = await resolveUserFromReq(req);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User account not found' });
+    }
+
+    if (user.role === 'ADMIN') {
+      return res.status(403).json({ success: false, error: 'Primary administrator accounts cannot be deleted directly' });
+    }
+
+    if (user.role === 'VEHICLE_OWNER') {
+      // Unlist tractors belonging to this owner
+      await query('DELETE FROM tractors WHERE owner_mobile = $1 OR mobile = $1', [user.mobile]);
+      await query('DELETE FROM vehicle_owners WHERE id = $1', [user.id]);
+    } else {
+      await query('DELETE FROM farmers WHERE id = $1', [user.id]);
+    }
+
+    res.json({
+      success: true,
+      message: 'Your account and personal data have been permanently deleted.'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
 

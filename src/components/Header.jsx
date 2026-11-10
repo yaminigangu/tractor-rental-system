@@ -178,6 +178,10 @@ export default function Header({
         return language === 'te' ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Website Admin Dashboard';
       case 'farmer-login':
         return language === 'te' ? 'రైతు లాగిన్' : 'Farmer Login';
+      case 'profile':
+        return language === 'te' ? 'నా ప్రొఫైల్ వివరాలు' : 'My Profile Details';
+      case 'account-settings':
+        return language === 'te' ? 'ఖాతా సెట్టింగ్‌లు' : 'Account Settings';
       case 'farmer-profile':
         return language === 'te' ? 'రైతు ప్రొఫైల్' : 'Farmer Profile & Settings';
       case 'farmer-onboarding':
@@ -201,6 +205,10 @@ export default function Header({
 
   const handleDefaultBack = () => {
     switch (activePage) {
+      case 'profile':
+      case 'account-settings':
+        setActivePage(currentFarmer ? 'find-tractor' : (currentOwner ? 'owner-inbox' : (isAdminLoggedIn ? 'admin-dashboard' : 'portal-select')));
+        break;
       case 'farmer-profile':
       case 'booking-form':
       case 'my-bookings':
@@ -513,62 +521,24 @@ export default function Header({
 
                 {/* Profile & Settings Links */}
                 <div className="dropdown-items-group">
-                  {currentFarmer && (
-                    <button
-                      type="button"
-                      className="dropdown-menu-item"
-                      onClick={() => {
-                        setIsProfileOpen(false);
-                        if (onOpenFarmerProfile) onOpenFarmerProfile();
-                        else if (setActivePage) setActivePage('farmer-profile');
-                      }}
-                    >
-                      <span className="dropdown-item-icon">👤</span>
-                      <span>{isTe ? 'నా ప్రొఫైల్' : 'My Profile'}</span>
-                    </button>
-                  )}
-
-                  {currentOwner && (
-                    <button
-                      type="button"
-                      className="dropdown-menu-item"
-                      onClick={() => {
-                        setIsProfileOpen(false);
-                        if (setActivePage) setActivePage('owner-inbox');
-                      }}
-                    >
-                      <span className="dropdown-item-icon">👤</span>
-                      <span>{isTe ? 'నా ప్రొఫైల్ / వివరాలు' : 'My Profile & Details'}</span>
-                    </button>
-                  )}
-
-                  {isAdminLoggedIn && (
-                    <button
-                      type="button"
-                      className="dropdown-menu-item"
-                      onClick={() => {
-                        setIsProfileOpen(false);
-                        if (setActivePage) setActivePage('admin-dashboard');
-                      }}
-                    >
-                      <span className="dropdown-item-icon">📊</span>
-                      <span>{isTe ? 'అడ్మిన్ డ్యాష్‌బోర్డ్' : 'Admin Dashboard'}</span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="dropdown-menu-item"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      if (setActivePage) setActivePage('profile');
+                    }}
+                  >
+                    <span className="dropdown-item-icon">👤</span>
+                    <span>{isTe ? 'నా ప్రొఫైల్' : 'My Profile & Details'}</span>
+                  </button>
 
                   <button
                     type="button"
                     className="dropdown-menu-item"
                     onClick={() => {
                       setIsProfileOpen(false);
-                      if (currentFarmer) {
-                        if (onOpenFarmerProfile) onOpenFarmerProfile();
-                        else if (setActivePage) setActivePage('farmer-profile');
-                      } else if (currentOwner) {
-                        if (setActivePage) setActivePage('owner-registration');
-                      } else if (isAdminLoggedIn) {
-                        if (setActivePage) setActivePage('admin-dashboard');
-                      }
+                      if (setActivePage) setActivePage('account-settings');
                     }}
                   >
                     <span className="dropdown-item-icon">⚙️</span>
@@ -585,9 +555,16 @@ export default function Header({
                     className="dropdown-menu-item dropdown-logout-item"
                     onClick={() => {
                       setIsProfileOpen(false);
-                      if (currentFarmer && onFarmerLogout) onFarmerLogout();
-                      else if (currentOwner && onOwnerLogout) onOwnerLogout();
-                      else if (isAdminLoggedIn && onAdminLogout) onAdminLogout();
+                      const confirmLogout = window.confirm(
+                        isTe
+                          ? 'మీరు మీ ఖాతా నుండి సురక్షితంగా లాగ్‌అవుట్ కావాలనుకుంటున్నారా?'
+                          : 'Are you sure you want to securely log out?'
+                      );
+                      if (confirmLogout) {
+                        if (currentFarmer && onFarmerLogout) onFarmerLogout();
+                        else if (currentOwner && onOwnerLogout) onOwnerLogout();
+                        else if (isAdminLoggedIn && onAdminLogout) onAdminLogout();
+                      }
                     }}
                   >
                     <span className="dropdown-item-icon">🚪</span>
@@ -600,7 +577,12 @@ export default function Header({
                       className="dropdown-menu-item dropdown-danger-item"
                       onClick={() => {
                         setIsProfileOpen(false);
-                        onFarmerDeleteAccount();
+                        const confirmDel = window.confirm(
+                          isTe
+                            ? 'హెచ్చరిక: మీ రైతు ఖాతాను శాశ్వతంగా తొలగించాలనుకుంటున్నారా?\n\nఈ చర్యను తిరిగి మార్చలేము.'
+                            : 'Warning: Are you sure you want to permanently delete your Farmer account?\n\nThis action cannot be undone.'
+                        );
+                        if (confirmDel) onFarmerDeleteAccount();
                       }}
                       title={isTe ? 'రైతు ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Farmer Account'}
                     >
@@ -615,7 +597,12 @@ export default function Header({
                       className="dropdown-menu-item dropdown-danger-item"
                       onClick={() => {
                         setIsProfileOpen(false);
-                        onOwnerDeleteAccount();
+                        const confirmDel = window.confirm(
+                          isTe
+                            ? 'హెచ్చరిక: మీ వాహన యజమాని ఖాతాను శాశ్వతంగా తొలగించాలనుకుంటున్నారా?\n\nఈ చర్యను తిరిగి మార్చలేము.'
+                            : 'Warning: Are you sure you want to permanently delete your Vehicle Owner account?\n\nThis action cannot be undone.'
+                        );
+                        if (confirmDel) onOwnerDeleteAccount();
                       }}
                       title={isTe ? 'వాహన యజమాని ఖాతాను శాశ్వతంగా తొలగించండి' : 'Permanently Delete Vehicle Owner Account'}
                     >

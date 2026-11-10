@@ -16,6 +16,8 @@ import OwnerRegistration from './pages/OwnerRegistration';
 import OwnerLogin from './pages/OwnerLogin';
 import FarmerLogin from './pages/FarmerLogin';
 import FarmerProfile from './pages/FarmerProfile';
+import UserProfile from './pages/UserProfile';
+import AccountSettings from './pages/AccountSettings';
 import FarmerOnboarding from './pages/FarmerOnboarding';
 import OwnerInbox from './pages/OwnerInbox';
 import MyBookings from './pages/MyBookings';
@@ -130,6 +132,10 @@ function App() {
     }
     // Contextual fallback when no history stack is available
     switch (activePage) {
+      case 'profile':
+      case 'account-settings':
+        setActivePage(currentFarmer ? 'find-tractor' : (currentOwner ? 'owner-inbox' : (isAdminLoggedIn ? 'admin-dashboard' : 'portal-select')));
+        break;
       case 'farmer-profile':
       case 'booking-form':
       case 'my-bookings':
@@ -549,6 +555,35 @@ function App() {
             language={language}
             currentFarmer={currentFarmer}
             onFarmerDeleteAccount={handleFarmerDeleteAccount}
+          />
+        );
+      case 'profile':
+        return (
+          <UserProfile
+            language={language}
+            currentFarmer={currentFarmer}
+            setCurrentFarmer={setCurrentFarmer}
+            currentOwner={currentOwner}
+            setCurrentOwner={setCurrentOwner}
+            isAdminLoggedIn={isAdminLoggedIn}
+            setActivePage={handleNavigate}
+            onGoBack={handleGoBack}
+          />
+        );
+      case 'account-settings':
+        return (
+          <AccountSettings
+            language={language}
+            currentFarmer={currentFarmer}
+            currentOwner={currentOwner}
+            isAdminLoggedIn={isAdminLoggedIn}
+            onFarmerLogout={handleFarmerLogout}
+            onOwnerLogout={handleOwnerLogout}
+            onAdminLogout={handleAdminLogout}
+            onFarmerDeleteAccount={handleFarmerDeleteAccount}
+            onOwnerDeleteAccount={handleOwnerDeleteAccount}
+            setActivePage={handleNavigate}
+            onGoBack={handleGoBack}
           />
         );
       case 'farmer-profile':
