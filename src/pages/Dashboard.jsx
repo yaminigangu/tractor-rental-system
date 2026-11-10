@@ -3,7 +3,7 @@ import StatCard from '../components/StatCard';
 import { translations } from '../translations';
 import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
 import { getRegisteredFarmers, getRegisteredOwners, deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from '../data/userData';
-import { checkBackendHealth, apiUpdateBookingStatus, apiGetBookings } from '../api/apiClient';
+import { checkBackendHealth, apiUpdateBookingStatus, apiGetBookings, apiGetAdminTractors, apiUpdateTractorVerification } from '../api/apiClient';
 
 export default function Dashboard({
   bookings = [],
@@ -15,7 +15,7 @@ export default function Dashboard({
   language = 'en'
 }) {
   const [statusFilter, setStatusFilter] = useState('All');
-  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings', 'fleet', or 'database'
+  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings', 'fleet', 'verifications', or 'database'
   const [farmersList, setFarmersList] = useState(() => getRegisteredFarmers());
   const [ownersList, setOwnersList] = useState(() => getRegisteredOwners());
   const [dbSearch, setDbSearch] = useState('');
@@ -23,8 +23,35 @@ export default function Dashboard({
   const [dbNotice, setDbNotice] = useState('');
   const [pgStatus, setPgStatus] = useState(null);
 
+  // Custom Tractor Verification States
+  const [customTractorsList, setCustomTractorsList] = useState([]);
+  const [verificationFilter, setVerificationFilter] = useState('All');
+  const [verificationModal, setVerificationModal] = useState(null); // { tractor, action: 'Reject' | 'Resubmit' }
+  const [decisionRemarks, setDecisionRemarks] = useState('');
+  const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
+  const [enlargedPhoto, setEnlargedPhoto] = useState(null);
+  const [actionNotice, setActionNotice] = useState('');
+
+  const fetchAdminTractors = async () => {
+    try {
+      const data = await apiGetAdminTractors('all');
+      if (Array.isArray(data) && data.length > 0) {
+        setCustomTractorsList(data);
+      } else {
+        // Fallback to local custom tractors if API empty
+        try {
+          const localCustom = JSON.parse(localStorage.getItem('agri_custom_tractors') || '[]');
+          setCustomTractorsList(localCustom);
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('Failed to fetch admin tractors:', e);
+    }
+  };
+
   useEffect(() => {
     checkBackendHealth().then((status) => setPgStatus(status));
+    fetchAdminTractors();
     // Fetch live bookings from PostgreSQL
     apiGetBookings().then(dbOrders => {
       if (Array.isArray(dbOrders) && dbOrders.length > 0) {
@@ -45,12 +72,63 @@ export default function Dashboard({
   const approvedCount = bookings.filter(b => b.status === 'Approved' || b.status === 'Confirmed').length;
   const completedCount = bookings.filter(b => b.status === 'Completed').length;
   const totalAcres = bookings.reduce((sum, b) => sum + (Number(b.landArea) || 0), 0);
+  const pendingVerificationCount = customTractorsList.filter(t => (t.verificationStatus === 'Pending Verification' || t.verification_status === 'Pending Verification')).length;
 
   const handleUpdateStatus = (id, newStatus) => {
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
     );
     apiUpdateBookingStatus(id, newStatus).catch(() => {});
+  };
+
+  const handleApproveTractor = async (tractor) => {
+    if (!window.confirm(isTe ? `ఈ ట్రాక్టర్‌ను (${tractor.brand} ${tractor.model}) ఆమోదించాలనుకుంటున్నారా? ఆమోదించిన తర్వాత ఇది కస్టమర్ల బుకింగ్ మార్కెట్‌ప్లేస్‌లో ప్రత్యక్షంగా కనిపిస్తుంది.` : `Approve tractor "${tractor.brand} ${tractor.model}"? Once approved, it will go live for all customer bookings.`)) {
+      return;
+    }
+    try {
+      const res = await apiUpdateTractorVerification(tractor.id, 'Approved', 'Approved by Platform Administrator');
+      if (res && (res.success || res.tractor)) {
+        setCustomTractorsList(prev => prev.map(t => t.id === tractor.id ? { ...t, verificationStatus: 'Approved', verification_status: 'Approved' } : t));
+        if (setTractors) {
+          setTractors(prev => prev.map(t => t.id === tractor.id ? { ...t, verificationStatus: 'Approved', verification_status: 'Approved' } : t));
+        }
+        setActionNotice(isTe ? `✓ ${tractor.brand} ${tractor.model} విజయవంతంగా ఆమోదించబడింది! యజమానికి WhatsApp మరియు ఇన్-యాప్ నోటిఫికేషన్ పంపబడింది.` : `✓ ${tractor.brand} ${tractor.model} approved successfully! Owner notified via WhatsApp and in-app.`);
+        setTimeout(() => setActionNotice(''), 6000);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to approve tractor');
+    }
+  };
+
+  const handleOpenDecisionModal = (tractor, action) => {
+    setVerificationModal({ tractor, action });
+    setDecisionRemarks('');
+  };
+
+  const handleConfirmDecision = async () => {
+    if (!decisionRemarks.trim()) {
+      alert(isTe ? 'దయచేసి తిరస్కరణ లేదా సవరణ కారణాన్ని నమోదు చేయండి.' : 'Please enter feedback or reason for the vehicle owner.');
+      return;
+    }
+    setIsSubmittingDecision(true);
+    try {
+      const newStatus = verificationModal.action === 'Reject' ? 'Rejected' : 'Resubmission Required';
+      const res = await apiUpdateTractorVerification(verificationModal.tractor.id, newStatus, decisionRemarks.trim());
+      if (res && (res.success || res.tractor)) {
+        setCustomTractorsList(prev => prev.map(t => t.id === verificationModal.tractor.id ? { ...t, verificationStatus: newStatus, verification_status: newStatus, adminRemarks: decisionRemarks.trim() } : t));
+        if (setTractors) {
+          setTractors(prev => prev.map(t => t.id === verificationModal.tractor.id ? { ...t, verificationStatus: newStatus, verification_status: newStatus, adminRemarks: decisionRemarks.trim() } : t));
+        }
+        setActionNotice(isTe ? `✓ ట్రాక్టర్ స్థితి '${newStatus}' కి నవీకరించబడింది. యజమానికి సలహా పంపబడింది.` : `✓ Tractor status updated to '${newStatus}'. Feedback dispatched to owner.`);
+        setVerificationModal(null);
+        setDecisionRemarks('');
+        setTimeout(() => setActionNotice(''), 6000);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to update verification status');
+    } finally {
+      setIsSubmittingDecision(false);
+    }
   };
 
   const handleToggleTractorAvailability = (id) => {
@@ -112,7 +190,7 @@ export default function Dashboard({
 
       {/* Tabs & Logout */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
             className={`filter-pill ${activeTab === 'bookings' ? 'active' : ''}`}
             onClick={() => setActiveTab('bookings')}
@@ -124,6 +202,31 @@ export default function Dashboard({
             onClick={() => setActiveTab('fleet')}
           >
             🚜 {isTe ? 'ట్రాక్టర్ పరికరాల నిర్వహణ' : 'Manage Fleet Machinery'} ({tractors.length})
+          </button>
+          <button
+            className={`filter-pill ${activeTab === 'verifications' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('verifications');
+              fetchAdminTractors();
+            }}
+            style={{ position: 'relative' }}
+          >
+            🛡️ {isTe ? 'కస్టమ్ ట్రాక్టర్ ధృవీకరణ' : 'Custom Tractor Verification'}
+            {pendingVerificationCount > 0 && (
+              <span
+                style={{
+                  background: '#f59e0b',
+                  color: '#ffffff',
+                  borderRadius: '10px',
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  marginLeft: '6px',
+                  fontWeight: 800
+                }}
+              >
+                {pendingVerificationCount}
+              </span>
+            )}
           </button>
           <button
             className={`filter-pill ${activeTab === 'database' ? 'active' : ''}`}
@@ -360,6 +463,278 @@ export default function Dashboard({
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ====================================================
+          TAB: CUSTOM TRACTOR VERIFICATION SECTION
+         ==================================================== */}
+      {activeTab === 'verifications' && (
+        <div className="page-anim">
+          {actionNotice && (
+            <div
+              style={{
+                padding: '12px 18px',
+                background: '#e8f5e9',
+                border: '1px solid #81c784',
+                color: '#1b5e20',
+                borderRadius: '10px',
+                marginBottom: '16px',
+                fontWeight: 700,
+                fontSize: '13.5px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>{actionNotice}</span>
+            </div>
+          )}
+
+          {/* Header & Status Filter Chips */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              <h4 style={{ color: 'var(--primary-900)', margin: '0 0 4px 0' }}>
+                🛡️ {isTe ? 'కస్టమ్ ట్రాక్టర్ ధృవీకరణ నిర్వహణ' : 'Custom Tractor Model Verification'}
+              </h4>
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                {isTe
+                  ? 'యజమానులు సమర్పించిన అసలు ట్రాక్టర్ ఫోటోలు & వివరాలను పరిశీలించి ఆమోదించండి లేదా తిరస్కరించండి.'
+                  : 'Review genuine photos, owner contacts, and specs before approving tractors to the live customer fleet.'}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'All', labelEn: 'All Submissions', labelTe: 'అన్నీ' },
+                { id: 'Pending Verification', labelEn: 'Pending', labelTe: 'పెండింగ్' },
+                { id: 'Approved', labelEn: 'Approved', labelTe: 'ఆమోదించబడినవి' },
+                { id: 'Rejected', labelEn: 'Rejected', labelTe: 'తిరస్కరించబడినవి' },
+                { id: 'Resubmission Required', labelEn: 'Resubmit', labelTe: 'మళ్లీ సమర్పణ' }
+              ].map(chip => (
+                <button
+                  key={chip.id}
+                  className={`role-btn ${verificationFilter === chip.id ? 'active' : ''}`}
+                  onClick={() => setVerificationFilter(chip.id)}
+                  style={{ fontSize: '12.5px', padding: '6px 12px' }}
+                >
+                  {isTe ? chip.labelTe : chip.labelEn}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* List of Custom Tractor Submissions */}
+          {(() => {
+            const filteredCustom = customTractorsList.filter(tr => {
+              const vStatus = tr.verificationStatus || tr.verification_status || 'Approved';
+              if (verificationFilter === 'All') return true;
+              return vStatus.toLowerCase() === verificationFilter.toLowerCase();
+            });
+
+            if (filteredCustom.length === 0) {
+              return (
+                <div className="table-card text-center" style={{ padding: '50px 20px' }}>
+                  <span style={{ fontSize: '42px', display: 'block', marginBottom: '10px' }}>🛡️</span>
+                  <h4>{isTe ? `ఈ స్థితితో ఎలాంటి కస్టమ్ ట్రాక్టర్లు లేవు: "${verificationFilter}"` : `No custom tractor submissions found under "${verificationFilter}".`}</h4>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '6px' }}>
+                    {isTe ? 'వాహన యజమానులు "ఇతర ట్రాక్టర్ మోడల్" ద్వారా సమర్పించినప్పుడు అవి ఇక్కడ కనిపిస్తాయి.' : 'When vehicle owners register tractors using "Other Tractor Model", they will appear here for review.'}
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {filteredCustom.map(tr => {
+                  const vStatus = tr.verificationStatus || tr.verification_status || 'Approved';
+                  const isApproved = vStatus === 'Approved';
+                  const isPending = vStatus === 'Pending Verification';
+                  const isRejected = vStatus === 'Rejected';
+                  const isResubmit = vStatus === 'Resubmission Required';
+
+                  const badgeColor = isApproved ? { bg: '#dcfce7', text: '#166534', border: '#86efac' }
+                    : isPending ? { bg: '#fef08a', text: '#854d0e', border: '#fde047' }
+                    : isRejected ? { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5' }
+                    : { bg: '#ffedd5', text: '#9a3412', border: '#fdba74' };
+
+                  const photoUrl = tr.photo || '/tractor1.jpeg';
+                  const ownerName = tr.ownerName || tr.owner || tr.defaultOwner || 'Vehicle Owner';
+                  const ownerPhone = (tr.ownerMobile || tr.mobile || tr.defaultMobile || '').replace(/\D/g, '');
+
+                  return (
+                    <div
+                      key={tr.id}
+                      className="service-card"
+                      style={{
+                        padding: '18px 20px',
+                        borderLeft: `6px solid ${isApproved ? '#16a34a' : isPending ? '#f59e0b' : isRejected ? '#dc2626' : '#ea580c'}`
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                        {/* Real Uploaded Tractor Photograph (Click to Enlarge) */}
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <img
+                            src={photoUrl}
+                            alt={`${tr.brand} ${tr.model}`}
+                            style={{
+                              width: '140px',
+                              height: '105px',
+                              objectFit: 'cover',
+                              borderRadius: '8px',
+                              border: '2px solid #e2e8f0',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                            }}
+                            onClick={() => setEnlargedPhoto(photoUrl)}
+                            title="Click to view full photograph"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setEnlargedPhoto(photoUrl)}
+                            style={{
+                              position: 'absolute',
+                              bottom: '4px',
+                              right: '4px',
+                              background: 'rgba(15, 23, 42, 0.75)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '2px 6px',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                          >
+                            🔍 {isTe ? 'చూడు' : 'View'}
+                          </button>
+                        </div>
+
+                        {/* Tractor Specifications & Owner Info */}
+                        <div style={{ flex: 1, minWidth: '240px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                            <h4 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>
+                              🚜 {tr.brand} {tr.model}
+                            </h4>
+                            <span
+                              style={{
+                                background: badgeColor.bg,
+                                color: badgeColor.text,
+                                border: `1px solid ${badgeColor.border}`,
+                                borderRadius: '14px',
+                                padding: '3px 10px',
+                                fontSize: '11.5px',
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              {isPending ? '⏳' : isApproved ? '✓' : isRejected ? '✕' : '↺'} {vStatus}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
+                              ID: TRAC-CUSTOM-{tr.id}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', fontSize: '13px', color: '#334155', marginBottom: '10px' }}>
+                            <div>⚡ <strong>HP:</strong> {tr.hp || '48 HP'}</div>
+                            <div>📅 <strong>{isTe ? 'తయారీ:' : 'Year:'}</strong> {tr.year || '2023'}</div>
+                            <div>📄 <strong>{isTe ? 'వాహన RC:' : 'RC Number:'}</strong> {tr.rcNumber || tr.rc_number || 'N/A'}</div>
+                            <div>📍 <strong>{isTe ? 'లొకేషన్:' : 'Location:'}</strong> {tr.village || tr.mandal || 'Hasanparthy'}, {tr.district || 'Hanumakonda'}</div>
+                            <div>🏡 <strong>{isTe ? 'స్థలం:' : 'Whereabouts:'}</strong> {tr.whereabouts || 'Village Rythu Vedika'}</div>
+                            <div>💰 <strong>{isTe ? 'అద్దె ధర:' : 'Pricing:'}</strong> ₹{tr.pricing || 900}/hr {tr.priceAcre ? `• ₹${tr.priceAcre}/acre` : ''}</div>
+                          </div>
+
+                          {/* Owner Details & Contact */}
+                          <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '6px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                            <span>👤 <strong>{isTe ? 'యజమాని:' : 'Owner:'}</strong> {ownerName}</span>
+                            <span>📞 <strong>{isTe ? 'ఫోన్:' : 'Mobile:'}</strong> +91 {ownerPhone}</span>
+                            <a
+                              href={`https://wa.me/91${ownerPhone}?text=${encodeURIComponent(`Hello ${ownerName}, regarding your tractor ${tr.brand} ${tr.model} on AgriRent...`)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: '#16a34a', textDecoration: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              💬 WhatsApp
+                            </a>
+                            <a
+                              href={`tel:${ownerPhone}`}
+                              style={{ color: '#0288d1', textDecoration: 'none', fontWeight: 700 }}
+                            >
+                              📞 Call
+                            </a>
+                          </div>
+
+                          {/* Implements */}
+                          {tr.equipment && (
+                            <div style={{ fontSize: '12px', color: '#475569', marginBottom: '8px' }}>
+                              ⚙️ <strong>{isTe ? 'అనుసంధానించబడిన పరికరాలు:' : 'Attachments:'}</strong> {tr.equipment}
+                            </div>
+                          )}
+
+                          {/* Rejection / Resubmission Remarks Feedback */}
+                          {(tr.adminRemarks || tr.admin_remarks) && (
+                            <div
+                              style={{
+                                background: isRejected ? '#fef2f2' : '#fffbeb',
+                                border: `1px solid ${isRejected ? '#fca5a5' : '#fde68a'}`,
+                                color: isRejected ? '#991b1b' : '#92400e',
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                fontSize: '12.5px',
+                                marginTop: '6px'
+                              }}
+                            >
+                              💬 <strong>{isTe ? 'అడ్మిన్ వ్యాఖ్యలు:' : 'Admin Remarks:'}</strong> {tr.adminRemarks || tr.admin_remarks}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Administrative Control Actions */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '150px' }}>
+                          {!isApproved && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ background: '#16a34a', color: '#ffffff', padding: '8px 14px', fontSize: '13px', fontWeight: 700, borderRadius: '6px' }}
+                              onClick={() => handleApproveTractor(tr)}
+                            >
+                              ✓ {isTe ? 'ట్రాక్టర్ ఆమోదించు' : 'Approve Tractor'}
+                            </button>
+                          )}
+
+                          {!isRejected && (
+                            <button
+                              type="button"
+                              className="btn btn-call"
+                              style={{ background: '#dc2626', color: '#ffffff', padding: '7px 12px', fontSize: '12px', fontWeight: 700, borderRadius: '6px' }}
+                              onClick={() => handleOpenDecisionModal(tr, 'Reject')}
+                            >
+                              ✕ {isTe ? 'తిరస్కరించు (కారణంతో)' : 'Reject with Reason'}
+                            </button>
+                          )}
+
+                          {!isResubmit && (
+                            <button
+                              type="button"
+                              className="btn btn-outline-white"
+                              style={{ borderColor: '#ea580c', color: '#ea580c', padding: '6px 12px', fontSize: '12px', fontWeight: 700, borderRadius: '6px' }}
+                              onClick={() => handleOpenDecisionModal(tr, 'Resubmit')}
+                            >
+                              ↺ {isTe ? 'సవరణ అభ్యర్థన' : 'Request Resubmission'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -672,6 +1047,192 @@ export default function Dashboard({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ====================================================
+          ADMIN DECISION MODAL (Reject or Request Resubmission)
+         ==================================================== */}
+      {verificationModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            zIndex: 9999
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isSubmittingDecision) setVerificationModal(null);
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '14px',
+              maxWidth: '520px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+              border: '1px solid #e2e8f0'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '24px' }}>
+                {verificationModal.action === 'Reject' ? '❌' : '🔄'}
+              </span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: verificationModal.action === 'Reject' ? '#991b1b' : '#9a3412' }}>
+                  {verificationModal.action === 'Reject'
+                    ? (isTe ? 'ట్రాక్టర్ నమోదు తిరస్కరణ' : 'Reject Custom Tractor Submission')
+                    : (isTe ? 'సవరణ మరియు పునఃసమర్పణ అభ్యర్థన' : 'Request Resubmission from Owner')}
+                </h3>
+                <small style={{ color: '#64748b' }}>
+                  {verificationModal.tractor?.brand} {verificationModal.tractor?.model} (Owner: {verificationModal.tractor?.ownerName || verificationModal.tractor?.owner})
+                </small>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, marginBottom: '14px' }}>
+              {isTe
+                ? 'యజమానికి కారణం మరియు సవరణ సూచనలను తప్పనిసరిగా అందించండి. ఇది వారి ఓనర్ డాష్‌బోర్డ్‌లో మరియు WhatsApp ద్వారా పంపబడుతుంది.'
+                : 'Please provide clear, constructive feedback for the tractor owner explaining why this listing requires corrections. This will be sent via In-App notification and WhatsApp.'}
+            </p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
+                {isTe ? 'అడ్మినిస్ట్రేటర్ వ్యాఖ్యలు / కారణం (తప్పనిసరి) *' : 'Administrator Feedback / Reason (Mandatory) *'}
+              </label>
+              <textarea
+                rows={4}
+                required
+                value={decisionRemarks}
+                onChange={(e) => setDecisionRemarks(e.target.value)}
+                placeholder={
+                  verificationModal.action === 'Reject'
+                    ? (isTe ? 'ఉదాహరణ: అసలు ట్రాక్టర్ నంబర్ ప్లేట్ లేదా ఆర్సీ స్పష్టంగా లేదు. దయచేసి స్పష్టమైన ఫోటో తీయండి.' : 'e.g. Uploaded photograph does not clearly show tractor registration badge or engine horsepower.')
+                    : (isTe ? 'ఉదాహరణ: దయచేసి ట్రాక్టర్ నిలిపి ఉంచే సరైన స్థలం మరియు ధర వివరాలను నవీకరించండి.' : 'e.g. Please update exact stationed whereabouts and correct pricing details.')
+                }
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  lineHeight: 1.4,
+                  resize: 'vertical'
+                }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setVerificationModal(null)}
+                disabled={isSubmittingDecision}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: '1px solid #cbd5e1',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                {isTe ? 'రద్దు చేయి' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDecision}
+                disabled={isSubmittingDecision}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '6px',
+                  background: verificationModal.action === 'Reject' ? '#dc2626' : '#ea580c',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: isSubmittingDecision ? 'wait' : 'pointer'
+                }}
+              >
+                {isSubmittingDecision
+                  ? (isTe ? 'పంపుతోంది...' : 'Updating...')
+                  : (verificationModal.action === 'Reject' ? (isTe ? 'తిరస్కరించు & నోటిఫై చేయి' : 'Confirm Rejection') : (isTe ? 'సవరణ అభ్యర్థన పంపు' : 'Send Resubmission Request'))}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================
+          FULL PHOTOGRAPH LIGHTBOX PREVIEW MODAL
+         ==================================================== */}
+      {enlargedPhoto && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            zIndex: 10000
+          }}
+          onClick={() => setEnlargedPhoto(null)}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={enlargedPhoto}
+              alt="Enlarged Tractor Photograph"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+              }}
+            />
+            <div style={{ marginTop: '12px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <span style={{ color: '#fff', fontSize: '13px', fontWeight: 600 }}>
+                📷 {isTe ? 'వాస్తవ ట్రాక్టర్ ఛాయాచిత్రం' : 'Genuine Uploaded Tractor Photo'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setEnlargedPhoto(null)}
+                style={{
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  border: 'none',
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕ {isTe ? 'మూసివేయి' : 'Close'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

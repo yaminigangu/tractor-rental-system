@@ -501,6 +501,8 @@ function App() {
             bookings={bookings}
             setBookings={setBookings}
             tractors={tractors}
+            setTractors={setTractors}
+            selectedLocation={selectedLocation}
             onViewSlip={(b) => setReceiptModalBooking(b)}
             language={language}
             currentOwner={currentOwner}

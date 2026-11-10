@@ -98,6 +98,79 @@ export async function apiDeleteTractor(id) {
   return null;
 }
 
+export async function apiSubmitCustomTractor(tractorData) {
+  try {
+    const res = await fetch(`${API_BASE}/tractors/custom`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tractorData),
+      signal: AbortSignal.timeout(6000),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn('apiSubmitCustomTractor network error:', err);
+    return { success: false, error: err.message || 'Network error submitting custom tractor' };
+  }
+}
+
+export async function apiUpdateTractorVerification(id, status, remarks = '') {
+  try {
+    const res = await fetch(`${API_BASE}/tractors/${id}/verification`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, remarks }),
+      signal: AbortSignal.timeout(6000),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn('apiUpdateTractorVerification network error:', err);
+    return { success: false, error: err.message || 'Network error updating verification' };
+  }
+}
+
+export async function apiResubmitCustomTractor(id, updates) {
+  try {
+    const res = await fetch(`${API_BASE}/tractors/${id}/custom`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+      signal: AbortSignal.timeout(6000),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn('apiResubmitCustomTractor error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function apiGetOwnerTractors(ownerMobile) {
+  try {
+    const clean = String(ownerMobile || '').replace(/\D/g, '');
+    const res = await fetch(`${API_BASE}/tractors?ownerMobile=${encodeURIComponent(clean)}`, {
+      signal: AbortSignal.timeout(4000)
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('apiGetOwnerTractors error:', err);
+  }
+  return [];
+}
+
+export async function apiGetAdminTractors(status = 'all') {
+  try {
+    const res = await fetch(`${API_BASE}/tractors?status=${encodeURIComponent(status)}&includeUnverified=true`, {
+      signal: AbortSignal.timeout(4000)
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('apiGetAdminTractors error:', err);
+  }
+  return [];
+}
+
 // =====================================================================
 // FARMERS
 // =====================================================================

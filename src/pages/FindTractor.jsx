@@ -235,6 +235,10 @@ export default function FindTractor({
 
   // Filter tractors based on search query, selected service, and regional fleet
   const filteredTractors = tractors.filter((tractor) => {
+    // Strictly gate customer fleet visibility: only approved tractors are shown
+    const vStatus = tractor.verification_status || tractor.verificationStatus || 'Approved';
+    if (vStatus !== 'Approved') return false;
+
     const matchesSearch =
       (tractor.model || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (tractor.brand || '').toLowerCase().includes(searchQuery.toLowerCase()) ||

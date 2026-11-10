@@ -211,6 +211,21 @@ async function ensureBookingsSchema() {
       );
       CREATE INDEX IF NOT EXISTS idx_notifications_mobile ON notifications(user_mobile);
       CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
+
+      -- Custom Tractor Verification & Listings Columns
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS owner_id INTEGER;
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS owner_mobile VARCHAR(20);
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS owner_name VARCHAR(150);
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS year VARCHAR(10);
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS rc_number VARCHAR(50);
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS price_per_acre INTEGER DEFAULT 0;
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS implements JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS whereabouts TEXT;
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS verification_status VARCHAR(50) DEFAULT 'Approved';
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS admin_remarks TEXT;
+      ALTER TABLE tractors ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+      CREATE INDEX IF NOT EXISTS idx_tractors_verification_status ON tractors(verification_status);
+      CREATE INDEX IF NOT EXISTS idx_tractors_owner_mobile ON tractors(owner_mobile);
     `);
     console.log('✅ PostgreSQL full schema verified & migrated.');
   } catch (err) {

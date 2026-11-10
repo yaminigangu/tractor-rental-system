@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredOwner, findOwnerByIdentifier } from '../data/userData';
 import { apiSendOtp, apiVerifyOtp, setStoredAuthToken, apiSaveTractor, apiSaveOwner, apiUploadImage } from '../api/apiClient';
+import CustomTractorModal from '../components/CustomTractorModal';
 
 export default function OwnerRegistration({
   setTractors,
@@ -56,6 +57,8 @@ export default function OwnerRegistration({
   const [isSendingLoginOtp, setIsSendingLoginOtp] = useState(false);
   const [isVerifyingLoginOtp, setIsVerifyingLoginOtp] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isCustomTractorModalOpen, setIsCustomTractorModalOpen] = useState(false);
+  const [submittedCustomTractor, setSubmittedCustomTractor] = useState(null);
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -471,34 +474,38 @@ export default function OwnerRegistration({
         ? `${formData.brand} ${cleanModel}`
         : formData.brand;
 
-      // Pick accurate photo matching the model and brand
+      // Pick accurate photo matching the model and brand (preserve actual uploaded photo for custom tractor models)
       let resolvedPhoto = formData.selectedPhoto;
-      const lowerModel = (formData.modelSpecs || '').toLowerCase();
-      const lowerBrand = (formData.brand || '').toLowerCase();
-      if (lowerModel.includes('575') || (lowerBrand.includes('mahindra') && lowerModel.includes('sarpanch'))) {
-        resolvedPhoto = '/images/mahindra_575.jpg';
-      } else if (lowerModel.includes('475')) {
-        resolvedPhoto = '/tractor1.jpeg';
-      } else if (lowerModel.includes('744') || (lowerBrand.includes('swaraj') && lowerModel.includes('xt'))) {
-        resolvedPhoto = '/tractor4.jpeg';
-      } else if (lowerModel.includes('735')) {
-        resolvedPhoto = '/tractor8.jpg';
-      } else if (lowerModel.includes('5310')) {
-        resolvedPhoto = '/images/john_deere_5310.jpg';
-      } else if (lowerModel.includes('5075')) {
-        resolvedPhoto = '/tractor3.jpeg';
-      } else if (lowerModel.includes('380') || lowerBrand.includes('eicher')) {
-        resolvedPhoto = '/eicher_380_clean.jpg';
-      } else if (lowerModel.includes('farmtrac') || lowerModel.includes('60')) {
-        resolvedPhoto = '/farmtrac_60.jpg';
-      } else if (lowerModel.includes('3630') || lowerBrand.includes('new holland')) {
-        resolvedPhoto = '/new_holland_3630.jpg';
-      } else if (lowerModel.includes('tiger')) {
-        resolvedPhoto = '/sonalika_tiger_55.jpg';
-      } else if (lowerBrand.includes('kubota')) {
-        resolvedPhoto = '/tractor7.jpeg';
-      } else if (!resolvedPhoto || resolvedPhoto === '/tractor2.jpeg') {
-        resolvedPhoto = '/images/mahindra_575.jpg';
+      const isCustomPhoto = resolvedPhoto && (resolvedPhoto.startsWith('/uploads') || resolvedPhoto.startsWith('http') || formData.isOtherCustom);
+      
+      if (!isCustomPhoto) {
+        const lowerModel = (formData.modelSpecs || '').toLowerCase();
+        const lowerBrand = (formData.brand || '').toLowerCase();
+        if (lowerModel.includes('575') || (lowerBrand.includes('mahindra') && lowerModel.includes('sarpanch'))) {
+          resolvedPhoto = '/images/mahindra_575.jpg';
+        } else if (lowerModel.includes('475')) {
+          resolvedPhoto = '/tractor1.jpeg';
+        } else if (lowerModel.includes('744') || (lowerBrand.includes('swaraj') && lowerModel.includes('xt'))) {
+          resolvedPhoto = '/tractor4.jpeg';
+        } else if (lowerModel.includes('735')) {
+          resolvedPhoto = '/tractor8.jpg';
+        } else if (lowerModel.includes('5310')) {
+          resolvedPhoto = '/images/john_deere_5310.jpg';
+        } else if (lowerModel.includes('5075')) {
+          resolvedPhoto = '/tractor3.jpeg';
+        } else if (lowerModel.includes('380') || lowerBrand.includes('eicher')) {
+          resolvedPhoto = '/eicher_380_clean.jpg';
+        } else if (lowerModel.includes('farmtrac') || lowerModel.includes('60')) {
+          resolvedPhoto = '/farmtrac_60.jpg';
+        } else if (lowerModel.includes('3630') || lowerBrand.includes('new holland')) {
+          resolvedPhoto = '/new_holland_3630.jpg';
+        } else if (lowerModel.includes('tiger')) {
+          resolvedPhoto = '/sonalika_tiger_55.jpg';
+        } else if (lowerBrand.includes('kubota')) {
+          resolvedPhoto = '/tractor7.jpeg';
+        } else if (!resolvedPhoto || resolvedPhoto === '/tractor2.jpeg') {
+          resolvedPhoto = '/images/mahindra_575.jpg';
+        }
       }
 
       const newOwnerRecord = {
@@ -528,7 +535,7 @@ export default function OwnerRegistration({
       saveRegisteredOwner(newOwnerRecord);
 
       const newTractorEntry = {
-        id: Date.now(),
+        id: submittedCustomTractor ? submittedCustomTractor.id : Date.now(),
         owner: formData.fullName.trim(),
         mobile: formData.mobile,
         location: formData.mandalBase,
@@ -542,10 +549,12 @@ export default function OwnerRegistration({
         availability: 'Available',
         photo: resolvedPhoto,
         rating: 4.9,
-        jobsDone: 24,
+        jobsDone: 0,
         registeredAt: new Date().toLocaleDateString(),
         vehicleNumber: formData.rcNumber.toUpperCase(),
-        isCaptainVerified: true,
+        verificationStatus: formData.isOtherCustom ? 'Pending Verification' : 'Approved',
+        verification_status: formData.isOtherCustom ? 'Pending Verification' : 'Approved',
+        isCaptainVerified: !formData.isOtherCustom,
         distanceKm: 1.0,
         dispatchMins: 13
       };
@@ -1264,6 +1273,55 @@ export default function OwnerRegistration({
                           </div>
                         )}
 
+                        {submittedCustomTractor && (
+                          <div style={{
+                            marginBottom: '14px',
+                            padding: '12px 16px',
+                            background: '#fefce8',
+                            border: '2px solid #fef08a',
+                            borderRadius: '10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '12px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <img
+                                src={submittedCustomTractor.photo}
+                                alt="Custom Tractor"
+                                style={{ width: '64px', height: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #ca8a04' }}
+                              />
+                              <div>
+                                <div style={{ fontWeight: 800, fontSize: '13.5px', color: '#854d0e' }}>
+                                  🚜 {submittedCustomTractor.brand} {submittedCustomTractor.model} ({submittedCustomTractor.hp || 'Custom HP'})
+                                </div>
+                                <div style={{ fontSize: '11.5px', color: '#713f12' }}>
+                                  {isTe ? 'ధృవీకరణ స్థితి:' : 'Status:'}{' '}
+                                  <span style={{ background: '#fef08a', color: '#854d0e', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>
+                                    ⏳ {submittedCustomTractor.verificationStatus || 'Pending Verification'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setIsCustomTractorModalOpen(true)}
+                              style={{
+                                background: '#ffffff',
+                                border: '1px solid #ca8a04',
+                                color: '#854d0e',
+                                borderRadius: '6px',
+                                padding: '5px 10px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ✏️ {isTe ? 'సవరించు' : 'Edit'}
+                            </button>
+                          </div>
+                        )}
+
                         <div className="owner-photos-horizontal">
                           {photoOptions.map((photo) => {
                             const isSelected = formData.photoName === photo.id && !formData.selectedPhoto.startsWith('/uploads');
@@ -1274,6 +1332,7 @@ export default function OwnerRegistration({
                                 onClick={() => {
                                   handleInputChange('photoName', photo.id);
                                   handleInputChange('selectedPhoto', photo.src);
+                                  handleInputChange('isOtherCustom', false);
                                 }}
                               >
                                 <img src={photo.src} alt={photo.label} className="owner-tractor-thumb" />
@@ -1281,6 +1340,52 @@ export default function OwnerRegistration({
                               </div>
                             );
                           })}
+
+                          {/* Separate "Other Tractor Model" Card alongside existing models */}
+                          <div
+                            className={`owner-photo-card other-tractor-card ${formData.isOtherCustom ? 'selected' : ''}`}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: '2px dashed #16a34a',
+                              background: '#f0fdf4',
+                              cursor: 'pointer',
+                              minHeight: '120px',
+                              padding: '12px 10px',
+                              textAlign: 'center',
+                              transition: 'all 0.2s ease',
+                              boxShadow: '0 2px 5px rgba(22, 163, 74, 0.12)'
+                            }}
+                            onClick={() => setIsCustomTractorModalOpen(true)}
+                            title={isTe ? 'జాబితాలో లేని ఇతర ట్రాక్టర్ మోడల్ నమోదు చేయండి' : 'Click to register custom tractor model with Admin Verification'}
+                          >
+                            <div
+                              style={{
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '50%',
+                                background: '#16a34a',
+                                color: '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '24px',
+                                fontWeight: 'bold',
+                                marginBottom: '6px',
+                                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)'
+                              }}
+                            >
+                              +
+                            </div>
+                            <strong style={{ fontSize: '13px', color: '#166534', lineHeight: 1.2 }}>
+                              {isTe ? 'ఇతర ట్రాక్టర్ మోడల్ (+)' : 'Other Tractor Model (+)'}
+                            </strong>
+                            <span style={{ fontSize: '10.5px', color: '#15803d', marginTop: '4px', fontWeight: 600 }}>
+                              {isTe ? 'కస్టమ్ రిజిస్ట్రేషన్' : 'Custom Verification'}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -1488,6 +1593,28 @@ export default function OwnerRegistration({
             </footer>
           </main>
         </div>
+
+        {/* Dedicated Custom Tractor Registration Form Modal */}
+        <CustomTractorModal
+          isOpen={isCustomTractorModalOpen}
+          onClose={() => setIsCustomTractorModalOpen(false)}
+          ownerName={formData.fullName}
+          ownerMobile={formData.mobile}
+          defaultDistrict={formData.district || defaultDistrict}
+          defaultVillage={formData.mandalBase || defaultVillage}
+          language={language}
+          onTractorSubmitted={(savedTractor) => {
+            setSubmittedCustomTractor(savedTractor);
+            handleInputChange('brand', savedTractor.brand);
+            handleInputChange('modelSpecs', savedTractor.model);
+            handleInputChange('selectedPhoto', savedTractor.photo);
+            handleInputChange('photoName', `custom_${savedTractor.id}`);
+            handleInputChange('isOtherCustom', true);
+            if (setTractors) {
+              setTractors((prev) => [savedTractor, ...prev]);
+            }
+          }}
+        />
       </div>
     );
   }

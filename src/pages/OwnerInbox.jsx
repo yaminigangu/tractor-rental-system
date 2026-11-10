@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { translations } from '../translations';
-import { apiUpdateBookingStatus, apiGetOwnerBookings } from '../api/apiClient';
+import { apiUpdateBookingStatus, apiGetOwnerBookings, apiGetOwnerTractors } from '../api/apiClient';
+import CustomTractorModal from '../components/CustomTractorModal';
 
 export default function OwnerInbox({ 
   bookings = [], 
   setBookings, 
   tractors = [],
+  setTractors,
+  selectedLocation,
   onViewSlip,
   language = 'en',
   currentOwner,
@@ -13,6 +16,14 @@ export default function OwnerInbox({
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
+
+  // Navigation view: 'bookings' (Farmer Booking Requests) or 'my-tractors' (My Tractor Listings)
+  const [activeView, setActiveView] = useState('bookings');
+
+  // Owner tractors state
+  const [ownerTractorsList, setOwnerTractorsList] = useState([]);
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [editingTractor, setEditingTractor] = useState(null);
 
   // Default selected tractor to current owner's tractor if matched, else first tractor
   const [selectedOwnerId, setSelectedOwnerId] = useState(() => {
@@ -58,9 +69,47 @@ export default function OwnerInbox({
     }
   };
 
+  // Fetch registered tractors belonging to this owner
+  const fetchOwnerTractors = async () => {
+    if (!currentOwner?.mobile) return;
+    const clean = currentOwner.mobile.replace(/\D/g, '').slice(-10);
+    try {
+      const dbTractors = await apiGetOwnerTractors(clean);
+      let combined = Array.isArray(dbTractors) ? dbTractors : [];
+
+      // Combine with local custom tractors
+      try {
+        const local = JSON.parse(localStorage.getItem('agri_custom_tractors') || '[]');
+        const ownerLocal = local.filter(t => {
+          const tClean = (t.ownerMobile || t.mobile || '').replace(/\D/g, '').slice(-10);
+          return tClean === clean || t.owner === currentOwner.fullName || t.owner === currentOwner.owner;
+        });
+        const map = new Map();
+        combined.forEach(t => map.set(t.id, t));
+        ownerLocal.forEach(t => {
+          if (!map.has(t.id)) map.set(t.id, t);
+        });
+        combined = Array.from(map.values());
+      } catch {}
+
+      // Combine with tractors prop
+      (Array.isArray(tractors) ? tractors : []).forEach(t => {
+        const tClean = (t.ownerMobile || t.mobile || '').replace(/\D/g, '').slice(-10);
+        if ((tClean === clean || t.owner === currentOwner.fullName || t.owner === currentOwner.owner) && !combined.find(c => c.id === t.id)) {
+          combined.push(t);
+        }
+      });
+
+      setOwnerTractorsList(combined);
+    } catch (err) {
+      console.warn('fetchOwnerTractors error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchLiveOwnerBookings();
-  }, [currentOwner?.mobile]);
+    fetchOwnerTractors();
+  }, [currentOwner?.mobile, tractors]);
 
   const selectedTractor = tractors.find(tr => tr.id === Number(selectedOwnerId));
 
@@ -200,8 +249,34 @@ export default function OwnerInbox({
         )}
       </div>
 
-      {/* Tractor Selector & Filter Tabs Strip */}
-      <div className="form-card-wrapper" style={{ maxWidth: '100%', marginBottom: '24px', padding: '16px 24px' }}>
+      {/* Top View Selector: Farmer Bookings vs My Tractor Listings */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className={`filter-pill ${activeView === 'bookings' ? 'active' : ''}`}
+          onClick={() => setActiveView('bookings')}
+          style={{ fontSize: '13.5px', padding: '8px 18px', fontWeight: 700 }}
+        >
+          📥 {isTe ? 'రైతుల బుకింగ్ అభ్యర్థనలు' : 'Farmer Booking Requests'} ({ownerBookings.length})
+        </button>
+        <button
+          type="button"
+          className={`filter-pill ${activeView === 'my-tractors' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveView('my-tractors');
+            fetchOwnerTractors();
+          }}
+          style={{ fontSize: '13.5px', padding: '8px 18px', fontWeight: 700 }}
+        >
+          🚜 {isTe ? 'నా ట్రాక్టర్ల జాబితా' : 'My Tractor Listings'} ({ownerTractorsList.length})
+        </button>
+      </div>
+
+      {/* VIEW 1: FARMER BOOKING REQUESTS */}
+      {activeView === 'bookings' && (
+        <>
+          {/* Tractor Selector & Filter Tabs Strip */}
+          <div className="form-card-wrapper" style={{ maxWidth: '100%', marginBottom: '24px', padding: '16px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '24px' }}>🚜</span>
@@ -492,6 +567,256 @@ export default function OwnerInbox({
           </div>
         </div>
       )}
+        </>
+      )}
+
+      {/* ====================================================
+          VIEW 2: MY TRACTOR LISTINGS
+         ==================================================== */}
+      {activeView === 'my-tractors' && (
+        <div className="page-anim">
+          {/* Header & Register Action */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
+            <div>
+              <h4 style={{ fontSize: '18px', color: 'var(--primary-900)', margin: '0 0 4px 0' }}>
+                🚜 {isTe ? 'నా నమోదిత ట్రాక్టర్ల జాబితా' : 'My Registered Tractor Fleet'}
+              </h4>
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                {isTe
+                  ? 'మీ ట్రాక్టర్ల ధృవీకరణ స్థితిని పరిశీలించండి, అడ్మిన్ వ్యాఖ్యలు చూడండి లేదా సవరించి పునఃసమర్పించండి.'
+                  : 'Track verification progress, review administrator feedback, and manage your tractor fleet.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setEditingTractor(null);
+                setIsCustomModalOpen(true);
+              }}
+              style={{
+                background: '#16a34a',
+                color: '#ffffff',
+                padding: '9px 18px',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)'
+              }}
+            >
+              <span>+ {isTe ? 'ఇతర ట్రాక్టర్ మోడల్ నమోదు చేయండి' : 'Register Other Tractor Model'}</span>
+            </button>
+          </div>
+
+          {/* Empty State */}
+          {ownerTractorsList.length === 0 ? (
+            <div className="form-card-wrapper text-center" style={{ padding: '50px 20px' }}>
+              <span style={{ fontSize: '48px', display: 'block', marginBottom: '12px' }}>🚜</span>
+              <h4>{isTe ? 'ఇంకా ఎలాంటి ట్రాక్టర్లు నమోదు కాలేదు' : 'No tractors listed yet.'}</h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: '13.5px', marginTop: '6px', maxWidth: '420px', margin: '6px auto 18px auto' }}>
+                {isTe
+                  ? 'మీ వద్ద ఉన్న ఇతర ట్రాక్టర్ మోడల్ లేదా యంత్రాన్ని నమోదు చేసి ధృవీకరణ కోసం సమర్పించండి.'
+                  : 'Register your custom tractor model with genuine photographs to start receiving rental bookings from local farmers.'}
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setEditingTractor(null);
+                  setIsCustomModalOpen(true);
+                }}
+                style={{ padding: '10px 24px', fontSize: '13.5px' }}
+              >
+                + {isTe ? 'మొదటి ట్రాక్టర్‌ను నమోదు చేయండి' : 'Register Tractor Now'}
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
+              {ownerTractorsList.map(tractor => {
+                const vStatus = tractor.verificationStatus || tractor.verification_status || 'Approved';
+                const isApproved = vStatus === 'Approved';
+                const isPending = vStatus === 'Pending Verification' || vStatus === 'Pending';
+                const isRejected = vStatus === 'Rejected';
+                const isResubmit = vStatus === 'Resubmission Required';
+
+                // Status Badges Colors matching user requirements:
+                // Pending – Yellow, Approved – Green, Rejected – Red
+                const badgeStyle = isApproved
+                  ? { bg: '#dcfce7', text: '#166534', border: '#86efac', icon: '✓' }
+                  : isPending
+                  ? { bg: '#fef08a', text: '#854d0e', border: '#fde047', icon: '⏳' }
+                  : isRejected
+                  ? { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5', icon: '✕' }
+                  : { bg: '#ffedd5', text: '#9a3412', border: '#fdba74', icon: '↺' };
+
+                const photoSrc = tractor.photo || '/tractor1.jpeg';
+
+                return (
+                  <div
+                    key={tractor.id}
+                    className="service-card"
+                    style={{
+                      padding: '0',
+                      overflow: 'hidden',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                    }}
+                  >
+                    {/* Tractor Image with Overlay Status Badge */}
+                    <div style={{ position: 'relative', height: '170px', width: '100%', background: '#f1f5f9' }}>
+                      <img
+                        src={photoSrc}
+                        alt={`${tractor.brand} ${tractor.model}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.target.src = '/tractor1.jpeg'; }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          background: badgeStyle.bg,
+                          color: badgeStyle.text,
+                          border: `1px solid ${badgeStyle.border}`,
+                          borderRadius: '20px',
+                          padding: '4px 12px',
+                          fontSize: '11.5px',
+                          fontWeight: 800,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.12)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <span>{badgeStyle.icon}</span>
+                        <span>{vStatus}</span>
+                      </div>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: '8px',
+                          left: '10px',
+                          background: 'rgba(15, 23, 42, 0.75)',
+                          color: '#ffffff',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontFamily: 'monospace'
+                        }}
+                      >
+                        ID: TRAC-CUSTOM-{tractor.id}
+                      </div>
+                    </div>
+
+                    {/* Content Details */}
+                    <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <h4 style={{ margin: '0 0 6px 0', fontSize: '17px', color: '#0f172a' }}>
+                        {tractor.brand} {tractor.model}
+                      </h4>
+
+                      <div style={{ fontSize: '13px', color: '#475569', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <div>📍 <strong>{isTe ? 'లొకేషన్:' : 'Location:'}</strong> {tractor.village || tractor.mandal || tractor.location || 'Hasanparthy'}, {tractor.district || 'Hanumakonda'}</div>
+                        {tractor.whereabouts && (
+                          <div>🏡 <strong>{isTe ? 'స్థలం:' : 'Whereabouts:'}</strong> {tractor.whereabouts}</div>
+                        )}
+                        <div>💰 <strong>{isTe ? 'అద్దె ధర:' : 'Rental Price:'}</strong> ₹{tractor.pricing || 900}/hr {tractor.priceAcre ? `• ₹${tractor.priceAcre}/acre` : ''}</div>
+                        {tractor.hp && (
+                          <div>⚡ <strong>{isTe ? 'హార్స్‌పవర్:' : 'Horsepower:'}</strong> {tractor.hp}</div>
+                        )}
+                        {tractor.equipment && (
+                          <div style={{ marginTop: '4px', fontSize: '12px' }}>
+                            ⚙️ <span style={{ color: '#047857' }}>{tractor.equipment}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Admin Remarks if Rejected or Resubmission Required */}
+                      {(tractor.adminRemarks || tractor.admin_remarks) && (
+                        <div
+                          style={{
+                            background: isRejected ? '#fef2f2' : '#fffbeb',
+                            border: `1px solid ${isRejected ? '#fca5a5' : '#fde68a'}`,
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            color: isRejected ? '#991b1b' : '#92400e',
+                            fontSize: '12.5px',
+                            margin: '8px 0 12px 0'
+                          }}
+                        >
+                          <strong style={{ display: 'block', marginBottom: '2px' }}>
+                            ⚠️ {isTe ? 'అడ్మినిస్ట్రేటర్ సూచనలు / కారణం:' : 'Administrator Feedback:'}
+                          </strong>
+                          <div style={{ fontStyle: 'italic' }}>"{tractor.adminRemarks || tractor.admin_remarks}"</div>
+                        </div>
+                      )}
+
+                      {/* Action Controls */}
+                      <div style={{ marginTop: 'auto', paddingTop: '10px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '8px' }}>
+                        {(isRejected || isResubmit || isPending) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTractor(tractor);
+                              setIsCustomModalOpen(true);
+                            }}
+                            style={{
+                              flex: 1,
+                              background: '#f8fafc',
+                              border: '1px solid #cbd5e1',
+                              color: '#334155',
+                              padding: '8px',
+                              borderRadius: '6px',
+                              fontWeight: 700,
+                              fontSize: '12.5px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✏️ {isTe ? 'సవరించి పునఃసమర్పించండి' : 'Edit & Resubmit'}
+                          </button>
+                        )}
+
+                        {isApproved && (
+                          <div style={{ fontSize: '12px', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            ✓ {isTe ? 'రైతు మార్కెట్‌ప్లేస్‌లో బుకింగ్‌లకు అందుబాటులో ఉంది' : 'Live & Available on Marketplace'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Dedicated Custom Tractor Registration & Resubmission Modal */}
+      <CustomTractorModal
+        isOpen={isCustomModalOpen}
+        onClose={() => {
+          setIsCustomModalOpen(false);
+          setEditingTractor(null);
+        }}
+        ownerName={currentOwner?.fullName || currentOwner?.owner || 'Vehicle Owner'}
+        ownerMobile={currentOwner?.mobile || ''}
+        defaultDistrict={selectedLocation?.district || 'Hanumakonda'}
+        defaultVillage={selectedLocation?.village || 'Hasanparthy'}
+        language={language}
+        initialData={editingTractor}
+        onTractorSubmitted={(savedTractor) => {
+          fetchOwnerTractors();
+          if (setTractors) {
+            setTractors(prev => [savedTractor, ...prev.filter(t => t.id !== savedTractor.id)]);
+          }
+        }}
+      />
 
       {/* CONFIRMATION POPUP MODAL */}
       {slotModal && (

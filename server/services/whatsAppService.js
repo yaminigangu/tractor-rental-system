@@ -49,6 +49,23 @@ export function formatBookingWhatsAppMessage({
     return `⚠️ BOOKING CANCELLED BY CUSTOMER\n\nBooking ID: ${code}\n\nCustomer: ${farmerName} (${farmerMobile})\nTractor: ${tractorName}\nDate: ${date}\nTime: ${time}\n\nStatus: Cancelled\n\nThis time slot has been freed on your tractor schedule.`;
   }
 
+  if (type === 'tractor_approved_to_owner') {
+    const tName = booking.model ? `${booking.brand || ''} ${booking.model}`.trim() : (booking.tractorModel || 'Tractor');
+    return `🎉 CONGRATULATIONS! TRACTOR APPROVED\n\nCongratulations! Your tractor ${tName} has been successfully verified and approved.\n\nYour tractor is now available for customers to view and book on AgriRent.\n\nThank you for choosing AgriRent!`;
+  }
+
+  if (type === 'tractor_rejected_to_owner') {
+    const tName = booking.model ? `${booking.brand || ''} ${booking.model}`.trim() : (booking.tractorModel || 'Tractor');
+    const feedback = booking.adminRemarks || booking.admin_remarks || 'Please upload genuine tractor photograph and correct registration details.';
+    return `⚠️ TRACTOR VERIFICATION UPDATE\n\nYour tractor listing (${tName}) needs some corrections.\n\nAdmin Feedback:\n"${feedback}"\n\nPlease check the administrator's feedback and upload the required information again.`;
+  }
+
+  if (type === 'tractor_resubmit_to_owner') {
+    const tName = booking.model ? `${booking.brand || ''} ${booking.model}`.trim() : (booking.tractorModel || 'Tractor');
+    const feedback = booking.adminRemarks || booking.admin_remarks || 'Please review your tractor submission details.';
+    return `🔄 TRACTOR RESUBMISSION REQUIRED\n\nYour tractor listing (${tName}) requires updates before approval.\n\nAdmin Feedback:\n"${feedback}"\n\nPlease log in to your owner dashboard to edit and resubmit your tractor listing.`;
+  }
+
   return `🚜 AgriRent Booking Update: #${code} is now ${status}.`;
 }
 

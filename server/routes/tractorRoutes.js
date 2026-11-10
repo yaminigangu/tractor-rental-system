@@ -3,6 +3,9 @@ import {
   getTractors,
   getTractorById,
   createTractor,
+  createCustomTractor,
+  updateTractorVerification,
+  resubmitCustomTractor,
   updateTractor,
   deleteTractor
 } from '../controllers/tractorController.js';
@@ -10,6 +13,9 @@ import {
 const router = Router();
 
 router.get('/', getTractors);
+router.post('/custom', createCustomTractor);
+router.patch('/:id/verification', updateTractorVerification);
+router.put('/:id/custom', resubmitCustomTractor);
 router.get('/:id', getTractorById);
 router.post('/', createTractor);
 router.put('/:id', updateTractor);
