@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import BookingStepper from '../components/BookingStepper';
 import { translations } from '../translations';
 import { apiGetMyBookings, apiUpdateBookingStatus } from '../api/apiClient';
 
@@ -342,10 +341,6 @@ export default function MyBookings({
                             ⚠️ {isTe ? 'తిరస్కరణ కారణం:' : 'Reason:'} {b.rejectionReason}
                           </div>
                         )}
-                        {/* Progress Stepper */}
-                        <div style={{ marginTop: '8px', maxWidth: '280px' }}>
-                          <BookingStepper status={b.status} language={language} />
-                        </div>
                       </td>
 
                       {/* Rented Tractor Details: Photo, Model, Registration/Identifier */}

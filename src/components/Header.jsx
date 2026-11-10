@@ -76,6 +76,79 @@ export default function Header({
     setUnreadCount(0);
   };
 
+  const getTranslatedNotification = (notif, isTelugu) => {
+    if (!notif) return { title: '', message: '' };
+    if (!isTelugu) {
+      return {
+        title: notif.title || 'Notification',
+        message: notif.message || ''
+      };
+    }
+
+    const titleStr = notif.title || '';
+    const msgStr = notif.message || '';
+    const codeMatch = (titleStr + ' ' + msgStr).match(/TRC\d+|#\d+/i);
+    const code = codeMatch ? codeMatch[0] : '';
+
+    const modelMatch = msgStr.match(/booking for ([^on]+) on/i) || msgStr.match(/for ([^on]+) on/i);
+    const tractorName = modelMatch ? modelMatch[1].trim() : '';
+
+    const dateMatch = msgStr.match(/\d{4}-\d{2}-\d{2}/);
+    const slotMatch = msgStr.match(/\[([^\]]+)\]/);
+    const dateStr = dateMatch ? dateMatch[0] : '';
+    const slotStr = slotMatch ? `[${slotMatch[1]}]` : '';
+
+    const type = notif.type || '';
+    const titleLower = titleStr.toLowerCase();
+
+    // 1. Booking Submitted / Dispatched
+    if (type === 'booking_submitted' || titleLower.includes('dispatched') || titleLower.includes('submitted')) {
+      return {
+        title: `📋 బుకింగ్ అభ్యర్థన పంపబడింది ${code ? `(${code})` : ''}`,
+        message: tractorName
+          ? `${tractorName} కొరకు ${dateStr} ${slotStr} సమయానికి బుకింగ్ అభ్యర్థన పంపబడింది. యజమాని ఆమోదం కోసం వేచి ఉంది.`
+          : `మీ ట్రాక్టర్ బుకింగ్ విజయవంతంగా పంపబడింది. యజమాని ఆమోదం కోసం వేచి ఉంది.`
+      };
+    }
+
+    // 2. New Booking Request to Owner
+    if (type === 'new_booking_request' || titleLower.includes('new booking request')) {
+      return {
+        title: `🚜 కొత్త బుకింగ్ అభ్యర్థన ${code ? `(${code})` : ''}`,
+        message: `మీ ట్రాక్టర్‌కు కొత్త బుకింగ్ అభ్యర్థన వచ్చింది. దయచేసి పరిశీలించి ఆమోదించండి.`
+      };
+    }
+
+    // 3. Booking Confirmed
+    if (type === 'booking_confirmed' || titleLower.includes('confirmed')) {
+      return {
+        title: `✅ బుకింగ్ ఖరారైంది ${code ? `(${code})` : ''}`,
+        message: `వాహన యజమాని మీ ట్రాక్టర్ బుకింగ్‌ను ఆమోదించారు. నిర్ణీత సమయానికి పొలానికి వస్తారు.`
+      };
+    }
+
+    // 4. Booking Rejected
+    if (type === 'booking_rejected' || titleLower.includes('rejected')) {
+      return {
+        title: `❌ బుకింగ్ తిరస్కరించబడింది ${code ? `(${code})` : ''}`,
+        message: `వాహన యజమాని ప్రస్తుతానికి అందుబాటులో లేనందున ఈ బుకింగ్‌ను తిరస్కరించారు.`
+      };
+    }
+
+    // 5. Booking Cancelled
+    if (type === 'booking_cancelled' || titleLower.includes('cancelled')) {
+      return {
+        title: `⚠️ బుకింగ్ రద్దు చేయబడింది ${code ? `(${code})` : ''}`,
+        message: `ఈ ట్రాక్టర్ బుకింగ్ రద్దు చేయబడింది.`
+      };
+    }
+
+    return {
+      title: titleStr,
+      message: msgStr
+    };
+  };
+
   const getPageTitle = (page) => {
     switch (page) {
       case 'portal-select':
@@ -306,6 +379,7 @@ export default function Header({
                                       notif.type === 'booking_confirmed' ? '✅' :
                                       notif.type === 'booking_rejected' ? '❌' :
                                       notif.type === 'booking_cancelled' ? '⚠️' : '🔔';
+                    const translated = getTranslatedNotification(notif, isTe);
 
                     return (
                       <div
@@ -325,7 +399,7 @@ export default function Header({
                         <span style={{ fontSize: '20px', lineHeight: 1 }}>{notifIcon}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '13px', color: '#1e293b' }}>{notif.title}</strong>
+                            <strong style={{ fontSize: '13px', color: '#1e293b' }}>{translated.title}</strong>
                             {isNew && (
                               <span style={{
                                 width: '7px',
@@ -337,7 +411,7 @@ export default function Header({
                             )}
                           </div>
                           <p style={{ margin: '3px 0 4px 0', fontSize: '12px', color: '#475569', lineHeight: 1.35 }}>
-                            {notif.message}
+                            {translated.message}
                           </p>
                           <small style={{ fontSize: '10.5px', color: '#94a3b8' }}>
                             {notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
