@@ -29,12 +29,12 @@ function base64UrlDecode(str) {
 }
 
 /**
- * Signs a standard HS256 JWT token with 14-day validity
+ * Signs a standard HS256 JWT token with customizable validity (default 14 days)
  * payload: { id, mobile, name, role }
  */
-export function generateToken(payload) {
+export function generateToken(payload, expiresInMs = 14 * 24 * 60 * 60 * 1000) {
   const header = { alg: 'HS256', typ: 'JWT' };
-  const exp = Date.now() + 14 * 24 * 60 * 60 * 1000; // 14 days
+  const exp = Date.now() + expiresInMs;
   const fullPayload = { ...payload, exp };
 
   const encodedHeader = base64UrlEncode(JSON.stringify(header));

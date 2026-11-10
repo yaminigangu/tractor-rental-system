@@ -2,9 +2,17 @@ import { useState, useEffect } from 'react';
 import { translations } from '../translations';
 import { ALL_LOCATIONS_LIST } from '../data/telanganaLocations';
 import { getAccurateTractorPhoto, getTractorDisplayName } from './FindTractor';
-import { apiSaveBooking } from '../api/apiClient';
+import { apiSaveBooking, apiCheckAvailability } from '../api/apiClient';
 
 const TODAY_DATE = new Date().toISOString().split('T')[0];
+
+const TIME_SLOTS = [
+  { value: '06:00 AM – 10:00 AM', label: '06:00 AM – 10:00 AM (Early Morning)' },
+  { value: '09:00 AM – 01:00 PM', label: '09:00 AM – 01:00 PM (Standard Morning)' },
+  { value: '02:00 PM – 06:00 PM', label: '02:00 PM – 06:00 PM (Afternoon Shift)' },
+  { value: '06:00 PM – 10:00 PM', label: '06:00 PM – 10:00 PM (Evening Shift)' },
+  { value: 'Full Day: 07:00 AM – 05:00 PM', label: 'Full Day: 07:00 AM – 05:00 PM (10 Hours Work)' }
+];
 
 export default function TractorBooking({
   tractors = [],
@@ -33,8 +41,16 @@ export default function TractorBooking({
     otherWorkDetails: '',
     landArea: currentFarmer?.landArea || 2,
     bookingDate: TODAY_DATE,
+    timeSlot: '09:00 AM – 01:00 PM',
+    advancePayment: 0,
     assignedTractorId: selectedTractor ? selectedTractor.id : (tractors[0]?.id || '')
   }));
+
+  // Live Availability Check State
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [availabilityResult, setAvailabilityResult] = useState({ available: true, conflict: null });
+  const [validationError, setValidationError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Auto-sync currentFarmer if user logs in while on or visiting the page
   useEffect(() => {
@@ -64,8 +80,47 @@ export default function TractorBooking({
   const currentTractor = selectedUnit || selectedTractor || tractors[0];
   const hourlyRate = currentTractor ? currentTractor.pricing : 1200;
   // Estimated 1.5 hours per acre for ploughing/rotavator
-  const estimatedHours = Math.max(1, Math.round((Number(formData.landArea) || 1) * 1.5));
+  const estimatedHours = formData.timeSlot.includes('Full Day')
+    ? 10
+    : Math.max(1, Math.round((Number(formData.landArea) || 1) * 1.5));
   const estimatedCost = estimatedHours * hourlyRate;
+
+  // Live Availability Checker: verifies slot against active bookings in database
+  useEffect(() => {
+    let isMounted = true;
+    if (!formData.assignedTractorId || !formData.bookingDate || !formData.timeSlot) return;
+
+    setIsCheckingAvailability(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await apiCheckAvailability(formData.assignedTractorId, formData.bookingDate, formData.timeSlot);
+        if (isMounted && res) {
+          setAvailabilityResult({
+            available: res.available !== false,
+            conflict: res.conflict || null
+          });
+          if (res.available === false) {
+            setValidationError(
+              isTe
+                ? `⚠️ ఈ ట్రాక్టర్ ఇప్పటికే ${res.conflict?.timeSlot || formData.timeSlot} స్లాట్‌లో బుక్ చేయబడింది! దయచేసి వేరే సమయాన్ని లేదా వేరే ట్రాక్టర్‌ను ఎంచుకోండి.`
+                : `⚠️ This tractor is already booked for ${res.conflict?.timeSlot || formData.timeSlot}! Please choose another time slot or another tractor.`
+            );
+          } else {
+            setValidationError('');
+          }
+        }
+      } catch (err) {
+        console.warn('Availability check error:', err);
+      } finally {
+        if (isMounted) setIsCheckingAvailability(false);
+      }
+    }, 250);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [formData.assignedTractorId, formData.bookingDate, formData.timeSlot]);
 
   // Helper to accurately extract vehicle owner's mobile number
   const getOwnerPhone = (tractor) => {
@@ -73,13 +128,30 @@ export default function TractorBooking({
     return String(tractor.mobile || tractor.defaultMobile || tractor.ownerMobile || '').replace(/\D/g, '');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setValidationError('');
+
+    if (availabilityResult.available === false) {
+      setValidationError(
+        isTe
+          ? 'ఈ ట్రాక్టర్ ఎంచుకున్న స్లాట్‌లో ఖాళీగా లేదు. డబుల్ బుకింగ్ నివారించడానికి దయచేసి వేరే స్లాట్ లేదా ట్రాక్టర్‌ను ఎంచుకోండి.'
+          : 'Double booking detected: This tractor is unavailable in the selected time slot. Please choose another slot.'
+      );
+      return;
+    }
 
     const resolvedOwnerPhone = getOwnerPhone(currentTractor);
     const typedFarmerMobile = String(formData.farmerMobile || '').trim();
 
-    const newBooking = {
+    if (typedFarmerMobile.length < 10) {
+      setValidationError(isTe ? 'దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const bookingPayload = {
       id: Date.now(),
       farmerId: currentFarmer?.id || null,
       farmerName: formData.farmerName.trim(),
@@ -90,8 +162,11 @@ export default function TractorBooking({
         : formData.workType,
       landArea: Number(formData.landArea),
       bookingDate: formData.bookingDate,
+      timeSlot: formData.timeSlot,
+      durationHours: estimatedHours,
       estimatedHours,
       estimatedCost,
+      advancePayment: Number(formData.advancePayment) || 0,
       status: 'Pending Approval',
       tractorId: currentTractor ? currentTractor.id : null,
       tractorModel: currentTractor ? `${currentTractor.brand} ${currentTractor.model}` : 'Assigned Tractor',
@@ -101,19 +176,46 @@ export default function TractorBooking({
       createdAt: new Date().toLocaleString()
     };
 
-    setBookings((prev) => [newBooking, ...prev]);
+    try {
+      const res = await apiSaveBooking(bookingPayload);
 
-    // Asynchronously persist work order to PostgreSQL database if backend is running
-    apiSaveBooking(newBooking).catch(() => {});
+      if (res && res.success === false && res.conflict) {
+        setValidationError(
+          res.error ||
+          (isTe
+            ? 'ఈ స్లాట్ ఇప్పటికే వేరొక రైతు ద్వారా బుక్ చేయబడింది. దయచేసి వేరే సమయం లేదా ట్రాక్టర్‌ను ఎంచుకోండి.'
+            : 'Overlap Conflict: This slot has just been booked. Please pick another time or unit.')
+        );
+        setIsSubmitting(false);
+        return;
+      }
 
-    // Trigger Digital Receipt Slip Modal with the exact typed farmer mobile!
-    if (onBookingSuccess) {
-      onBookingSuccess(newBooking);
+      const finalizedBooking = (res && res.booking) ? res.booking : bookingPayload;
+
+      // Attach WhatsApp dispatch summary
+      if (res && res.whatsapp) {
+        finalizedBooking.whatsappResult = res.whatsapp;
+      }
+
+      setBookings((prev) => [finalizedBooking, ...(Array.isArray(prev) ? prev : [])]);
+
+      // Trigger Digital Invoice / Slip Modal
+      if (onBookingSuccess) {
+        onBookingSuccess(finalizedBooking);
+      }
+      setActivePage('my-bookings');
+    } catch (err) {
+      console.warn('Booking dispatch error:', err);
+      // Fallback local save
+      setBookings((prev) => [bookingPayload, ...(Array.isArray(prev) ? prev : [])]);
+      if (onBookingSuccess) {
+        onBookingSuccess(bookingPayload);
+      }
+      setActivePage('my-bookings');
+    } finally {
+      setIsSubmitting(false);
     }
-    setActivePage('my-bookings');
   };
-
-  const [validationError, setValidationError] = useState('');
 
   const handleSendWhatsAppBooking = () => {
     if (!formData.farmerName || !formData.farmerMobile) {
@@ -124,32 +226,23 @@ export default function TractorBooking({
     const targetPhone = getOwnerPhone(currentTractor);
     const typedFarmerPhone = String(formData.farmerMobile).trim();
     const ownerDisplayName = currentTractor ? (currentTractor.owner || currentTractor.defaultOwner || 'Tractor Owner') : 'Tractor Owner';
-    const tractorDisplayName = currentTractor ? `${currentTractor.brand} ${currentTractor.model}` : 'Best Available Tractor';
+    const tractorDisplayName = currentTractor ? `${currentTractor.brand} ${currentTractor.model}` : 'Assigned Tractor';
 
     const message = encodeURIComponent(
-      isTe
-        ? `🌾 *అగ్రిరెంట్ స్లాట్ లభ్యత & బుకింగ్ అభ్యర్థన*\n` +
-        `రైతు పేరు: ${formData.farmerName}\n` +
-        `రైతు మొబైల్: ${typedFarmerPhone}\n` +
-        `గ్రామం: ${formData.farmerVillage}\n` +
-        `పని రకం: ${formData.workType} ${formData.otherWorkDetails ? `(${formData.otherWorkDetails})` : ''}\n` +
-        `విస్తీర్ణం: ${formData.landArea} ఎకరాలు\n` +
-        `కోరిన తేదీ: ${formData.bookingDate}\n` +
-        `ట్రాక్టర్: ${tractorDisplayName}\n` +
-        `వాహన యజమాని: ${ownerDisplayName}\n` +
-        `అంచనా అద్దె: ₹${estimatedCost.toLocaleString()}\n\n` +
-        `👉 ట్రాక్టర్ యజమాని గారు (${ownerDisplayName}): ఈ తేదీన మీ ట్రాక్టర్ ఖాళీగా ఉందా? దయచేసి అవును (FREE) లేదా కాదు (BUSY) అని రైతు మొబైల్ (+91 ${typedFarmerPhone}) కి చెప్పగలరు.`
-        : `🌾 *AgriRent Slot Availability & Work Request*\n` +
-        `Farmer Name: ${formData.farmerName}\n` +
-        `Farmer Mobile (Contact): ${typedFarmerPhone}\n` +
-        `Village: ${formData.farmerVillage}\n` +
-        `Operation: ${formData.workType} ${formData.otherWorkDetails ? `(${formData.otherWorkDetails})` : ''}\n` +
-        `Land Area: ${formData.landArea} Acres\n` +
-        `Requested Date: ${formData.bookingDate}\n` +
-        `Tractor Unit: ${tractorDisplayName}\n` +
-        `Vehicle Owner: ${ownerDisplayName}\n` +
-        `Estimated Total Fare: ₹${estimatedCost.toLocaleString()}\n\n` +
-        `👉 Tractor Owner (${ownerDisplayName}): Please reply whether your tractor is FREE or BUSY for this slot directly to farmer mobile +91 ${typedFarmerPhone}.`
+      `🚜 NEW TRACTOR BOOKING REQUEST\n\n` +
+      `Booking ID: TRC${Math.floor(1000 + Math.random() * 9000)}\n\n` +
+      `Customer: ${formData.farmerName}\n` +
+      `Mobile: ${typedFarmerPhone}\n` +
+      `Tractor: ${tractorDisplayName}\n` +
+      `Booking Date: ${formData.bookingDate}\n` +
+      `Time: ${formData.timeSlot}\n` +
+      `Location: ${formData.farmerVillage}\n` +
+      `Duration: ${estimatedHours} Hours\n` +
+      `Operation: ${formData.workType}\n` +
+      `Estimated Amount: ₹${estimatedCost.toLocaleString()}\n` +
+      `Advance Payment: ₹${Number(formData.advancePayment || 0).toLocaleString()}\n\n` +
+      `Status: Pending Approval\n\n` +
+      `Please log in to your Tractor Rental System dashboard to confirm or reject this booking.`
     );
 
     if (targetPhone) {
@@ -185,9 +278,9 @@ export default function TractorBooking({
           borderRadius: '8px',
           marginBottom: '16px',
           fontWeight: '600',
-          border: '1px solid #ffcdd2'
+          border: '1.5px solid #ef5350'
         }}>
-          ⚠️ {validationError}
+          {validationError}
         </div>
       )}
 
@@ -280,7 +373,7 @@ export default function TractorBooking({
           </div>
         </div>
 
-        {/* Field 4: Type of Work (Exact 5 items from handwritten notes) */}
+        {/* Field 4: Type of Work */}
         <div className="form-group">
           <label htmlFor="workType">{t.workTypeLabel}</label>
           <select
@@ -344,6 +437,41 @@ export default function TractorBooking({
           </div>
         </div>
 
+        {/* Field 7: Specific Time Slot Selection & Live Availability Indicator */}
+        <div className="form-group">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label htmlFor="timeSlot" style={{ margin: 0, fontWeight: 700 }}>
+              ⏰ {isTe ? 'సమయ స్లాట్ ఎంపిక (Preferred Time Slot) *' : 'Select Time Slot *'}
+            </label>
+            <span style={{ fontSize: '12px', fontWeight: 700 }}>
+              {isCheckingAvailability ? (
+                <span style={{ color: '#0288d1' }}>🔄 {isTe ? 'పరిశీలిస్తోంది...' : 'Checking availability...'}</span>
+              ) : availabilityResult.available ? (
+                <span style={{ color: '#2e7d32' }}>🟢 {isTe ? 'స్లాట్ ఖాళీగా ఉంది' : 'Slot Available'}</span>
+              ) : (
+                <span style={{ color: '#d32f2f' }}>🔴 {isTe ? 'స్లాట్ బిజీగా ఉంది' : 'Slot Booked'}</span>
+              )}
+            </span>
+          </div>
+
+          <select
+            id="timeSlot"
+            required
+            value={formData.timeSlot}
+            onChange={(e) => setFormData({ ...formData, timeSlot: e.target.value })}
+            style={{
+              borderColor: availabilityResult.available ? '#81c784' : '#e57373',
+              background: availabilityResult.available ? '#f1f8e9' : '#ffebee'
+            }}
+          >
+            {TIME_SLOTS.map((slot) => (
+              <option key={slot.value} value={slot.value}>
+                {slot.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Tractor Selection if not locked */}
         <div className="form-group">
           <label htmlFor="assignedTractorId">{t.assignedTractorUnitLabel}</label>
@@ -367,21 +495,26 @@ export default function TractorBooking({
           </select>
         </div>
 
-        {/* Dynamic Cost Calculator Box */}
+        {/* Dynamic Cost Calculator Box with Breakdown */}
         <div className="cost-preview-box">
           <div>
             <p><strong>{t.estWorkDuration}</strong> ~{estimatedHours} {isTe ? 'గంటలు' : 'Hours'} ({formData.landArea} {isTe ? 'ఎకరాలకు' : 'Acres'})</p>
-            <p style={{ marginTop: '2px' }}>{isTe ? `గంటకు ₹${hourlyRate} మరియు డ్రైవర్‌తో సహా` : `Calculated at ₹${hourlyRate}/Hr with professional operator`}</p>
+            <p style={{ marginTop: '2px' }}>{isTe ? `గంటకు ₹${hourlyRate} మరియు డ్రైవర్‌తో సహా • స్లాట్: ${formData.timeSlot}` : `Calculated at ₹${hourlyRate}/Hr with professional operator • Slot: ${formData.timeSlot}`}</p>
           </div>
           <div style={{ textAlign: 'right' }}>
             <span style={{ fontSize: '11px', display: 'block', color: '#795548', textTransform: 'uppercase' }}>{t.estTotalCost}</span>
-            <strong>₹{estimatedCost.toLocaleString()}</strong>
+            <strong style={{ fontSize: '22px' }}>₹{estimatedCost.toLocaleString()}</strong>
           </div>
         </div>
 
         {/* Submit Actions */}
-        <button type="submit" className="btn btn-primary w-100" style={{ padding: '14px', fontSize: '16px' }}>
-          {t.btnSubmitBooking}
+        <button
+          type="submit"
+          className="btn btn-primary w-100"
+          disabled={isSubmitting || availabilityResult.available === false}
+          style={{ padding: '14px', fontSize: '16px', opacity: (availabilityResult.available === false) ? 0.6 : 1 }}
+        >
+          {isSubmitting ? (isTe ? 'బుకింగ్ జరుగుతోంది...' : 'Confirming Booking & Dispatching Alerts...') : `✓ ${t.btnSubmitBooking}`}
         </button>
 
         <button

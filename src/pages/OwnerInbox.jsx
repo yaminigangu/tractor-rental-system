@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { translations } from '../translations';
-import { apiUpdateBookingStatus, apiGetOwnerBookings, apiGetMyBookings } from '../api/apiClient';
+import { apiUpdateBookingStatus, apiGetOwnerBookings } from '../api/apiClient';
 
 export default function OwnerInbox({ 
   bookings = [], 
@@ -25,11 +25,17 @@ export default function OwnerInbox({
     }
     return tractors[0]?.id || 'all';
   });
+
   const [statusFilter, setStatusFilter] = useState('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // In-App Permanent Confirmation Modal (NEVER auto-dismisses!)
+  // In-App Permanent Confirmation Modal
   const [slotModal, setSlotModal] = useState(null);
+
+  // Reject with Reason Modal State
+  const [rejectingBooking, setRejectingBooking] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
 
   // Fetch live bookings from PostgreSQL on mount and whenever currentOwner changes
   const fetchLiveOwnerBookings = async () => {
@@ -76,76 +82,98 @@ export default function OwnerInbox({
     }
 
     if (statusFilter === 'All') return true;
-    if (statusFilter === 'Pending') return b.status === 'Pending Approval';
+    if (statusFilter === 'Pending') return b.status === 'Pending Approval' || b.status === 'Pending';
     if (statusFilter === 'Confirmed') return b.status === 'Approved' || b.status === 'Confirmed';
-    if (statusFilter === 'Declined') return b.status.includes('Declined');
+    if (statusFilter === 'Rejected') return b.status === 'Rejected' || b.status.includes('Declined');
+    if (statusFilter === 'Cancelled') return b.status === 'Cancelled';
+    if (statusFilter === 'Completed') return b.status === 'Completed';
     return true;
   });
 
-  const handleSlotDecision = (booking, decisionStatus) => {
+  const handleSlotDecision = async (booking, decisionStatus, reason = null) => {
+    setIsSubmittingDecision(true);
+
+    const updatedBooking = {
+      ...booking,
+      status: decisionStatus,
+      rejectionReason: decisionStatus === 'Rejected' ? reason : booking.rejectionReason,
+      slotDecidedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
     setBookings((prev) =>
-      prev.map((b) => {
-        if (b.id === booking.id) {
-          return {
-            ...b,
-            status: decisionStatus,
-            slotDecidedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-        }
-        return b;
-      })
+      prev.map((b) => (b.id === booking.id ? updatedBooking : b))
     );
 
-    // Asynchronously update booking status in PostgreSQL database
-    apiUpdateBookingStatus(booking.id, decisionStatus).catch(() => {});
+    // Update in database with rejection/cancellation reason & triggers in-app + WhatsApp notifications
+    try {
+      await apiUpdateBookingStatus(booking.id, decisionStatus, reason);
+    } catch (err) {
+      console.warn('apiUpdateBookingStatus error:', err);
+    } finally {
+      setIsSubmittingDecision(false);
+      setRejectingBooking(null);
+      setRejectionReason('');
+    }
 
-    // Open permanent in-app modal with manual OK button
-    const updatedBooking = { ...booking, status: decisionStatus };
-    if (decisionStatus === 'Approved') {
+    // Modal popup
+    if (decisionStatus === 'Confirmed' || decisionStatus === 'Approved') {
       setSlotModal({
-        title: isTe ? '✅ స్లాట్ విజయవంతంగా ఖరారైంది!' : '✅ Slot Confirmed Successfully!',
+        title: isTe ? '✅ స్లాట్ విజయవంతంగా ఖరారైంది!' : '✅ Booking Confirmed Successfully!',
         message: isTe 
-          ? `${booking.farmerName} గారికి ${booking.bookingDate} తేదీన మీ ట్రాక్టర్ స్లాట్ ఖరారైంది. రైతుకు తన అకౌంట్లో ఈ స్టేటస్ కనిపిస్తుంది.`
-          : `Slot has been confirmed for ${booking.farmerName} on ${booking.bookingDate}. The farmer will now see this confirmed in their booking tracker.`,
+          ? `${booking.farmerName} గారికి ${booking.bookingDate} (${booking.timeSlot || 'స్లాట్'}) తేదీన మీ ట్రాక్టర్ ఖరారైంది. రైతుకు ఇన్‌-యాప్ నోటిఫికేషన్ పంపబడింది.`
+          : `Booking confirmed for ${booking.farmerName} on ${booking.bookingDate} (${booking.timeSlot || 'slot'}). Customer notified in-app and WhatsApp alert dispatched.`,
         booking: updatedBooking,
         decisionStatus: 'Approved'
       });
-    } else if (decisionStatus.includes('Proposed')) {
+    } else if (decisionStatus === 'Completed') {
       setSlotModal({
-        title: isTe ? '⏳ మరుసటి రోజు స్లాట్ ప్రతిపాదించబడింది' : '⏳ Alternative Slot Proposed!',
-        message: isTe 
-          ? `${booking.farmerName} గారికి ఈ తేదీన బిజీ అని, మరుసటి రోజు అందుబాటులో ఉన్నారని తెలియజేశాము.`
-          : `You proposed to do work on the next day. The farmer is informed to coordinate the alternative slot.`,
+        title: isTe ? '🌾 పని పూర్తయినట్లు మార్క్ చేయబడింది!' : '🌾 Work Marked as Completed!',
+        message: isTe
+          ? `${booking.farmerName} గారి పొలంలో పని విజయవంతంగా పూర్తయింది.`
+          : `Field operation completed for ${booking.farmerName}. Receipt updated.`,
         booking: updatedBooking,
-        decisionStatus: 'Proposed'
+        decisionStatus: 'Completed'
       });
     } else {
       setSlotModal({
-        title: isTe ? '❌ స్లాట్ తిరస్కరించబడింది (బిజీ)' : '❌ Slot Declined (Busy)',
+        title: isTe ? '❌ స్లాట్ తిరస్కరించబడింది' : '❌ Booking Rejected',
         message: isTe 
-          ? `ఈ స్లాట్ తిరస్కరించబడింది. రైతు వేరే తేదీ లేదా వేరే ట్రాక్టర్‌ను ఎంచుకోగలరు.`
-          : `You marked your tractor as busy for this date. The farmer will be prompted to pick another date or tractor.`,
+          ? `ఈ బుకింగ్ తిరస్కరించబడింది. రైతుకు నోటిఫికేషన్ ద్వారా సమాచారం అందించబడింది.`
+          : `Booking rejected. Reason: ${reason || 'Tractor occupied'}. Customer notified.`,
         booking: updatedBooking,
         decisionStatus: 'Declined'
       });
     }
   };
 
-  // Method 1: Send WhatsApp message to Farmer with slot confirmation
+  // Method: Send WhatsApp message to Farmer with slot confirmation
   const handleWhatsAppFarmer = (b, type = 'confirm') => {
     let messageText = '';
 
     if (type === 'confirm') {
       messageText = encodeURIComponent(
-        isTe
-          ? `🌾 *అగ్రిరెంట్ స్లాట్ ఖరారైంది*\nనమస్తే ${b.farmerName} గారు, మీరు ${b.bookingDate} తేదీన కోరిన ${b.workType} (${b.landArea} ఎకరాలు) పనిని నేను ఆమోదించాను.\n🚜 ట్రాక్టర్: ${b.tractorModel}\n👨‍🔧 యజమాని: ${b.tractorOwner} (${b.ownerMobile})\n💰 అంచనా మొత్తం: ₹${(b.estimatedCost || 0).toLocaleString()}\nఉదయం 7:00 గంటలకు మీ పొలానికి వస్తాను.`
-          : `🌾 *AgriRent Slot Confirmed*\nHello ${b.farmerName}, your booking request for ${b.workType} (${b.landArea} Acres) on ${b.bookingDate} is CONFIRMED by ${b.tractorOwner}.\n🚜 Tractor: ${b.tractorModel}\n💰 Est. Amount: ₹${(b.estimatedCost || 0).toLocaleString()}\nI will reach your farm field in ${b.farmerVillage} at 7:00 AM.`
+        `🚜 TRACTOR BOOKING CONFIRMED\n\n` +
+        `Booking ID: ${b.bookingCode || 'TRC' + String(b.id).slice(-4)}\n` +
+        `Customer: ${b.farmerName}\n` +
+        `Tractor: ${b.tractorModel}\n` +
+        `Date: ${b.bookingDate}\n` +
+        `Time Slot: ${b.timeSlot || '09:00 AM – 01:00 PM'}\n` +
+        `Duration: ${b.durationHours || b.estimatedHours || 4} Hours\n` +
+        `Location: ${b.farmerVillage}\n` +
+        `Estimated Total: ₹${(b.estimatedCost || 0).toLocaleString()}\n\n` +
+        `Status: Confirmed ✓\n\n` +
+        `I will reach your farm field on the scheduled time. Contact: +91 ${(b.ownerMobile || currentOwner?.mobile || '')}`
       );
     } else {
       messageText = encodeURIComponent(
-        isTe
-          ? `🌾 *అగ్రిరెంట్ స్లాట్ సమాచారం*\nనమస్తే ${b.farmerName} గారు, ${b.bookingDate} తేదీన నా ట్రాక్టర్ ఇప్పటికే వేరే పొలంలో బుక్ అయి ఉంది. దయచేసి మరుసటి రోజు లేదా పోర్టల్‌లో వేరే ట్రాక్టర్‌ను ఎంచుకోగలరు.`
-          : `🌾 *AgriRent Slot Notice*\nHello ${b.farmerName}, my tractor is already occupied in field on ${b.bookingDate}. Please pick another date or choose another tractor on AgriRent portal.`
+        `🚜 TRACTOR BOOKING UPDATE\n\n` +
+        `Booking ID: ${b.bookingCode || 'TRC' + String(b.id).slice(-4)}\n` +
+        `Customer: ${b.farmerName}\n` +
+        `Date: ${b.bookingDate}\n` +
+        `Time Slot: ${b.timeSlot || '09:00 AM – 01:00 PM'}\n\n` +
+        `Status: Rejected ✕\n` +
+        `Reason: ${b.rejectionReason || 'Tractor occupied or under maintenance'}\n\n` +
+        `Please log in to AgriRent to choose another tractor or another date.`
       );
     }
 
@@ -172,7 +200,7 @@ export default function OwnerInbox({
         )}
       </div>
 
-      {/* Tractor Selector Strip */}
+      {/* Tractor Selector & Filter Tabs Strip */}
       <div className="form-card-wrapper" style={{ maxWidth: '100%', marginBottom: '24px', padding: '16px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -213,39 +241,46 @@ export default function OwnerInbox({
             </div>
           </div>
 
-          {/* Quick status tabs */}
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {['All', 'Pending', 'Confirmed', 'Declined'].map((tab) => (
+          {/* All 6 Required Status Tabs */}
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {[
+              { id: 'All', labelEn: 'All', labelTe: 'అన్ని' },
+              { id: 'Pending', labelEn: 'Pending', labelTe: 'పెండింగ్' },
+              { id: 'Confirmed', labelEn: 'Confirmed', labelTe: 'ధృవీకరించబడినవి' },
+              { id: 'Rejected', labelEn: 'Rejected', labelTe: 'తిరస్కరించబడినవి' },
+              { id: 'Cancelled', labelEn: 'Cancelled', labelTe: 'రద్దు చేసినవి' },
+              { id: 'Completed', labelEn: 'Completed', labelTe: 'పూర్తయినవి' }
+            ].map((tab) => (
               <button
-                key={tab}
-                className={`role-btn ${statusFilter === tab ? 'active' : ''}`}
-                onClick={() => setStatusFilter(tab)}
+                key={tab.id}
+                className={`role-btn ${statusFilter === tab.id ? 'active' : ''}`}
+                onClick={() => setStatusFilter(tab.id)}
+                style={{ fontSize: '12.5px', padding: '6px 12px' }}
               >
-                {tab === 'All' ? (isTe ? 'అన్ని' : 'All') : 
-                 tab === 'Pending' ? (isTe ? 'పరిశీలనలో' : 'Pending') :
-                 tab === 'Confirmed' ? (isTe ? 'ధృవీకరించబడినవి' : 'Confirmed') : (isTe ? 'రద్దు/బిజీ' : 'Declined')}
+                {isTe ? tab.labelTe : tab.labelEn}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Incoming Requests Cards / Table */}
+      {/* Incoming Requests Cards */}
       {ownerBookings.length === 0 ? (
         <div className="form-card-wrapper text-center" style={{ padding: '50px 20px' }}>
           <span style={{ fontSize: '42px', display: 'block', marginBottom: '10px' }}>📥</span>
-          <h4>{isTe ? 'ఈ ట్రాక్టర్‌కు పెండింగ్ అభ్యర్థనలు లేవు' : 'No incoming work requests for this tractor right now.'}</h4>
+          <h4>{isTe ? 'ఈ ఫిల్టర్‌లో అభ్యర్థనలు లేవు' : 'No bookings found under this status filter.'}</h4>
           <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-            {isTe ? 'రైతులు బుకింగ్ చేయగానే ఇక్కడ కనిపిస్తాయి. ఫోన్ మాట్లాడకుండానే స్లాట్‌ను ఆమోదించవచ్చు!' : 'When farmers book your tractor, orders appear here. You can confirm slots with 1-click!'}
+            {isTe ? 'రైతులు బుకింగ్ చేయగానే ఇక్కడ కనిపిస్తాయి. మీరు తక్షణమే ఆమోదించవచ్చు లేదా తిరస్కరించవచ్చు.' : 'When farmers submit rental requests, they appear here. You can confirm or reject them with 1-click.'}
           </p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {ownerBookings.map((b) => {
             const isApproved = b.status === 'Approved' || b.status === 'Confirmed';
-            const isPending = b.status === 'Pending Approval';
-            const isDeclined = b.status.includes('Declined');
-            const isProposed = b.status.includes('Proposed');
+            const isPending = b.status === 'Pending Approval' || b.status === 'Pending';
+            const isRejected = b.status === 'Rejected' || b.status.includes('Declined');
+            const isCancelled = b.status === 'Cancelled';
+            const isCompleted = b.status === 'Completed';
 
             return (
               <div 
@@ -253,14 +288,14 @@ export default function OwnerInbox({
                 className="service-card" 
                 style={{ 
                   cursor: 'default', 
-                  borderLeft: `6px solid ${isApproved ? '#2e7d32' : isPending ? '#f57c00' : isDeclined ? '#d32f2f' : isProposed ? '#0288d1' : '#7b1fa2'}` 
+                  borderLeft: `6px solid ${isApproved ? '#2e7d32' : isPending ? '#f57c00' : isRejected ? '#d32f2f' : isCancelled ? '#757575' : '#1565c0'}` 
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                   {/* Farmer details */}
                   <div>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--primary-700)', textTransform: 'uppercase' }}>
-                      ORDER #{b.id.toString().slice(-6)} • 📅 {b.bookingDate}
+                      ORDER {b.bookingCode || `#${String(b.id).slice(-6)}`} • 📅 {b.bookingDate} • ⏰ {b.timeSlot || '09:00 AM – 01:00 PM'}
                     </span>
                     <h4 style={{ fontSize: '18px', marginTop: '4px', marginBottom: '4px' }}>
                       👨‍🌾 {b.farmerName} <small style={{ fontWeight: 'normal', color: 'var(--text-muted)' }}>({b.farmerVillage})</small>
@@ -268,24 +303,34 @@ export default function OwnerInbox({
                     <p style={{ margin: 0, fontSize: '13.5px' }}>
                       📞 <strong>{b.farmerMobile}</strong> • 📐 <strong>{b.landArea} {isTe ? 'ఎకరాలు' : 'Acres'}</strong> • ⚙️ <strong>{b.workType}</strong>
                     </p>
+                    {b.advancePayment > 0 && (
+                      <span style={{ fontSize: '12px', color: '#2e7d32', fontWeight: 700, display: 'inline-block', marginTop: '4px' }}>
+                        💵 Advance Paid: ₹{b.advancePayment.toLocaleString()}
+                      </span>
+                    )}
+                    {b.rejectionReason && (
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#c62828', fontWeight: 600 }}>
+                        ⚠️ Rejection Reason: {b.rejectionReason}
+                      </p>
+                    )}
                   </div>
 
                   {/* Status & Fare */}
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>
-                      {isTe ? 'అంచనా అద్దె' : 'Estimated Fare'}
+                      {isTe ? 'మొత్తం అంచనా చార్జ్' : 'Total Estimated Fare'}
                     </span>
                     <strong style={{ fontSize: '20px', color: '#e65100' }}>
                       ₹{(b.estimatedCost || 0).toLocaleString()}
                     </strong>
                     <br />
-                    <span className={`badge ${isApproved ? 'bg-success' : isPending ? 'bg-warning' : isDeclined ? 'bg-danger' : 'bg-info'}`} style={{ marginTop: '4px' }}>
+                    <span className={`badge ${isApproved ? 'bg-success' : isPending ? 'bg-warning' : isRejected ? 'bg-danger' : isCompleted ? 'bg-info' : 'bg-secondary'}`} style={{ marginTop: '4px' }}>
                       ● {b.status}
                     </span>
                   </div>
                 </div>
 
-                {/* Permanent In-Card Status Notice */}
+                {/* Status Notice Banners */}
                 {isApproved && (
                   <div style={{
                     background: '#e8f5e9',
@@ -302,34 +347,19 @@ export default function OwnerInbox({
                     fontSize: '13px',
                     fontWeight: '700'
                   }}>
-                    <span>✅ {isTe ? 'స్లాట్ ఖరారైంది! రైతు అకౌంట్లో ఈ స్టేటస్ అప్‌డేట్ అయ్యింది.' : 'Slot Confirmed! The farmer can see this verified in their account.'}</span>
+                    <span>✅ {isTe ? 'స్లాట్ ఖరారైంది! రైతుకు నోటిఫికేషన్ అప్‌డేట్ అయ్యింది.' : 'Booking Confirmed! Customer has received the update in-app.'}</span>
                     <button 
                       type="button"
                       className="btn btn-whatsapp" 
                       style={{ padding: '5px 12px', fontSize: '12px' }}
                       onClick={() => handleWhatsAppFarmer(b, 'confirm')}
                     >
-                      💬 {isTe ? 'రైతుకు వాట్సాప్ పంపండి' : 'WhatsApp Farmer'}
+                      💬 {isTe ? 'వాట్సాప్ ఇన్‌వాయిస్ పంపండి' : 'Send WhatsApp Invoice'}
                     </button>
                   </div>
                 )}
 
-                {isProposed && (
-                  <div style={{
-                    background: '#fff3e0',
-                    border: '1.5px solid #f57c00',
-                    color: '#e65100',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    marginTop: '12px',
-                    fontSize: '13px',
-                    fontWeight: '700'
-                  }}>
-                    <span>⏳ {isTe ? 'మరుసటి రోజు స్లాట్ రైతుకు సూచించబడింది.' : 'Next day alternative slot proposed to the farmer.'}</span>
-                  </div>
-                )}
-
-                {isDeclined && (
+                {isRejected && (
                   <div style={{
                     background: '#ffebee',
                     border: '1.5px solid #d32f2f',
@@ -340,91 +370,69 @@ export default function OwnerInbox({
                     fontSize: '13px',
                     fontWeight: '700'
                   }}>
-                    <span>❌ {isTe ? 'ఈ తేదీన ట్రాక్టర్ బిజీ అని మార్క్ చేయబడింది.' : 'This slot was marked busy/declined.'}</span>
+                    <span>❌ {isTe ? 'ఈ బుకింగ్ తిరస్కరించబడింది.' : 'This booking was rejected.'} {b.rejectionReason && `(${b.rejectionReason})`}</span>
                   </div>
                 )}
 
-                {/* Slot Decision Operations */}
+                {/* Decision Operations */}
                 <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '16px', paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {/* Accept Slot Button */}
-                    <button 
-                      type="button"
-                      className={`btn ${isApproved ? 'btn-outline-white' : 'btn-primary'}`} 
-                      style={{ 
-                        padding: '8px 14px', 
-                        fontSize: '13px', 
-                        borderColor: isApproved ? '#2e7d32' : 'transparent', 
-                        color: isApproved ? '#1b5e20' : 'white',
-                        background: isApproved ? '#e8f5e9' : undefined,
-                        fontWeight: 700 
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSlotDecision(b, 'Approved');
-                      }}
-                    >
-                      {isApproved ? (isTe ? '✓ స్లాట్ ఖరారైంది (Confirmed)' : '✓ Slot Confirmed') : t.btnAcceptSlot}
-                    </button>
+                    {/* Explicit Confirm Button */}
+                    {isPending && (
+                      <button 
+                        type="button"
+                        className="btn btn-primary" 
+                        style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 700, background: '#1b5e20' }}
+                        onClick={() => handleSlotDecision(b, 'Confirmed')}
+                      >
+                        ✓ {isTe ? 'ఆమోదించండి (Confirm)' : 'Confirm Booking'}
+                      </button>
+                    )}
 
-                    {/* Propose Next Day Button */}
-                    <button 
-                      type="button"
-                      className="btn btn-call" 
-                      style={{ 
-                        padding: '8px 14px', 
-                        fontSize: '13px', 
-                        background: isProposed ? '#e0f2fe' : '#0288d1',
-                        color: isProposed ? '#0369a1' : 'white',
-                        borderColor: isProposed ? '#0288d1' : 'transparent'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSlotDecision(b, 'Next Day Proposed ⏳');
-                      }}
-                    >
-                      {isProposed ? (isTe ? '⏳ మరుసటి రోజు ప్రతిపాదించబడింది' : '⏳ Next Day Proposed') : t.btnProposeAlt}
-                    </button>
+                    {/* Explicit Reject Button */}
+                    {isPending && (
+                      <button 
+                        type="button"
+                        className="btn btn-call" 
+                        style={{ padding: '8px 16px', fontSize: '13px', background: '#d32f2f', color: '#fff', fontWeight: 700 }}
+                        onClick={() => setRejectingBooking(b)}
+                      >
+                        ✕ {isTe ? 'తిరస్కరించండి (Reject)' : 'Reject Booking'}
+                      </button>
+                    )}
 
-                    {/* Decline Button */}
-                    <button 
-                      type="button"
-                      className="btn btn-call" 
-                      style={{ 
-                        padding: '8px 14px', 
-                        fontSize: '13px', 
-                        background: isDeclined ? '#fee2e2' : '#d32f2f',
-                        color: isDeclined ? '#b91c1c' : 'white',
-                        borderColor: isDeclined ? '#d32f2f' : 'transparent'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSlotDecision(b, 'Declined (Slot Busy) ❌');
-                      }}
-                    >
-                      {isDeclined ? (isTe ? '✕ స్లాట్ తిరస్కరించబడింది' : '✕ Slot Declined') : t.btnDeclineSlot}
-                    </button>
+                    {/* Mark Completed Button */}
+                    {isApproved && (
+                      <button 
+                        type="button"
+                        className="btn btn-primary" 
+                        style={{ padding: '8px 16px', fontSize: '13px', background: '#0288d1', fontWeight: 700 }}
+                        onClick={() => handleSlotDecision(b, 'Completed')}
+                      >
+                        🌾 {isTe ? 'పని పూర్తయింది (Mark Completed)' : 'Mark Work Completed'}
+                      </button>
+                    )}
                   </div>
 
-                  {/* Method 1: Instant WhatsApp Reply to Farmer */}
+                  {/* Actions Right */}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button 
                       type="button"
                       className="btn btn-whatsapp" 
                       style={{ padding: '8px 14px', fontSize: '13px' }}
-                      onClick={() => handleWhatsAppFarmer(b, isApproved ? 'confirm' : 'decline')}
-                      title="Send WhatsApp confirmation directly to farmer without saving contact"
+                      onClick={() => handleWhatsAppFarmer(b, isApproved ? 'confirm' : 'reject')}
+                      title="Send WhatsApp update to farmer"
                     >
-                      {t.replyFarmerWhatsApp}
+                      💬 WhatsApp
                     </button>
 
                     <button 
                       type="button"
                       className="btn btn-outline-white" 
-                      style={{ borderColor: 'var(--primary-600)', color: 'var(--primary-700)', padding: '6px 12px', fontSize: '12px' }}
+                      style={{ borderColor: 'var(--primary-600)', color: 'var(--primary-700)', padding: '6px 14px', fontSize: '13px', fontWeight: 700 }}
                       onClick={() => onViewSlip && onViewSlip(b)}
                     >
-                      🧾 {t.btnViewSlip}
+                      🧾 {isTe ? 'ఇన్‌వాయిస్ రసీదు' : 'View Invoice'}
                     </button>
                   </div>
                 </div>
@@ -434,13 +442,63 @@ export default function OwnerInbox({
         </div>
       )}
 
-      {/* PERMANENT IN-APP CONFIRMATION NOTIFICATION MODAL */}
-      {/* LOCKED: CANNOT BE DISMISSED EXCEPT BY CLICKING '✓ OK' OR '✕' */}
+      {/* REJECT BOOKING REASON MODAL */}
+      {rejectingBooking && (
+        <div 
+          className="receipt-modal-backdrop"
+          style={{ zIndex: 9999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setRejectingBooking(null)}
+        >
+          <div 
+            className="receipt-modal-card" 
+            style={{ maxWidth: '480px', padding: '24px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 style={{ margin: '0 0 10px 0', color: '#b71c1c' }}>
+              ❌ {isTe ? 'బుకింగ్ తిరస్కరణ' : 'Reject Booking Request'}
+            </h4>
+            <p style={{ fontSize: '13.5px', color: '#334155', marginBottom: '16px' }}>
+              {isTe
+                ? `${rejectingBooking.farmerName} గారి ${rejectingBooking.bookingDate} (${rejectingBooking.timeSlot}) అభ్యర్థనను తిరస్కరించడానికి కారణాన్ని నమోదు చేయండి:`
+                : `Please provide an optional reason for rejecting the booking for ${rejectingBooking.farmerName}:`}
+            </p>
+
+            <textarea
+              rows="3"
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '16px' }}
+              placeholder={isTe ? "ఉదా: ట్రాక్టర్ మరమ్మత్తులో ఉంది / వేరే పనిలో నిమగ్నమై ఉంది" : "e.g. Tractor undergoing routine servicing / Already committed"}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-outline-white"
+                onClick={() => setRejectingBooking(null)}
+              >
+                {isTe ? 'రద్దు' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ background: '#d32f2f' }}
+                disabled={isSubmittingDecision}
+                onClick={() => handleSlotDecision(rejectingBooking, 'Rejected', rejectionReason || 'Tractor occupied')}
+              >
+                {isSubmittingDecision ? '...' : (isTe ? 'ఖరారు చేసి తిరస్కరించండి' : 'Confirm Rejection')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION POPUP MODAL */}
       {slotModal && (
         <div 
           className="receipt-modal-backdrop"
           style={{ zIndex: 9999, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)' }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={() => setSlotModal(null)}
         >
           <div 
             className="receipt-modal-card" 
@@ -455,36 +513,15 @@ export default function OwnerInbox({
           >
             <div style={{
               background: slotModal.decisionStatus === 'Approved' ? 'linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%)' :
-                          slotModal.decisionStatus === 'Proposed' ? 'linear-gradient(135deg, #e65100 0%, #f57c00 100%)' :
+                          slotModal.decisionStatus === 'Completed' ? 'linear-gradient(135deg, #0288d1 0%, #0369a1 100%)' :
                           'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)',
               color: 'white',
               padding: '24px 28px',
               textAlign: 'center',
               position: 'relative'
             }}>
-              <button
-                type="button"
-                onClick={() => setSlotModal(null)}
-                style={{
-                  position: 'absolute',
-                  top: '12px',
-                  right: '14px',
-                  background: 'rgba(255,255,255,0.25)',
-                  border: 'none',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '16px'
-                }}
-                title="Close"
-              >
-                ✕
-              </button>
               <div style={{ fontSize: '46px', marginBottom: '8px' }}>
-                {slotModal.decisionStatus === 'Approved' ? '✅' : slotModal.decisionStatus === 'Proposed' ? '⏳' : '❌'}
+                {slotModal.decisionStatus === 'Approved' ? '✅' : slotModal.decisionStatus === 'Completed' ? '🌾' : '❌'}
               </div>
               <h3 style={{ margin: 0, fontSize: '21px', fontWeight: 800 }}>{slotModal.title}</h3>
             </div>
@@ -494,70 +531,14 @@ export default function OwnerInbox({
                 {slotModal.message}
               </p>
 
-              {/* Informative stay notice */}
-              <div style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                marginBottom: '16px',
-                fontSize: '12px',
-                color: '#64748b',
-                textAlign: 'center',
-                fontWeight: '600'
-              }}>
-                ℹ️ {isTe ? 'ఈ సమాచార నోటిఫికేషన్ మీరు "సరే (OK)" క్లిక్ చేసే వరకు స్క్రీన్‌పైనే ఉంటుంది.' : 'This confirmation stays on screen until you press OK.'}
-              </div>
-
-              {slotModal.booking && (
-                <div style={{
-                  background: 'var(--bg-app)',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '14px 18px',
-                  marginBottom: '20px',
-                  fontSize: '13.5px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>{isTe ? 'రైతు పేరు:' : 'Farmer:'}</span>
-                    <strong>{slotModal.booking.farmerName} ({slotModal.booking.farmerVillage})</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>{isTe ? 'పని & విస్తీర్ణం:' : 'Work & Area:'}</span>
-                    <strong>{slotModal.booking.workType} ({slotModal.booking.landArea} {isTe ? 'ఎకరాలు' : 'Acres'})</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>{isTe ? 'తేదీ:' : 'Date:'}</span>
-                    <strong>📅 {slotModal.booking.bookingDate}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>{isTe ? 'అంచనా అద్దె:' : 'Estimated Fare:'}</span>
-                    <strong style={{ color: '#e65100', fontSize: '15px' }}>₹{(slotModal.booking.estimatedCost || 0).toLocaleString()}</strong>
-                  </div>
-                </div>
-              )}
-
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                 <button 
                   type="button" 
                   className="btn btn-primary" 
-                  style={{ padding: '12px 40px', fontSize: '15px', fontWeight: 800, letterSpacing: '0.5px' }}
+                  style={{ padding: '12px 40px', fontSize: '15px', fontWeight: 800 }}
                   onClick={() => setSlotModal(null)}
                 >
                   ✓ {isTe ? 'సరే (OK)' : 'OK'}
-                </button>
-                
-                <button 
-                  type="button" 
-                  className="btn btn-whatsapp" 
-                  style={{ padding: '12px 20px', fontSize: '13px' }}
-                  onClick={() => {
-                    const b = slotModal.booking;
-                    setSlotModal(null);
-                    if (b) handleWhatsAppFarmer(b, slotModal.decisionStatus === 'Approved' ? 'confirm' : 'decline');
-                  }}
-                >
-                  💬 {isTe ? 'రైతుకు వాట్సాప్ పంపండి' : 'Send WhatsApp to Farmer'}
                 </button>
               </div>
             </div>

@@ -23,7 +23,7 @@ import Dashboard from './pages/Dashboard';
 import AdminLogin from './pages/AdminLogin';
 import DualLoginSelect from './pages/DualLoginSelect';
 import { saveRegisteredFarmer, deleteRegisteredFarmer, deleteRegisteredOwner, syncUserDataWithPostgres } from './data/userData';
-import { apiUpdateFarmer, getStoredAuthToken, setStoredAuthToken, apiGetSessionToken } from './api/apiClient';
+import { apiUpdateFarmer, getStoredAuthToken, setStoredAuthToken, apiGetSessionToken, apiGetCurrentUser, apiLogoutUser } from './api/apiClient';
 import { DEFAULT_LOCATION } from './data/telanganaLocations';
 import { buildFleetForLocation } from './data/fleetData';
 import { fetchRegionWeather, getFallbackWeather } from './services/weatherService';
@@ -330,6 +330,29 @@ function App() {
     syncUserDataWithPostgres().catch(() => {});
   }, []);
 
+  // Restore persistent authenticated user session across page refreshes and browser restarts
+  useEffect(() => {
+    async function restoreSession() {
+      const token = getStoredAuthToken();
+      if (!token) return;
+      try {
+        const user = await apiGetCurrentUser();
+        if (user) {
+          if (user.role === 'farmer') {
+            setCurrentFarmer(user);
+            try { localStorage.setItem('agri_current_farmer', JSON.stringify(user)); } catch {}
+          } else if (user.role === 'owner') {
+            setCurrentOwner(user);
+            try { localStorage.setItem('agri_current_owner', JSON.stringify(user)); } catch {}
+          }
+        }
+      } catch (err) {
+        console.warn('Session auto-restore error:', err);
+      }
+    }
+    restoreSession();
+  }, []);
+
   // Dynamically built localized fleet tailored to the selected village & district + custom tractors
   const tractors = buildFleetForLocation(selectedLocation, customTractors);
 
@@ -566,6 +589,7 @@ function App() {
 
   // Logout handlers
   const handleFarmerLogout = () => {
+    apiLogoutUser();
     setCurrentFarmer(null);
     try {
       localStorage.removeItem('agri_current_farmer');
@@ -576,6 +600,7 @@ function App() {
   };
 
   const handleOwnerLogout = () => {
+    apiLogoutUser();
     setCurrentOwner(null);
     try {
       localStorage.removeItem('agri_current_owner');

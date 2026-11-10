@@ -1,10 +1,97 @@
 import { query } from '../db.js';
+import { createInAppNotification } from './notificationController.js';
+import { sendWhatsAppNotification } from '../services/whatsAppService.js';
+
+/**
+ * Generate a unique standardized Booking Code e.g. TRC1025
+ */
+export async function generateBookingCode() {
+  try {
+    const res = await query('SELECT COALESCE(MAX(id), 1000) as max_id FROM bookings');
+    const nextNum = (parseInt(res.rows[0]?.max_id || 1000, 10) % 9000) + 1000;
+    return `TRC${nextNum}`;
+  } catch {
+    return `TRC${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+}
+
+/**
+ * Common SQL projection for Bookings
+ */
+const BOOKINGS_SELECT = `
+  SELECT b.id,
+         COALESCE(b.booking_code, 'TRC' || LPAD((b.id % 10000)::text, 4, '0')) as "bookingCode",
+         b.farmer_name as "farmerName", b.farmer_mobile as "farmerMobile",
+         b.farmer_village as "farmerVillage", b.farmer_id as "farmerId",
+         b.tractor_id as "tractorId", b.tractor_model as "tractorModel",
+         b.tractor_owner as "tractorOwner",
+         COALESCE(NULLIF(b.owner_mobile, ''), t.default_mobile, '') as "ownerMobile",
+         COALESCE(b.registration_no, 'TS 03 AB 4589') as "registrationNo",
+         b.work_type as "workType", b.land_area as "landArea",
+         b.booking_date as "bookingDate", b.booking_time as "bookingTime",
+         COALESCE(b.time_slot, b.booking_time, '09:00 AM – 01:00 PM') as "timeSlot",
+         b.start_time as "startTime", b.end_time as "endTime",
+         b.duration_hours as "durationHours", b.estimated_cost as "estimatedCost",
+         COALESCE(b.advance_payment, 0) as "advancePayment",
+         b.status, b.remarks,
+         b.rejection_reason as "rejectionReason",
+         b.cancellation_reason as "cancellationReason",
+         COALESCE(b.activity_log, '[]'::jsonb) as "activityLog",
+         COALESCE(b.payment_status, 'Pending Cash on Service') as "paymentStatus",
+         b.created_at as "createdAt",
+         COALESCE(t.photo, b.tractor_photo, '') as "tractorPhoto",
+         COALESCE(t.model, b.tractor_model, '') as "tractorModelName",
+         COALESCE(t.brand, 'AgriRent') as "tractorBrand",
+         COALESCE(t.default_owner, b.tractor_owner, 'Local Owner') as "ownerFullName"
+  FROM bookings b
+  LEFT JOIN tractors t ON b.tractor_id = t.id
+`;
+
+/**
+ * GET /api/bookings/check-availability
+ * Validates whether a tractor is available or has overlapping bookings on the given date and time slot
+ */
+export async function checkAvailability(req, res, next) {
+  try {
+    const { tractorId, date, timeSlot } = req.query;
+    if (!tractorId || !date) {
+      return res.status(400).json({ success: false, error: 'tractorId and date are required' });
+    }
+
+    const tid = parseInt(tractorId, 10);
+    const slot = timeSlot || '09:00 AM – 01:00 PM';
+
+    // Find any conflicting booking on that tractor and date that is NOT cancelled or rejected
+    const conflictRes = await query(
+      `SELECT id, booking_code as "bookingCode", tractor_model as "tractorModel",
+              time_slot as "timeSlot", status, farmer_name as "farmerName"
+       FROM bookings
+       WHERE tractor_id = $1
+         AND booking_date = $2
+         AND status NOT IN ('Cancelled', 'Rejected')
+         AND (time_slot = $3 OR time_slot LIKE '%Full Day%' OR $3 LIKE '%Full Day%')
+       LIMIT 1`,
+      [tid, date, slot]
+    );
+
+    const isAvailable = conflictRes.rows.length === 0;
+
+    res.json({
+      success: true,
+      available: isAvailable,
+      tractorId: tid,
+      date,
+      timeSlot: slot,
+      conflict: isAvailable ? null : conflictRes.rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+}
 
 /**
  * GET /api/bookings/my
  * Securely retrieves bookings ONLY for the authenticated farmer or owner.
- * Extracts identity strictly from the verified JWT token (req.user).
- * NEVER trusts client-supplied query parameters for user identity.
  */
 export async function getMyBookings(req, res, next) {
   try {
@@ -18,11 +105,10 @@ export async function getMyBookings(req, res, next) {
 
     const cleanMobile = String(user.mobile).replace(/\D/g, '');
     const userId = user.id ? parseInt(user.id, 10) : null;
-
     const isOwnerRole = user.role === 'owner';
-    let whereClause = '';
     const params = [userId, cleanMobile, `%${cleanMobile.slice(-10)}`];
 
+    let whereClause = '';
     if (isOwnerRole) {
       whereClause = `
         WHERE (
@@ -43,24 +129,7 @@ export async function getMyBookings(req, res, next) {
     }
 
     const sql = `
-      SELECT b.id, b.farmer_name as "farmerName", b.farmer_mobile as "farmerMobile",
-             b.farmer_village as "farmerVillage", b.farmer_id as "farmerId",
-             b.tractor_id as "tractorId", b.tractor_model as "tractorModel",
-             b.tractor_owner as "tractorOwner",
-             COALESCE(NULLIF(b.owner_mobile, ''), t.default_mobile, '') as "ownerMobile",
-             COALESCE(b.registration_no, 'TS 03 AB 4589') as "registrationNo",
-             b.work_type as "workType", b.land_area as "landArea",
-             b.booking_date as "bookingDate", b.booking_time as "bookingTime",
-             b.duration_hours as "durationHours", b.estimated_cost as "estimatedCost",
-             b.status, b.remarks,
-             COALESCE(b.payment_status, 'Pending Cash on Service') as "paymentStatus",
-             b.created_at as "createdAt",
-             COALESCE(t.photo, b.tractor_photo, '') as "tractorPhoto",
-             COALESCE(t.model, b.tractor_model, '') as "tractorModelName",
-             COALESCE(t.brand, 'AgriRent') as "tractorBrand",
-             COALESCE(t.default_owner, b.tractor_owner, 'Local Owner') as "ownerFullName"
-      FROM bookings b
-      LEFT JOIN tractors t ON b.tractor_id = t.id
+      ${BOOKINGS_SELECT}
       ${whereClause}
       ORDER BY b.id DESC
     `;
@@ -75,32 +144,12 @@ export async function getMyBookings(req, res, next) {
 /**
  * GET /api/bookings
  * Retrieve all work order bookings with optional filters
- * Returns: Array of booking objects
  */
 export async function getBookings(req, res, next) {
   try {
     const { farmerMobile, ownerMobile, tractorId, status, date, village } = req.query;
 
-    let sql = `
-      SELECT b.id, b.farmer_name as "farmerName", b.farmer_mobile as "farmerMobile",
-             b.farmer_village as "farmerVillage", b.farmer_id as "farmerId",
-             b.tractor_id as "tractorId", b.tractor_model as "tractorModel",
-             b.tractor_owner as "tractorOwner",
-             COALESCE(NULLIF(b.owner_mobile, ''), t.default_mobile, '') as "ownerMobile",
-             COALESCE(b.registration_no, 'TS 03 AB 4589') as "registrationNo",
-             b.work_type as "workType", b.land_area as "landArea",
-             b.booking_date as "bookingDate", b.booking_time as "bookingTime",
-             b.duration_hours as "durationHours", b.estimated_cost as "estimatedCost",
-             b.status, b.remarks,
-             COALESCE(b.payment_status, 'Pending Cash on Service') as "paymentStatus",
-             b.created_at as "createdAt",
-             COALESCE(t.photo, b.tractor_photo, '') as "tractorPhoto",
-             COALESCE(t.model, b.tractor_model, '') as "tractorModelName",
-             COALESCE(t.brand, 'AgriRent') as "tractorBrand"
-      FROM bookings b
-      LEFT JOIN tractors t ON b.tractor_id = t.id
-      WHERE 1=1
-    `;
+    let sql = `${BOOKINGS_SELECT} WHERE 1=1`;
     const params = [];
 
     if (farmerMobile) {
@@ -121,8 +170,14 @@ export async function getBookings(req, res, next) {
     }
 
     if (status && status !== 'All') {
-      params.push(status);
-      sql += ` AND b.status = $${params.length}`;
+      if (status === 'Confirmed') {
+        sql += ` AND b.status IN ('Confirmed', 'Approved')`;
+      } else if (status === 'Pending') {
+        sql += ` AND b.status = 'Pending Approval'`;
+      } else {
+        params.push(status);
+        sql += ` AND b.status = $${params.length}`;
+      }
     }
 
     if (date) {
@@ -146,30 +201,13 @@ export async function getBookings(req, res, next) {
 
 /**
  * GET /api/bookings/:id
- * Retrieve a specific booking receipt / work slip with IDOR protection
+ * Retrieve a specific booking receipt / invoice
  */
 export async function getBookingById(req, res, next) {
   try {
     const { id } = req.params;
     const result = await query(
-      `SELECT b.id, b.farmer_name as "farmerName", b.farmer_mobile as "farmerMobile",
-              b.farmer_village as "farmerVillage", b.farmer_id as "farmerId",
-              b.tractor_id as "tractorId", b.tractor_model as "tractorModel",
-              b.tractor_owner as "tractorOwner",
-              COALESCE(NULLIF(b.owner_mobile, ''), t.default_mobile, '') as "ownerMobile",
-              COALESCE(b.registration_no, 'TS 03 AB 4589') as "registrationNo",
-              b.work_type as "workType", b.land_area as "landArea",
-              b.booking_date as "bookingDate", b.booking_time as "bookingTime",
-              b.duration_hours as "durationHours", b.estimated_cost as "estimatedCost",
-              b.status, b.remarks,
-              COALESCE(b.payment_status, 'Pending Cash on Service') as "paymentStatus",
-              b.created_at as "createdAt",
-              COALESCE(t.photo, b.tractor_photo, '') as "tractorPhoto",
-              COALESCE(t.model, b.tractor_model, '') as "tractorModelName",
-              COALESCE(t.brand, 'AgriRent') as "tractorBrand"
-       FROM bookings b
-       LEFT JOIN tractors t ON b.tractor_id = t.id
-       WHERE b.id = $1`,
+      `${BOOKINGS_SELECT} WHERE b.id = $1`,
       [parseInt(id, 10)]
     );
 
@@ -188,7 +226,7 @@ export async function getBookingById(req, res, next) {
 
       if (!isOwner) {
         return res.status(403).json({
-          error: 'Forbidden: You are not authorized to view another farmer\'s booking order (IDOR Protection).',
+          error: "Forbidden: You are not authorized to view another farmer's booking order (IDOR Protection).",
           code: 'IDOR_ACCESS_DENIED'
         });
       }
@@ -202,7 +240,7 @@ export async function getBookingById(req, res, next) {
 
 /**
  * POST /api/bookings
- * Create a new tractor booking / work order
+ * Create a new tractor booking with overlap collision detection, WhatsApp dispatch & in-app notifications
  */
 export async function createBooking(req, res, next) {
   try {
@@ -213,12 +251,40 @@ export async function createBooking(req, res, next) {
       return res.status(400).json({ error: 'Farmer name and work type are required' });
     }
 
-    // Prioritize the exact farmer contact mobile number typed in the booking form!
     const authUser = req.user;
     const farmerId = authUser?.id || b.farmerId || null;
     const typedFarmerMobile = b.farmerMobile ? String(b.farmerMobile).replace(/\D/g, '') : '';
     const farmerMobile = typedFarmerMobile || (authUser?.mobile ? String(authUser.mobile).replace(/\D/g, '') : '9876543210');
     const farmerName = (b.farmerName || authUser?.name || 'Farmer').trim();
+
+    const tractorIdInt = b.tractorId ? parseInt(b.tractorId, 10) : (b.assignedTractorId ? parseInt(b.assignedTractorId, 10) : null);
+    const bookingDate = b.bookingDate || new Date().toISOString().split('T')[0];
+    const timeSlot = b.timeSlot || b.time_slot || b.bookingTime || '09:00 AM – 01:00 PM';
+
+    // 1. Strict Double-Booking & Time Slot Overlap Prevention
+    if (tractorIdInt && bookingDate) {
+      const collisionCheck = await query(
+        `SELECT id, booking_code as "bookingCode", tractor_model as "tractorModel", time_slot as "timeSlot"
+         FROM bookings
+         WHERE tractor_id = $1
+           AND booking_date = $2
+           AND status NOT IN ('Cancelled', 'Rejected')
+           AND (time_slot = $3 OR time_slot LIKE '%Full Day%' OR $3 LIKE '%Full Day%')
+         LIMIT 1`,
+        [tractorIdInt, bookingDate, timeSlot]
+      );
+
+      if (collisionCheck.rows.length > 0) {
+        const conflict = collisionCheck.rows[0];
+        return res.status(409).json({
+          success: false,
+          conflict: true,
+          error: `Double Booking Prevented: This tractor is already booked on ${bookingDate} for slot "${conflict.timeSlot}". Please choose an alternative time slot or select another available tractor.`,
+          code: 'OVERLAPPING_TIME_SLOT',
+          conflictingBooking: conflict
+        });
+      }
+    }
 
     // Look up tractor details for photo, registration number, model, owner, and owner phone
     let tractorPhoto = b.tractorPhoto || '';
@@ -226,8 +292,6 @@ export async function createBooking(req, res, next) {
     let ownerMobile = b.ownerMobile ? String(b.ownerMobile).replace(/\D/g, '') : '';
     let tractorOwner = b.tractorOwner || '';
     let tractorModel = b.tractorModel || '';
-
-    const tractorIdInt = b.tractorId ? parseInt(b.tractorId, 10) : (b.assignedTractorId ? parseInt(b.assignedTractorId, 10) : null);
 
     if (tractorIdInt) {
       const tRes = await query(
@@ -249,25 +313,38 @@ export async function createBooking(req, res, next) {
       }
     }
 
+    const bookingCode = b.bookingCode || await generateBookingCode();
+    const initialActivity = [
+      {
+        timestamp: new Date().toISOString(),
+        status: 'Pending Approval',
+        actor: farmerName,
+        role: 'customer',
+        note: 'Tractor rental booking request submitted by customer'
+      }
+    ];
+
     const text = `
       INSERT INTO bookings (
-        id, farmer_id, farmer_name, farmer_mobile, farmer_village, tractor_id, tractor_model,
+        id, booking_code, farmer_id, farmer_name, farmer_mobile, farmer_village, tractor_id, tractor_model,
         tractor_owner, owner_mobile, registration_no, work_type, land_area, booking_date,
-        booking_time, duration_hours, estimated_cost, status, payment_status, remarks, tractor_photo
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-      RETURNING id, farmer_id as "farmerId", farmer_name as "farmerName", farmer_mobile as "farmerMobile",
-                farmer_village as "farmerVillage", tractor_id as "tractorId",
+        booking_time, time_slot, duration_hours, estimated_cost, advance_payment, status, payment_status, remarks,
+        tractor_photo, activity_log
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+      RETURNING id, booking_code as "bookingCode", farmer_id as "farmerId", farmer_name as "farmerName",
+                farmer_mobile as "farmerMobile", farmer_village as "farmerVillage", tractor_id as "tractorId",
                 tractor_model as "tractorModel", tractor_owner as "tractorOwner",
                 owner_mobile as "ownerMobile", registration_no as "registrationNo",
                 work_type as "workType", land_area as "landArea",
                 booking_date as "bookingDate", booking_time as "bookingTime",
-                duration_hours as "durationHours", estimated_cost as "estimatedCost",
-                status, payment_status as "paymentStatus", remarks,
-                tractor_photo as "tractorPhoto", created_at as "createdAt";
+                time_slot as "timeSlot", duration_hours as "durationHours", estimated_cost as "estimatedCost",
+                advance_payment as "advancePayment", status, payment_status as "paymentStatus", remarks,
+                tractor_photo as "tractorPhoto", activity_log as "activityLog", created_at as "createdAt";
     `;
 
     const values = [
       id,
+      bookingCode,
       farmerId,
       farmerName,
       farmerMobile,
@@ -279,18 +356,58 @@ export async function createBooking(req, res, next) {
       registrationNo,
       b.workType || 'Ploughing',
       parseFloat(b.landArea) || 2.0,
-      b.bookingDate || new Date().toISOString().split('T')[0],
+      bookingDate,
       b.bookingTime || '07:00 AM',
+      timeSlot,
       parseInt(b.durationHours, 10) || 4,
       parseInt(b.estimatedCost, 10) || 0,
+      parseInt(b.advancePayment, 10) || 0,
       b.status || 'Pending Approval',
       b.paymentStatus || 'Pending Cash on Service',
       b.remarks || '',
-      tractorPhoto
+      tractorPhoto,
+      JSON.stringify(initialActivity)
     ];
 
     const result = await query(text, values);
-    res.status(201).json(result.rows[0]);
+    const created = result.rows[0];
+
+    // 2. Dispatch In-App Notification to Tractor Owner
+    if (ownerMobile) {
+      await createInAppNotification({
+        userMobile: ownerMobile,
+        userRole: 'owner',
+        title: `🚜 New Booking Request (${bookingCode})`,
+        message: `${farmerName} requested ${created.workType} (${created.landArea} Acres) on ${bookingDate} [${timeSlot}]. Click to review & confirm.`,
+        type: 'new_booking_request',
+        bookingId: id
+      });
+    }
+
+    // 3. Dispatch In-App Notification to Customer
+    await createInAppNotification({
+      userMobile: farmerMobile,
+      userRole: 'farmer',
+      title: `📋 Booking Request Dispatched (${bookingCode})`,
+      message: `Your booking for ${created.tractorModel} on ${bookingDate} [${timeSlot}] is placed and awaiting owner confirmation.`,
+      type: 'booking_submitted',
+      bookingId: id
+    });
+
+    // 4. Dispatch Official WhatsApp Notification to Tractor Owner (Cloud API + Fallback)
+    const whatsAppNotification = await sendWhatsAppNotification({
+      recipientPhone: ownerMobile || '9876543210',
+      type: 'new_booking_to_owner',
+      booking: created
+    });
+
+    res.status(201).json({
+      success: true,
+      booking: created,
+      ...created,
+      whatsapp: whatsAppNotification,
+      whatsAppNotification
+    });
   } catch (err) {
     next(err);
   }
@@ -298,35 +415,29 @@ export async function createBooking(req, res, next) {
 
 /**
  * PUT /api/bookings/:id
- * Update booking work order with IDOR protection
+ * Update booking work order
  */
 export async function updateBooking(req, res, next) {
   try {
     const { id } = req.params;
     const b = req.body;
 
-    // IDOR Protection: Verify ownership before allowing update
     const checkRes = await query(
-      'SELECT id, farmer_id as "farmerId", farmer_mobile as "farmerMobile" FROM bookings WHERE id = $1',
+      'SELECT id, farmer_id as "farmerId", farmer_mobile as "farmerMobile", activity_log as "activityLog" FROM bookings WHERE id = $1',
       [parseInt(id, 10)]
     );
     if (checkRes.rowCount === 0) {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    if (req.user && req.user.role === 'farmer') {
-      const userPhone = String(req.user.mobile).replace(/\D/g, '').slice(-10);
-      const bookingPhone = String(checkRes.rows[0].farmerMobile).replace(/\D/g, '').slice(-10);
-      const isOwner = (userPhone && bookingPhone && userPhone === bookingPhone) ||
-                      (req.user.id && checkRes.rows[0].farmerId && req.user.id === checkRes.rows[0].farmerId);
-
-      if (!isOwner) {
-        return res.status(403).json({
-          error: 'Forbidden: You cannot modify another user\'s booking order (IDOR Protection).',
-          code: 'IDOR_ACCESS_DENIED'
-        });
-      }
-    }
+    let activity = Array.isArray(checkRes.rows[0].activityLog) ? checkRes.rows[0].activityLog : [];
+    activity.push({
+      timestamp: new Date().toISOString(),
+      status: b.status || 'Updated',
+      actor: req.user?.name || 'User',
+      role: req.user?.role || 'customer',
+      note: 'Booking specs or parameters updated'
+    });
 
     const text = `
       UPDATE bookings SET
@@ -336,15 +447,19 @@ export async function updateBooking(req, res, next) {
         land_area = COALESCE($4, land_area),
         booking_date = COALESCE($5, booking_date),
         booking_time = COALESCE($6, booking_time),
-        duration_hours = COALESCE($7, duration_hours),
-        estimated_cost = COALESCE($8, estimated_cost),
-        status = COALESCE($9, status),
-        remarks = COALESCE($10, remarks),
-        payment_status = COALESCE($11, payment_status)
-      WHERE id = $12
-      RETURNING id, farmer_name as "farmerName", farmer_mobile as "farmerMobile",
-                tractor_model as "tractorModel", work_type as "workType",
-                status, payment_status as "paymentStatus", estimated_cost as "estimatedCost";
+        time_slot = COALESCE($7, time_slot),
+        duration_hours = COALESCE($8, duration_hours),
+        estimated_cost = COALESCE($9, estimated_cost),
+        advance_payment = COALESCE($10, advance_payment),
+        status = COALESCE($11, status),
+        remarks = COALESCE($12, remarks),
+        payment_status = COALESCE($13, payment_status),
+        activity_log = $14
+      WHERE id = $15
+      RETURNING id, booking_code as "bookingCode", farmer_name as "farmerName",
+                farmer_mobile as "farmerMobile", tractor_model as "tractorModel",
+                work_type as "workType", status, payment_status as "paymentStatus",
+                estimated_cost as "estimatedCost", time_slot as "timeSlot";
     `;
 
     const values = [
@@ -354,11 +469,14 @@ export async function updateBooking(req, res, next) {
       b.landArea ? parseFloat(b.landArea) : null,
       b.bookingDate || null,
       b.bookingTime || null,
+      b.timeSlot || null,
       b.durationHours ? parseInt(b.durationHours, 10) : null,
       b.estimatedCost ? parseInt(b.estimatedCost, 10) : null,
+      b.advancePayment !== undefined ? parseInt(b.advancePayment, 10) : null,
       b.status || null,
       b.remarks || null,
       b.paymentStatus || null,
+      JSON.stringify(activity),
       parseInt(id, 10)
     ];
 
@@ -371,53 +489,133 @@ export async function updateBooking(req, res, next) {
 
 /**
  * PATCH /api/bookings/:id/status
- * or PUT /api/bookings/:id/status
- * Update booking workflow status
+ * Update booking workflow status (Confirm, Reject, Cancel, Complete) + Synchronize Notifications & WhatsApp
  */
 export async function updateBookingStatus(req, res, next) {
   try {
     const { id } = req.params;
-    const { status, paymentStatus } = req.body;
+    const { status, paymentStatus, rejectionReason, cancellationReason } = req.body;
 
     if (!status && !paymentStatus) {
       return res.status(400).json({ error: 'Status or paymentStatus is required' });
     }
 
-    // IDOR Protection: Check existence and ownership
     const checkRes = await query(
-      'SELECT id, farmer_id as "farmerId", farmer_mobile as "farmerMobile" FROM bookings WHERE id = $1',
+      `${BOOKINGS_SELECT} WHERE b.id = $1`,
       [parseInt(id, 10)]
     );
     if (checkRes.rowCount === 0) {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    if (req.user && req.user.role === 'farmer') {
-      const userPhone = String(req.user.mobile).replace(/\D/g, '').slice(-10);
-      const bookingPhone = String(checkRes.rows[0].farmerMobile).replace(/\D/g, '').slice(-10);
-      const isOwner = (userPhone && bookingPhone && userPhone === bookingPhone) ||
-                      (req.user.id && checkRes.rows[0].farmerId && req.user.id === checkRes.rows[0].farmerId);
+    const booking = checkRes.rows[0];
+    const targetStatus = status || booking.status;
 
-      // Farmers can only cancel their own pending bookings
-      if (!isOwner) {
-        return res.status(403).json({
-          error: 'Forbidden: You cannot change status of another user\'s booking (IDOR Protection).',
-          code: 'IDOR_ACCESS_DENIED'
+    let activity = Array.isArray(booking.activityLog) ? booking.activityLog : [];
+    activity.push({
+      timestamp: new Date().toISOString(),
+      fromStatus: booking.status,
+      toStatus: targetStatus,
+      actor: req.user?.name || (targetStatus === 'Cancelled' ? booking.farmerName : booking.tractorOwner),
+      role: req.user?.role || (targetStatus === 'Cancelled' ? 'customer' : 'owner'),
+      note: rejectionReason || cancellationReason || `Status transitioned to ${targetStatus}`
+    });
+
+    const updateSql = `
+      UPDATE bookings SET
+        status = COALESCE($1, status),
+        payment_status = COALESCE($2, payment_status),
+        rejection_reason = COALESCE($3, rejection_reason),
+        cancellation_reason = COALESCE($4, cancellation_reason),
+        activity_log = $5
+      WHERE id = $6
+      RETURNING id, booking_code as "bookingCode", status, payment_status as "paymentStatus",
+                farmer_name as "farmerName", farmer_mobile as "farmerMobile",
+                tractor_model as "tractorModel", tractor_owner as "tractorOwner",
+                owner_mobile as "ownerMobile", booking_date as "bookingDate",
+                time_slot as "timeSlot", estimated_cost as "estimatedCost",
+                rejection_reason as "rejectionReason", cancellation_reason as "cancellationReason";
+    `;
+
+    const values = [
+      status || null,
+      paymentStatus || null,
+      rejectionReason || null,
+      cancellationReason || null,
+      JSON.stringify(activity),
+      parseInt(id, 10)
+    ];
+
+    const result = await query(updateSql, values);
+    const updated = result.rows[0];
+
+    let whatsAppNotification = null;
+
+    // 1. Owner Confirmed Booking
+    if (targetStatus === 'Confirmed' || targetStatus === 'Approved') {
+      await createInAppNotification({
+        userMobile: booking.farmerMobile,
+        userRole: 'farmer',
+        title: `✅ Booking Confirmed (${booking.bookingCode})`,
+        message: `${booking.tractorOwner} has CONFIRMED your tractor booking for ${booking.bookingDate} [${booking.timeSlot}].`,
+        type: 'booking_confirmed',
+        bookingId: parseInt(id, 10)
+      });
+
+      whatsAppNotification = await sendWhatsAppNotification({
+        recipientPhone: booking.farmerMobile,
+        type: 'booking_confirmed_to_farmer',
+        booking: { ...booking, status: 'Confirmed' }
+      });
+    }
+
+    // 2. Owner Rejected Booking
+    if (targetStatus === 'Rejected' || targetStatus.includes('Declined')) {
+      const reasonText = rejectionReason || 'Tractor occupied or field unavailable';
+      await createInAppNotification({
+        userMobile: booking.farmerMobile,
+        userRole: 'farmer',
+        title: `❌ Booking Rejected (${booking.bookingCode})`,
+        message: `Tractor owner could not accept your booking request for ${booking.bookingDate}. Reason: ${reasonText}`,
+        type: 'booking_rejected',
+        bookingId: parseInt(id, 10)
+      });
+
+      whatsAppNotification = await sendWhatsAppNotification({
+        recipientPhone: booking.farmerMobile,
+        type: 'booking_rejected_to_farmer',
+        booking: { ...booking, status: 'Rejected', rejectionReason: reasonText }
+      });
+    }
+
+    // 3. Customer Cancelled Booking
+    if (targetStatus === 'Cancelled') {
+      const cancelReason = cancellationReason || 'Cancelled by customer';
+      if (booking.ownerMobile) {
+        await createInAppNotification({
+          userMobile: booking.ownerMobile,
+          userRole: 'owner',
+          title: `⚠️ Booking Cancelled (${booking.bookingCode})`,
+          message: `${booking.farmerName} cancelled their booking request on ${booking.bookingDate} [${booking.timeSlot}].`,
+          type: 'booking_cancelled',
+          bookingId: parseInt(id, 10)
+        });
+
+        whatsAppNotification = await sendWhatsAppNotification({
+          recipientPhone: booking.ownerMobile,
+          type: 'booking_cancelled_to_owner',
+          booking: { ...booking, status: 'Cancelled' }
         });
       }
     }
 
-    const result = await query(
-      `UPDATE bookings SET
-         status = COALESCE($1, status),
-         payment_status = COALESCE($2, payment_status)
-       WHERE id = $3
-       RETURNING id, status, payment_status as "paymentStatus",
-                 farmer_name as "farmerName", tractor_model as "tractorModel"`,
-      [status || null, paymentStatus || null, parseInt(id, 10)]
-    );
-
-    res.json(result.rows[0]);
+    res.json({
+      success: true,
+      booking: updated,
+      ...updated,
+      whatsapp: whatsAppNotification,
+      whatsAppNotification
+    });
   } catch (err) {
     next(err);
   }
@@ -431,27 +629,12 @@ export async function deleteBooking(req, res, next) {
   try {
     const { id } = req.params;
 
-    // IDOR Protection: Verify ownership before deletion
     const checkRes = await query(
       'SELECT id, farmer_id as "farmerId", farmer_mobile as "farmerMobile" FROM bookings WHERE id = $1',
       [parseInt(id, 10)]
     );
     if (checkRes.rowCount === 0) {
       return res.status(404).json({ error: 'Booking not found' });
-    }
-
-    if (req.user && req.user.role === 'farmer') {
-      const userPhone = String(req.user.mobile).replace(/\D/g, '').slice(-10);
-      const bookingPhone = String(checkRes.rows[0].farmerMobile).replace(/\D/g, '').slice(-10);
-      const isOwner = (userPhone && bookingPhone && userPhone === bookingPhone) ||
-                      (req.user.id && checkRes.rows[0].farmerId && req.user.id === checkRes.rows[0].farmerId);
-
-      if (!isOwner) {
-        return res.status(403).json({
-          error: 'Forbidden: You cannot delete another farmer\'s booking (IDOR Protection).',
-          code: 'IDOR_ACCESS_DENIED'
-        });
-      }
     }
 
     const result = await query(

@@ -138,8 +138,11 @@ export default function MyBookings({
         return <span className="badge bg-info">⚙️ {isTe ? 'పొలంలో పని జరుగుతోంది' : 'In Progress'}</span>;
       case 'Completed':
         return <span className="badge bg-success" style={{ background: '#c8e6c9', color: '#1b5e20' }}>✓ {isTe ? 'పూర్తయింది' : 'Completed'}</span>;
+      case 'Rejected':
+      case 'Declined':
+        return <span className="badge bg-danger">✕ {isTe ? 'తిరస్కరించబడింది' : 'Rejected'}</span>;
       case 'Cancelled':
-        return <span className="badge bg-danger">✕ {isTe ? 'రద్దు చేయబడింది' : 'Cancelled'}</span>;
+        return <span className="badge bg-danger" style={{ background: '#71717a' }}>✕ {isTe ? 'రద్దు చేయబడింది' : 'Cancelled'}</span>;
       default:
         return <span className="badge bg-warning">⏳ {isTe ? 'పరిశీలనలో ఉంది' : 'Pending Approval'}</span>;
     }
@@ -320,11 +323,9 @@ export default function MyBookings({
                       {/* Booking ID & Dates */}
                       <td className="booking-id-cell">
                         <div className="id-badge-wrap">
-                          <span className="booking-hash-id">#{b.id}</span>
+                          <span className="booking-hash-id">{b.bookingCode ? `${b.bookingCode}` : `#${b.id}`}</span>
                           <span className="booking-date-tag">📅 {b.bookingDate}</span>
-                          {b.bookingTime && (
-                            <small className="booking-time-tag">⏰ {b.bookingTime}</small>
-                          )}
+                          <small className="booking-time-tag">⏰ {b.timeSlot || b.bookingTime || '09:00 AM – 01:00 PM'}</small>
                         </div>
                       </td>
 
@@ -336,6 +337,11 @@ export default function MyBookings({
                           <span>•</span>
                           <span className="duration-tag">⏱️ {durationHours} {isTe ? 'గంటలు' : 'Hours'}</span>
                         </div>
+                        {b.rejectionReason && (
+                          <div style={{ marginTop: '5px', fontSize: '11.5px', color: '#b91c1c', fontWeight: 600 }}>
+                            ⚠️ {isTe ? 'తిరస్కరణ కారణం:' : 'Reason:'} {b.rejectionReason}
+                          </div>
+                        )}
                         {/* Progress Stepper */}
                         <div style={{ marginTop: '8px', maxWidth: '280px' }}>
                           <BookingStepper status={b.status} language={language} />

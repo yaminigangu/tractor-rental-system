@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { translations } from '../translations';
 import { saveRegisteredFarmer, findFarmerByMobile, findOwnerByMobile } from '../data/userData';
-import { apiSendOtp, apiVerifyOtp, setStoredAuthToken, apiGetSessionToken } from '../api/apiClient';
+import {
+  apiSendOtp,
+  apiVerifyOtp,
+  setStoredAuthToken,
+  apiGetSessionToken,
+  apiRegisterUser,
+  apiLoginUser
+} from '../api/apiClient';
 
 export default function FarmerLogin({
   setActivePage,
@@ -22,33 +29,43 @@ export default function FarmerLogin({
   // Auth Mode: 'login' (existing user) or 'register' (first-time user)
   const [authMode, setAuthMode] = useState('login');
 
+  // Login Method: 'password' (default credentials) or 'otp' (Message Central SMS OTP)
+  const [loginMethod, setLoginMethod] = useState('password');
+
   // ----------------------------------------------------
-  // FLOW 1: EXISTING FARMER LOGIN (Zero data leaked upfront)
+  // FLOW 1: EXISTING USER LOGIN VIA PASSWORD & PERSISTENT SESSION
   // ----------------------------------------------------
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [loginNotice, setLoginNotice] = useState('');
+
+  // OTP Login sub-flow
   const [loginPhone, setLoginPhone] = useState('');
   const [loginOtpSent, setLoginOtpSent] = useState(false);
   const [loginOtp, setLoginOtp] = useState('');
   const [loginVerificationId, setLoginVerificationId] = useState('');
   const [loginMatchedFarmer, setLoginMatchedFarmer] = useState(null);
   const [matchedOwnerHint, setMatchedOwnerHint] = useState(null);
-  const [loginError, setLoginError] = useState('');
-  const [loginNotice, setLoginNotice] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   // ----------------------------------------------------
   // FLOW 2: FIRST-TIME FARMER REGISTRATION
   // ----------------------------------------------------
   const [regFullName, setRegFullName] = useState('');
   const [regMobile, setRegMobile] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
   const [regVillage, setRegVillage] = useState(defaultVillage);
   const [regLandArea, setRegLandArea] = useState('3.0');
-  const [regOtpSent, setRegOtpSent] = useState(false);
-  const [regOtp, setRegOtp] = useState('');
-  const [regVerificationId, setRegVerificationId] = useState('');
+  const [isSubmittingReg, setIsSubmittingReg] = useState(false);
   const [regError, setRegError] = useState('');
   const [regNotice, setRegNotice] = useState('');
-
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const toggleLanguage = () => {
     if (setLanguage) {
@@ -66,12 +83,13 @@ export default function FarmerLogin({
     return p;
   };
 
-  // Switch to Register flow from Login if number is not found
+  // Switch to Register flow from Login
   const handleSwitchToRegister = (prefillPhone) => {
     setAuthMode('register');
     setLoginError('');
     setLoginNotice('');
-    setLoginOtpSent(false);
+    setRegError('');
+    setRegNotice('');
     if (prefillPhone) {
       setRegMobile(prefillPhone);
     }
@@ -82,15 +100,187 @@ export default function FarmerLogin({
     setAuthMode('login');
     setRegError('');
     setRegNotice('');
-    setRegOtpSent(false);
+    setLoginError('');
+    setLoginNotice('');
     if (prefillPhone) {
+      setLoginIdentifier(prefillPhone);
       setLoginPhone(prefillPhone);
     }
   };
 
-  // ----------------------------------------------------
-  // STEP 1A: Existing User - Send Login OTP via Message Central
-  // ----------------------------------------------------
+  // ====================================================
+  // ACTION: Password Login with Remember Me & Session Storage
+  // ====================================================
+  const handlePasswordLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginNotice('');
+
+    const idVal = loginIdentifier.trim();
+    if (!idVal) {
+      setLoginError(isTe ? 'దయచేసి మీ మొబైల్ లేదా ఈమెయిల్ నమోదు చేయండి.' : 'Please enter your mobile number or email address.');
+      return;
+    }
+
+    if (!loginPassword) {
+      setLoginError(isTe ? 'దయచేసి మీ పాస్‌వర్డ్ నమోదు చేయండి.' : 'Please enter your account password.');
+      return;
+    }
+
+    setIsSubmittingLogin(true);
+    try {
+      const res = await apiLoginUser({
+        identifier: idVal,
+        password: loginPassword,
+        role: 'farmer',
+        rememberMe
+      });
+
+      if (!res || !res.success) {
+        setLoginError(
+          res?.error ||
+          (isTe ? 'లాగిన్ విఫలమైంది. దయచేసి వివరాలు సరిచూడండి.' : 'Login failed. Please verify your mobile/email and password.')
+        );
+        setIsSubmittingLogin(false);
+        return;
+      }
+
+      // Session established with JWT
+      if (res.token) {
+        setStoredAuthToken(res.token, rememberMe);
+      }
+
+      const activeUser = res.user || {
+        name: res.user?.name || idVal,
+        mobile: res.user?.mobile || idVal,
+        email: res.user?.email || '',
+        village: res.user?.village || defaultVillage,
+        landArea: res.user?.landArea || 3.0,
+        isVerified: true
+      };
+
+      try {
+        localStorage.setItem('agri_current_farmer', JSON.stringify(activeUser));
+      } catch (err) {
+        console.warn('Storage warning:', err);
+      }
+
+      if (setCurrentFarmer) {
+        setCurrentFarmer(activeUser);
+      }
+
+      setLoginNotice(isTe ? '✓ విజయవంతంగా లాగిన్ అయ్యారు! స్వాగతం.' : '✓ Logged in successfully! Directing to fleet...');
+      setTimeout(() => {
+        setActivePage('find-tractor');
+      }, 500);
+    } catch (err) {
+      setLoginError(err.message || 'Network error during login. Please try again.');
+    } finally {
+      setIsSubmittingLogin(false);
+    }
+  };
+
+  // ====================================================
+  // ACTION: Register New Farmer with Validation & Auto-Login
+  // ====================================================
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setRegError('');
+    setRegNotice('');
+
+    // Validations
+    const nameVal = regFullName.trim();
+    if (nameVal.length < 2) {
+      setRegError(isTe ? 'దయచేసి సరైన రైతు పూర్తి పేరు నమోదు చేయండి (కనీసం 2 అక్షరాలు).' : 'Please enter a valid full name (at least 2 letters).');
+      return;
+    }
+
+    const phoneVal = cleanPhone(regMobile);
+    if (phoneVal.length !== 10) {
+      setRegError(isTe ? 'దయచేసి ఖచ్చితమైన 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter an exact 10-digit mobile number.');
+      return;
+    }
+
+    const emailVal = regEmail.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailVal)) {
+      setRegError(isTe ? 'దయచేసి సరైన ఈమెయిల్ చిరునామా నమోదు చేయండి (ఉదా: farmer@gmail.com).' : 'Please enter a valid email address (e.g. farmer@gmail.com).');
+      return;
+    }
+
+    if (regPassword.length < 6) {
+      setRegError(isTe ? 'పాస్‌వర్డ్ కనీసం 6 అక్షరాలు లేదా అంకెలు ఉండాలి.' : 'Password must be at least 6 characters long.');
+      return;
+    }
+
+    setIsSubmittingReg(true);
+    try {
+      const payload = {
+        name: nameVal,
+        mobile: phoneVal,
+        email: emailVal,
+        password: regPassword,
+        village: regVillage.trim() || defaultVillage,
+        district: selectedLocation?.district || 'Hanamkonda',
+        landArea: parseFloat(regLandArea) || 3.0,
+        role: 'farmer'
+      };
+
+      const res = await apiRegisterUser(payload);
+
+      if (!res || !res.success) {
+        setRegError(
+          res?.error ||
+          (isTe ? 'నమోదు విఫలమైంది. ఈ మొబైల్ లేదా ఈమెయిల్ ఇప్పటికే వాడుకలో ఉండవచ్చు.' : 'Registration failed. This mobile or email might already be registered.')
+        );
+        setIsSubmittingReg(false);
+        return;
+      }
+
+      // Auto-login upon successful registration
+      if (res.token) {
+        setStoredAuthToken(res.token, true);
+      }
+
+      const newFarmer = res.user || {
+        id: res.user?.id || Date.now(),
+        name: nameVal,
+        mobile: phoneVal,
+        email: emailVal,
+        village: regVillage.trim() || defaultVillage,
+        district: selectedLocation?.district || 'Hanamkonda',
+        landArea: parseFloat(regLandArea) || 3.0,
+        crops: ['Paddy', 'Cotton'],
+        isVerified: true,
+        registeredAt: new Date().toISOString().split('T')[0]
+      };
+
+      saveRegisteredFarmer(newFarmer);
+
+      try {
+        localStorage.setItem('agri_current_farmer', JSON.stringify(newFarmer));
+      } catch (err) {
+        console.warn('Storage warning:', err);
+      }
+
+      if (setCurrentFarmer) {
+        setCurrentFarmer(newFarmer);
+      }
+
+      setRegNotice(isTe ? '✓ మీ రైతు ఖాతా విజయవంతంగా సృష్టించబడింది! స్వయంచాలకంగా లాగిన్ అవుతున్నారు...' : '✓ Account created successfully! Logging you in automatically...');
+      setTimeout(() => {
+        setActivePage('find-tractor');
+      }, 700);
+    } catch (err) {
+      setRegError(err.message || 'Network error during registration. Please try again.');
+    } finally {
+      setIsSubmittingReg(false);
+    }
+  };
+
+  // ====================================================
+  // OPTIONAL: Send Login OTP via Message Central VerifyNow
+  // ====================================================
   const handleSendLoginOtp = async (e) => {
     if (e) e.preventDefault();
     setLoginError('');
@@ -98,36 +288,28 @@ export default function FarmerLogin({
 
     const phone = cleanPhone(loginPhone);
     if (phone.length < 10) {
-      setLoginError(
-        isTe
-          ? 'దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.'
-          : 'Please enter a valid 10-digit mobile number.'
-      );
+      setLoginError(isTe ? 'దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.' : 'Please enter a valid 10-digit mobile number.');
       return;
     }
 
-    // Check database if this phone is registered in AgriRent
     const matched = findFarmerByMobile(phone);
-
     if (!matched) {
-      // Check if registered as a Vehicle Owner
       const matchedOwner = findOwnerByMobile(phone);
       if (matchedOwner) {
         setMatchedOwnerHint(matchedOwner);
         setLoginError(
           isTe
-            ? `ఈ మొబైల్ నంబర్ (+91 ${phone}) వాహన యజమానిగా (${matchedOwner.fullName || matchedOwner.owner}) నమోదు చేయబడింది!`
-            : `Mobile number +91 ${phone} is registered as a Vehicle Owner (${matchedOwner.fullName || matchedOwner.owner}) on AgriRent!`
+            ? `ఈ మొబైల్ (+91 ${phone}) వాహన యజమానిగా నమోదై ఉంది!`
+            : `Mobile +91 ${phone} is registered as a Vehicle Owner!`
         );
         return;
       }
 
       setMatchedOwnerHint(null);
-      // User is NOT registered yet!
       setLoginError(
         isTe
-          ? `మొబైల్ నంబర్ +91 ${phone} అగ్రిరెంట్‌లో నమోదు కాలేదు. మీరు మొదటిసారి వస్తున్నారా? క్రింద నమోదు చేసుకోండి.`
-          : `Mobile number +91 ${phone} is not registered on AgriRent. If you are a new farmer, please create an account.`
+          ? `మొబైల్ +91 ${phone} నమోదు కాలేదు. దయచేసి ఖాతా నమోదు చేసుకోండి.`
+          : `Mobile +91 ${phone} is not registered. Please create a new account.`
       );
       return;
     }
@@ -137,7 +319,6 @@ export default function FarmerLogin({
     setIsSendingOtp(true);
 
     try {
-      // Dispatch OTP via Message Central VerifyNow API
       const res = await apiSendOtp({ mobileNumber: phone });
       setLoginVerificationId(res.verificationId || '');
       setLoginOtpSent(true);
@@ -151,7 +332,7 @@ export default function FarmerLogin({
       setLoginNotice(
         isTe
           ? `✓ +91 ${maskPhone(phone)} కి SMS ధృవీకరణ OTP పంపబడింది!`
-          : `✓ Verification OTP sent to +91 ${maskPhone(phone)} via Message Central VerifyNow!`
+          : `✓ Verification OTP sent to +91 ${maskPhone(phone)} via Message Central!`
       );
     } catch (err) {
       setLoginError(err.message || 'Failed to dispatch SMS OTP. Please retry.');
@@ -160,19 +341,12 @@ export default function FarmerLogin({
     }
   };
 
-  // ----------------------------------------------------
-  // STEP 2A: Existing User - Verify OTP & Login Directly
-  // ----------------------------------------------------
   const handleVerifyLoginOtp = async (e) => {
     if (e) e.preventDefault();
     setLoginError('');
 
     if (loginOtp.trim().length < 4) {
-      setLoginError(
-        isTe
-          ? 'దయచేసి సరైన OTP కోడ్ నమోదు చేయండి.'
-          : 'Please enter the OTP verification code.'
-      );
+      setLoginError(isTe ? 'దయచేసి సరైన OTP కోడ్ నమోదు చేయండి.' : 'Please enter the OTP verification code.');
       return;
     }
 
@@ -191,22 +365,17 @@ export default function FarmerLogin({
       });
 
       if (!res.success || !res.verified) {
-        setLoginError(
-          res.error ||
-          (isTe ? 'తప్పుడు OTP కోడ్. దయచేసి మళ్లీ ప్రయత్నించండి.' : 'Invalid OTP code. Please check SMS and try again.')
-        );
+        setLoginError(res.error || (isTe ? 'తప్పుడు OTP కోడ్.' : 'Invalid OTP code. Please retry.'));
         setIsVerifyingOtp(false);
         return;
       }
 
-      // Store authentic JWT session token
       if (res.token) {
-        setStoredAuthToken(res.token);
+        setStoredAuthToken(res.token, true);
       } else {
         apiGetSessionToken(loginMatchedFarmer).catch(() => {});
       }
 
-      // Secure Login: Save session and navigate into fleet
       try {
         localStorage.setItem('agri_current_farmer', JSON.stringify(loginMatchedFarmer));
       } catch (err) {
@@ -220,133 +389,6 @@ export default function FarmerLogin({
       setActivePage('find-tractor');
     } catch (err) {
       setLoginError(err.message || 'OTP verification error. Please retry.');
-    } finally {
-      setIsVerifyingOtp(false);
-    }
-  };
-
-  // ----------------------------------------------------
-  // STEP 1B: First-Time User - Send Sign-Up OTP via Message Central
-  // ----------------------------------------------------
-  const handleSendRegOtp = async (e) => {
-    if (e) e.preventDefault();
-    setRegError('');
-    setRegNotice('');
-
-    if (!regFullName.trim()) {
-      setRegError(
-        isTe ? 'దయచేసి రైతు పూర్తి పేరు నమోదు చేయండి.' : 'Please enter your full name.'
-      );
-      return;
-    }
-
-    const phone = cleanPhone(regMobile);
-    if (phone.length < 10) {
-      setRegError(
-        isTe
-          ? 'దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.'
-          : 'Please enter a valid 10-digit mobile number.'
-      );
-      return;
-    }
-
-    // Check if phone is already registered
-    const already = findFarmerByMobile(phone);
-    if (already) {
-      setRegError(
-        isTe
-          ? `ఈ మొబైల్ నంబర్ ఇప్పటికే నమోదు చేయబడింది! దయచేసి లాగిన్ ట్యాబ్ ఉపయోగించండి.`
-          : `This mobile number is already registered! Please use the Existing User Login tab.`
-      );
-      return;
-    }
-
-    setIsSendingOtp(true);
-    try {
-      // Dispatch 3rd-Party SMS OTP via Message Central
-      const res = await apiSendOtp({ mobileNumber: phone });
-      setRegVerificationId(res.verificationId || '');
-      setRegOtpSent(true);
-
-      if (res.demoOtp) {
-        setRegOtp(res.demoOtp);
-      } else {
-        setRegOtp('');
-      }
-
-      setRegNotice(
-        isTe
-          ? `✓ +91 ${maskPhone(phone)} కి SMS OTP పంపబడింది!`
-          : `✓ Verification OTP sent to +91 ${maskPhone(phone)} via Message Central!`
-      );
-    } catch (err) {
-      setRegError(err.message || 'Failed to dispatch registration OTP. Please retry.');
-    } finally {
-      setIsSendingOtp(false);
-    }
-  };
-
-  // ----------------------------------------------------
-  // STEP 2B: First-Time User - Verify OTP & Create Account in PostgreSQL
-  // ----------------------------------------------------
-  const handleVerifyRegOtp = async (e) => {
-    if (e) e.preventDefault();
-    setRegError('');
-
-    if (regOtp.trim().length < 4) {
-      setRegError(
-        isTe
-          ? 'దయచేసి సరైన OTP కోడ్ నమోదు చేయండి.'
-          : 'Please enter the OTP verification code.'
-      );
-      return;
-    }
-
-    setIsVerifyingOtp(true);
-    try {
-      const res = await apiVerifyOtp({
-        verificationId: regVerificationId,
-        code: regOtp.trim(),
-        mobileNumber: cleanPhone(regMobile),
-      });
-
-      if (!res.success || !res.verified) {
-        setRegError(
-          res.error ||
-          (isTe ? 'తప్పుడు OTP కోడ్. దయచేసి మళ్లీ ప్రయత్నించండి.' : 'Invalid OTP code. Please check SMS and try again.')
-        );
-        setIsVerifyingOtp(false);
-        return;
-      }
-
-      const newFarmer = {
-        name: regFullName.trim(),
-        mobile: cleanPhone(regMobile),
-        village: regVillage.trim() || defaultVillage,
-        district: selectedLocation?.district || 'Hanamkonda',
-        landArea: parseFloat(regLandArea) || 3.0,
-        crops: ['Paddy', 'Cotton'],
-        isVerified: true,
-        registeredAt: new Date().toISOString().split('T')[0]
-      };
-
-      // Save in AgriRent database & PostgreSQL
-      saveRegisteredFarmer(newFarmer);
-      apiGetSessionToken(newFarmer).catch(() => {});
-
-      try {
-        localStorage.setItem('agri_current_farmer', JSON.stringify(newFarmer));
-      } catch (err) {
-        console.warn(err);
-      }
-
-      if (setCurrentFarmer) {
-        setCurrentFarmer(newFarmer);
-      }
-
-      setActivePage('find-tractor');
-    } catch (err) {
-      setRegError(err.message || 'Registration verification error. Please retry.');
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -367,36 +409,36 @@ export default function FarmerLogin({
       <div className="signin-center-wrapper">
         {/* Top Header Bar */}
         <header className="signin-top-nav">
-            <div className="signin-nav-left">
-              <button
-                type="button"
-                className="signin-header-back-sq"
-                onClick={onGoBack || (() => setActivePage('portal-select'))}
-                title="Back to portal selection"
-                aria-label="Back"
-              >
-                ←
-              </button>
-              <div className="signin-brand-group">
-                <h1 className="signin-brand-title">Agrirent</h1>
-                <span className="signin-brand-subtitle">
-                  {isTe ? 'రైతు మొబైల్ పోర్టల్' : 'Farmer Mobile Portal'}
-                </span>
-              </div>
-            </div>
-
+          <div className="signin-nav-left">
             <button
               type="button"
-              className="signin-lang-pill"
-              onClick={toggleLanguage}
-              title={isTe ? 'Switch to English' : 'తెలుగులోకి మార్చండి'}
+              className="signin-header-back-sq"
+              onClick={onGoBack || (() => setActivePage('portal-select'))}
+              title="Back to portal selection"
+              aria-label="Back"
             >
-              🌐 {isTe ? 'తెలుగు ▾' : 'English ▾'}
+              ←
             </button>
-          </header>
+            <div className="signin-brand-group">
+              <h1 className="signin-brand-title">AgriRent</h1>
+              <span className="signin-brand-subtitle">
+                {isTe ? 'రైతు అధికారిక పోర్టల్' : 'Farmer Official Portal'}
+              </span>
+            </div>
+          </div>
 
-          {/* Main Card Container */}
-          <main className="signin-card-container">
+          <button
+            type="button"
+            className="signin-lang-pill"
+            onClick={toggleLanguage}
+            title={isTe ? 'Switch to English' : 'తెలుగులోకి మార్చండి'}
+          >
+            🌐 {isTe ? 'తెలుగు ▾' : 'English ▾'}
+          </button>
+        </header>
+
+        {/* Main Card Container */}
+        <main className="signin-card-container">
           <div className="signin-main-card">
             {/* Top Navigation Row: Back Button */}
             <div className="signin-card-top-row">
@@ -405,14 +447,14 @@ export default function FarmerLogin({
                 className="signin-back-pill-btn"
                 onClick={onGoBack || (() => setActivePage('portal-select'))}
               >
-                ← {isTe ? 'ఎంపికకి వెనుకకు' : 'Back to Selection'}
+                ← {isTe ? 'పోర్టల్ ఎంపికకి వెనుకకు' : 'Back to Selection'}
               </button>
             </div>
 
             {/* Portal Badge */}
             <div className="signin-farmer-badge">
               <span className="signin-badge-avatar">👨‍🌾</span>
-              <span>{isTe ? 'రైతు సురక్షిత ప్రవేశం' : 'Secure Farmer Access'}</span>
+              <span>{isTe ? 'రైతు సురక్షిత ప్రవేశం' : 'Secure Farmer Authentication'}</span>
             </div>
 
             {/* Auth Mode Tabs Switcher */}
@@ -430,7 +472,7 @@ export default function FarmerLogin({
                 }}
               >
                 <span>🔑</span>
-                <span>{isTe ? 'ఖాతా లాగిన్' : 'Existing User'}</span>
+                <span>{isTe ? 'ఖాతా లాగిన్' : 'Sign In'}</span>
               </button>
 
               <button
@@ -442,27 +484,53 @@ export default function FarmerLogin({
                   setAuthMode('register');
                   setRegError('');
                   setRegNotice('');
-                  setRegOtpSent(false);
                 }}
               >
                 <span>📝</span>
-                <span>{isTe ? 'మొదటిసారి నమోదు' : 'New Farmer Sign-Up'}</span>
+                <span>{isTe ? 'కొత్త ఖాతా నమోదు' : 'Register Account'}</span>
               </button>
             </div>
 
             {/* ====================================================
-                TAB 1: EXISTING USER LOGIN (SECURE & DIRECT)
+                TAB 1: EXISTING USER LOGIN
                ==================================================== */}
             {authMode === 'login' && (
               <div className="auth-tab-content page-anim">
-                <h2 className="signin-heading" style={{ fontSize: '22px', marginTop: '2px' }}>
-                  {isTe ? 'రైతు ఖాతా లాగిన్' : 'Farmer Login'}
-                </h2>
-                <p className="signin-description" style={{ marginBottom: '16px' }}>
-                  {isTe
-                    ? 'మీ నమోదిత మొబైల్ నంబర్ ద్వారా సురక్షితంగా ప్రవేశించండి.'
-                    : 'Enter your registered mobile number to receive a secure OTP.'}
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <div>
+                    <h2 className="signin-heading" style={{ fontSize: '22px', margin: 0 }}>
+                      {isTe ? 'రైతు ఖాతా లాగిన్' : 'Farmer Sign In'}
+                    </h2>
+                    <p className="signin-description" style={{ margin: '4px 0 0 0' }}>
+                      {loginMethod === 'password'
+                        ? (isTe ? 'మీ నమోదిత ఆధారాలతో లాగిన్ అవ్వండి.' : 'Sign in using your mobile number/email and password.')
+                        : (isTe ? 'మీ మొబైల్‌కు వచ్చే SMS OTP ద్వారా లాగిన్ అవ్వండి.' : 'Sign in using Message Central SMS OTP verification.')}
+                    </p>
+                  </div>
+
+                  {/* Toggle between Password and OTP Login */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginMethod(prev => (prev === 'password' ? 'otp' : 'password'));
+                      setLoginError('');
+                      setLoginNotice('');
+                    }}
+                    style={{
+                      background: '#f1f8e9',
+                      color: '#2e7d32',
+                      border: '1px solid #c8e6c9',
+                      borderRadius: '6px',
+                      padding: '5px 10px',
+                      fontSize: '11.5px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {loginMethod === 'password' ? '📲 SMS OTP Mode' : '🔑 Password Mode'}
+                  </button>
+                </div>
 
                 {loginNotice && (
                   <div className="signin-otp-banner page-anim" style={{ marginBottom: '14px' }}>
@@ -473,7 +541,7 @@ export default function FarmerLogin({
                 {loginError && (
                   <div className="signin-error-box" style={{ marginBottom: '14px' }}>
                     ⚠️ {loginError}
-                    {matchedOwnerHint ? (
+                    {matchedOwnerHint && (
                       <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button
                           type="button"
@@ -482,140 +550,198 @@ export default function FarmerLogin({
                         >
                           🚜 {isTe ? 'వాహన యజమాని పోర్టల్‌కి వెళ్లండి →' : 'Switch to Vehicle Owner Portal →'}
                         </button>
-                        <button
-                          type="button"
-                          className="signin-inline-action-btn"
-                          style={{ background: '#e8f5e9', color: '#1b5e20', borderColor: '#a5d6a7' }}
-                          onClick={() => handleSwitchToRegister(loginPhone)}
-                        >
-                          📝 {isTe ? 'రైతుగా కూడా నమోదు చేయండి →' : 'Register as Farmer Too →'}
-                        </button>
                       </div>
-                    ) : (
-                      !loginOtpSent && cleanPhone(loginPhone).length === 10 && (
-                        <button
-                          type="button"
-                          className="signin-inline-action-btn"
-                          onClick={() => handleSwitchToRegister(loginPhone)}
-                        >
-                          📝 {isTe ? 'మొదటిసారి రైతుగా నమోదు చేసుకోండి →' : 'Register as First-Time Farmer →'}
-                        </button>
-                      )
                     )}
                   </div>
                 )}
 
-                {!loginOtpSent ? (
-                  /* Step 1: Enter Registered Mobile Number */
-                  <form onSubmit={handleSendLoginOtp}>
+                {loginMethod === 'password' ? (
+                  /* Form: Password Login with Remember Me */
+                  <form onSubmit={handlePasswordLogin}>
+                    {/* Identifier: Mobile or Email */}
                     <div className="signin-field-group">
                       <label className="signin-field-label">
-                        {isTe ? 'నమోదిత మొబైల్ నంబర్ *' : 'Registered 10-Digit Mobile Number *'}
+                        {isTe ? 'మొబైల్ నంబర్ లేదా ఈమెయిల్ *' : 'Mobile Number or Email *'}
                       </label>
                       <div className="signin-field-input-box">
-                        <span className="signin-flag-badge">🇮🇳 +91</span>
+                        <span className="signin-input-icon">📱</span>
                         <input
-                          type="tel"
-                          maxLength={10}
+                          type="text"
                           className="signin-input-text font-bold"
-                          value={loginPhone}
+                          value={loginIdentifier}
                           onChange={(e) => {
-                            setLoginPhone(e.target.value.replace(/\D/g, ''));
+                            setLoginIdentifier(e.target.value);
                             setLoginError('');
                           }}
-                          placeholder={isTe ? '10 అంకెల నంబర్' : 'Enter 10-digit number'}
+                          placeholder={isTe ? 'ఉదా: 9848012345 లేదా farmer@gmail.com' : 'e.g. 9848012345 or farmer@gmail.com'}
+                          required
                           autoFocus
                         />
                       </div>
-                      <span className="signin-field-hint">
-                        {isTe
-                          ? 'అగ్రిరెంట్‌లో ఇప్పటికే నమోదైన ఫోన్ నంబర్‌ను నమోదు చేయండి.'
-                          : 'Enter the mobile number linked to your AgriRent farmer account.'}
-                      </span>
                     </div>
 
-                    <button
-                      type="submit"
-                      className="signin-btn-forest-green"
-                      style={{ marginTop: '14px' }}
-                      disabled={isSendingOtp}
-                    >
-                      <span>{isSendingOtp ? (isTe ? 'SMS OTP పంపుతోంది...' : 'Sending SMS OTP via Message Central...') : `📲 ${isTe ? 'సురక్షిత లాగిన్ OTP పొందండి' : 'Get Secure Login OTP'}`}</span>
-                    </button>
-                  </form>
-                ) : (
-                  /* Step 2: Verify Login OTP */
-                  <form onSubmit={handleVerifyLoginOtp}>
-                    <div className="signin-field-group signin-otp-block page-anim">
-                      <div className="signin-otp-header-row">
-                        <label className="signin-field-label" style={{ fontWeight: 800 }}>
-                          {isTe ? 'లాగిన్ OTP కోడ్ నమోదు చేయండి' : 'Enter Login OTP Code'}
+                    {/* Password Field with Eye Toggle */}
+                    <div className="signin-field-group">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <label className="signin-field-label" style={{ margin: 0 }}>
+                          {isTe ? 'పాస్‌వర్డ్ *' : 'Password *'}
                         </label>
                         <button
                           type="button"
-                          className="signin-change-phone-btn"
-                          onClick={() => {
-                            setLoginOtpSent(false);
-                            setLoginError('');
-                          }}
+                          onClick={() => setShowLoginPassword(p => !p)}
+                          style={{ background: 'none', border: 'none', color: '#2e7d32', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
                         >
-                          ✎ {isTe ? 'నంబర్ మార్చండి' : 'Change Number'}
+                          {showLoginPassword ? (isTe ? 'దాచు 👁️' : 'Hide 👁️') : (isTe ? 'చూపించు 👁️' : 'Show 👁️')}
                         </button>
                       </div>
+                      <div className="signin-field-input-box">
+                        <span className="signin-input-icon">🔒</span>
+                        <input
+                          type={showLoginPassword ? 'text' : 'password'}
+                          className="signin-input-text"
+                          value={loginPassword}
+                          onChange={(e) => {
+                            setLoginPassword(e.target.value);
+                            setLoginError('');
+                          }}
+                          placeholder={isTe ? 'మీ ఖాతా పాస్‌వర్డ్' : 'Enter your account password'}
+                          required
+                        />
+                      </div>
+                    </div>
 
-                      <input
-                        type="text"
-                        maxLength={8}
-                        className="signin-otp-input"
-                        value={loginOtp}
-                        onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, ''))}
-                        placeholder="••••••"
-                        autoFocus
-                      />
-                      {loginOtp && (
-                        <span className="signin-demo-otp-hint">
-                          {isTe ? `సిమ్యులేటర్ ప్రివ్యూ కోడ్: ${loginOtp}` : `Simulator test code: ${loginOtp}`}
+                    {/* Remember Me Checkbox */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '12px 0 16px 0' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#334155' }}>
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          style={{ width: '16px', height: '16px', accentColor: '#2e7d32', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontWeight: '600' }}>
+                          {isTe ? 'నన్ను లాగిన్ లోనే ఉంచు (Remember Me)' : 'Keep me signed in (Remember Me)'}
                         </span>
-                      )}
+                      </label>
                     </div>
 
                     <button
                       type="submit"
                       className="signin-btn-forest-green"
-                      style={{ marginTop: '14px' }}
-                      disabled={isVerifyingOtp}
+                      disabled={isSubmittingLogin}
                     >
-                      <span>{isVerifyingOtp ? (isTe ? 'ధృవీకరిస్తోంది...' : 'Verifying OTP...') : `🔓 ${isTe ? 'ధృవీకరించి ప్రవేశించండి →' : 'Verify & Login Directly →'}`}</span>
+                      <span>
+                        {isSubmittingLogin
+                          ? (isTe ? 'సురక్షిత లాగిన్ అవుతోంది...' : 'Signing In Securely...')
+                          : `✓ ${isTe ? 'ఖాతాలోకి ప్రవేశించండి' : 'Sign In to AgriRent'}`}
+                      </span>
                     </button>
                   </form>
+                ) : (
+                  /* Form: OTP Login via Message Central */
+                  <div>
+                    {!loginOtpSent ? (
+                      <form onSubmit={handleSendLoginOtp}>
+                        <div className="signin-field-group">
+                          <label className="signin-field-label">
+                            {isTe ? 'నమోదిత 10-అంకెల మొబైల్ నంబర్ *' : 'Registered 10-Digit Mobile Number *'}
+                          </label>
+                          <div className="signin-field-input-box">
+                            <span className="signin-flag-badge">🇮🇳 +91</span>
+                            <input
+                              type="tel"
+                              maxLength={10}
+                              className="signin-input-text font-bold"
+                              value={loginPhone}
+                              onChange={(e) => {
+                                setLoginPhone(e.target.value.replace(/\D/g, ''));
+                                setLoginError('');
+                              }}
+                              placeholder="9848012345"
+                              required
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="signin-btn-forest-green"
+                          style={{ marginTop: '14px' }}
+                          disabled={isSendingOtp}
+                        >
+                          <span>{isSendingOtp ? (isTe ? 'SMS OTP పంపుతోంది...' : 'Sending SMS OTP...') : `📲 ${isTe ? 'SMS OTP పంపండి' : 'Send SMS Login OTP'}`}</span>
+                        </button>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleVerifyLoginOtp}>
+                        <div className="signin-field-group signin-otp-block page-anim">
+                          <div className="signin-otp-header-row">
+                            <label className="signin-field-label" style={{ fontWeight: 800 }}>
+                              {isTe ? 'OTP కోడ్ నమోదు చేయండి' : 'Enter 6-Digit Verification OTP'}
+                            </label>
+                            <button
+                              type="button"
+                              className="signin-change-phone-btn"
+                              onClick={() => {
+                                setLoginOtpSent(false);
+                                setLoginError('');
+                              }}
+                            >
+                              ✎ {isTe ? 'మొబైల్ మార్చండి' : 'Change Number'}
+                            </button>
+                          </div>
+
+                          <input
+                            type="text"
+                            maxLength={8}
+                            className="signin-otp-input"
+                            value={loginOtp}
+                            onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, ''))}
+                            placeholder="••••••"
+                            autoFocus
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="signin-btn-forest-green"
+                          style={{ marginTop: '14px' }}
+                          disabled={isVerifyingOtp}
+                        >
+                          <span>{isVerifyingOtp ? (isTe ? 'ధృవీకరిస్తోంది...' : 'Verifying OTP...') : `🚀 ${isTe ? 'ధృవీకరించి ప్రవేశించండి' : 'Verify OTP & Sign In'}`}</span>
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 )}
 
                 {/* Footer Switcher */}
-                <div className="auth-switch-box">
-                  <span>{isTe ? 'అగ్రిరెంట్‌కి కొత్తవారా? ' : 'First time using AgriRent? '}</span>
+                <div className="auth-switch-box" style={{ marginTop: '20px' }}>
+                  <span>{isTe ? 'ఖాతా లేదా? ' : "Don't have an account yet? "}</span>
                   <button
                     type="button"
                     className="auth-switch-link"
-                    onClick={() => handleSwitchToRegister(loginPhone)}
+                    onClick={() => handleSwitchToRegister(loginIdentifier || loginPhone)}
                   >
-                    {isTe ? 'కొత్త రైతు ఖాతా తెరవండి →' : 'Create Farmer Account →'}
+                    {isTe ? 'కొత్త రైతు ఖాతా తెరవండి →' : 'Register New Account →'}
                   </button>
                 </div>
               </div>
             )}
 
             {/* ====================================================
-                TAB 2: FIRST-TIME USER SIGN-UP
+                TAB 2: NEW USER REGISTRATION
                ==================================================== */}
             {authMode === 'register' && (
               <div className="auth-tab-content page-anim">
-                <h2 className="signin-heading" style={{ fontSize: '22px', marginTop: '2px' }}>
-                  {isTe ? 'మొదటిసారి రైతు నమోదు' : 'New Farmer Registration'}
+                <h2 className="signin-heading" style={{ fontSize: '22px', margin: 0 }}>
+                  {isTe ? 'కొత్త రైతు ఖాతా నమోదు' : 'New Farmer Registration'}
                 </h2>
-                <p className="signin-description" style={{ marginBottom: '16px' }}>
+                <p className="signin-description" style={{ margin: '4px 0 16px 0' }}>
                   {isTe
-                    ? '0% కమీషన్‌తో ట్రాక్టర్లు అద్దెకు తీసుకోవడానికి ఉచితంగా నమోదు చేసుకోండి.'
-                    : 'Register once to rent tractors & machinery at 0% platform fee.'}
+                    ? 'ట్రాక్టర్లు మరియు యంత్రాలను అద్దెకు తీసుకోవడానికి ఉచితంగా నమోదు చేసుకోండి.'
+                    : 'Register your account to rent tractors and farm machinery with 0% platform fee.'}
                 </p>
 
                 {regNotice && (
@@ -633,75 +759,128 @@ export default function FarmerLogin({
                         className="signin-inline-action-btn"
                         onClick={() => handleSwitchToLogin(regMobile)}
                       >
-                        🔑 {isTe ? 'లాగిన్ పేజీకి వెళ్లండి →' : 'Go to Login Tab →'}
+                        🔑 {isTe ? 'లాగిన్ పేజీకి వెళ్లండి →' : 'Go to Sign In →'}
                       </button>
                     )}
                   </div>
                 )}
 
-                {!regOtpSent ? (
-                  /* Step 1: Sign-Up Form */
-                  <form onSubmit={handleSendRegOtp}>
-                    {/* Farmer Full Name */}
-                    <div className="signin-field-group">
-                      <label className="signin-field-label">
-                        {isTe ? 'రైతు పూర్తి పేరు *' : 'Farmer Full Name *'}
-                      </label>
-                      <div className="signin-field-input-box">
-                        <span className="signin-input-icon icon-person">👤</span>
-                        <input
-                          type="text"
-                          className="signin-input-text"
-                          value={regFullName}
-                          onChange={(e) => setRegFullName(e.target.value)}
-                          placeholder="e.g. Kondal Rao"
-                          autoFocus
-                        />
-                      </div>
+                <form onSubmit={handleRegister}>
+                  {/* Farmer Full Name */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'రైతు పూర్తి పేరు *' : 'Farmer Full Name *'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="signin-input-icon">👤</span>
+                      <input
+                        type="text"
+                        className="signin-input-text font-bold"
+                        value={regFullName}
+                        onChange={(e) => setRegFullName(e.target.value)}
+                        placeholder={isTe ? 'ఉదా: కొండల్ రావు' : 'e.g. Kondal Rao'}
+                        required
+                        autoFocus
+                      />
                     </div>
+                  </div>
 
-                    {/* Mobile Number */}
-                    <div className="signin-field-group">
-                      <label className="signin-field-label">
-                        {isTe ? '10-అంకెల మొబైల్ నంబర్ *' : '10-Digit Mobile Number *'}
-                      </label>
-                      <div className="signin-field-input-box">
-                        <span className="signin-flag-badge">🇮🇳 +91</span>
-                        <input
-                          type="tel"
-                          maxLength={10}
-                          className="signin-input-text font-bold"
-                          value={regMobile}
-                          onChange={(e) => {
-                            setRegMobile(e.target.value.replace(/\D/g, ''));
-                            setRegError('');
-                          }}
-                          placeholder="9848012345"
-                        />
-                      </div>
+                  {/* 10-Digit Mobile Number */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? '10-అంకెల మొబైల్ నంబర్ *' : '10-Digit Mobile Number *'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="signin-flag-badge">🇮🇳 +91</span>
+                      <input
+                        type="tel"
+                        maxLength={10}
+                        className="signin-input-text font-bold"
+                        value={regMobile}
+                        onChange={(e) => {
+                          setRegMobile(e.target.value.replace(/\D/g, ''));
+                          setRegError('');
+                        }}
+                        placeholder="9848012345"
+                        required
+                      />
                     </div>
+                  </div>
 
-                    {/* Village / Delivery Base */}
+                  {/* Email Address */}
+                  <div className="signin-field-group">
+                    <label className="signin-field-label">
+                      {isTe ? 'ఈమెయిల్ చిరునామా *' : 'Email Address *'}
+                    </label>
+                    <div className="signin-field-input-box">
+                      <span className="signin-input-icon">✉️</span>
+                      <input
+                        type="email"
+                        className="signin-input-text"
+                        value={regEmail}
+                        onChange={(e) => {
+                          setRegEmail(e.target.value);
+                          setRegError('');
+                        }}
+                        placeholder="farmer@gmail.com"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password with Show/Hide Toggle */}
+                  <div className="signin-field-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label className="signin-field-label" style={{ margin: 0 }}>
+                        {isTe ? 'సురక్షిత పాస్‌వర్డ్ (కనీసం 6 అక్షరాలు) *' : 'Secure Password (Min. 6 Characters) *'}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowRegPassword(p => !p)}
+                        style={{ background: 'none', border: 'none', color: '#2e7d32', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                      >
+                        {showRegPassword ? (isTe ? 'దాచు 👁️' : 'Hide 👁️') : (isTe ? 'చూపించు 👁️' : 'Show 👁️')}
+                      </button>
+                    </div>
+                    <div className="signin-field-input-box">
+                      <span className="signin-input-icon">🔒</span>
+                      <input
+                        type={showRegPassword ? 'text' : 'password'}
+                        className="signin-input-text"
+                        value={regPassword}
+                        onChange={(e) => {
+                          setRegPassword(e.target.value);
+                          setRegError('');
+                        }}
+                        placeholder="••••••••"
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Village / Delivery Base & Land Area */}
+                  <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div className="signin-field-group">
                       <label className="signin-field-label">
-                        {isTe ? 'గ్రామం / డెలివరీ ప్రాంతం *' : 'Village / Delivery Base *'}
+                        {isTe ? 'గ్రామం / మండలం *' : 'Village / Mandal *'}
                       </label>
                       <div className="signin-field-input-box">
-                        <span className="signin-input-icon icon-pin">📍</span>
+                        <span className="signin-input-icon">📍</span>
                         <input
                           type="text"
                           className="signin-input-text"
                           value={regVillage}
                           onChange={(e) => setRegVillage(e.target.value)}
-                          placeholder="e.g. Hasanparthy"
+                          placeholder="Hasanparthy"
+                          required
                         />
                       </div>
                     </div>
 
-                    {/* Land Area */}
                     <div className="signin-field-group">
                       <label className="signin-field-label">
-                        {isTe ? 'సాగు విస్తీర్ణం (ఎకరాలు)' : 'Land Size (Acres - Optional)'}
+                        {isTe ? 'సాగు విస్తీర్ణం (ఎకరాలు)' : 'Land Area (Acres)'}
                       </label>
                       <div className="signin-field-input-box">
                         <span className="signin-input-icon">🌾</span>
@@ -712,76 +891,35 @@ export default function FarmerLogin({
                           className="signin-input-text"
                           value={regLandArea}
                           onChange={(e) => setRegLandArea(e.target.value)}
-                          placeholder="e.g. 3.0"
+                          placeholder="3.0"
                         />
                       </div>
                     </div>
+                  </div>
 
-                    <button
-                      type="submit"
-                      className="signin-btn-forest-green"
-                      style={{ marginTop: '14px' }}
-                      disabled={isSendingOtp}
-                    >
-                      <span>{isSendingOtp ? (isTe ? 'SMS OTP పంపుతోంది...' : 'Sending SMS OTP via Message Central...') : `📲 ${isTe ? 'ధృవీకరణ OTP పంపండి' : 'Send Verification OTP'}`}</span>
-                    </button>
-                  </form>
-                ) : (
-                  /* Step 2: Verify Sign-Up OTP */
-                  <form onSubmit={handleVerifyRegOtp}>
-                    <div className="signin-field-group signin-otp-block page-anim">
-                      <div className="signin-otp-header-row">
-                        <label className="signin-field-label" style={{ fontWeight: 800 }}>
-                          {isTe ? 'ధృవీకరణ OTP కోడ్ నమోదు చేయండి' : 'Enter Verification OTP Code'}
-                        </label>
-                        <button
-                          type="button"
-                          className="signin-change-phone-btn"
-                          onClick={() => {
-                            setRegOtpSent(false);
-                            setRegError('');
-                          }}
-                        >
-                          ✎ {isTe ? 'సవరించండి' : 'Edit Details'}
-                        </button>
-                      </div>
-
-                      <input
-                        type="text"
-                        maxLength={8}
-                        className="signin-otp-input"
-                        value={regOtp}
-                        onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ''))}
-                        placeholder="••••••"
-                        autoFocus
-                      />
-                      {regOtp && (
-                        <span className="signin-demo-otp-hint">
-                          {isTe ? `సిమ్యులేటర్ ప్రివ్యూ కోడ్: ${regOtp}` : `Simulator test code: ${regOtp}`}
-                        </span>
-                      )}
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="signin-btn-forest-green"
-                      style={{ marginTop: '14px' }}
-                      disabled={isVerifyingOtp}
-                    >
-                      <span>{isVerifyingOtp ? (isTe ? 'ధృవీకరిస్తోంది...' : 'Verifying OTP...') : `🚀 ${isTe ? 'ధృవీకరించి ఖాతా పూర్తి చేయండి →' : 'Verify & Create Farmer Account →'}`}</span>
-                    </button>
-                  </form>
-                )}
+                  <button
+                    type="submit"
+                    className="signin-btn-forest-green"
+                    style={{ marginTop: '14px' }}
+                    disabled={isSubmittingReg}
+                  >
+                    <span>
+                      {isSubmittingReg
+                        ? (isTe ? 'ఖాతా సృష్టించబడుతోంది...' : 'Creating Account & Auto-Signing In...')
+                        : `🚀 ${isTe ? 'ఖాతా నమోదు చేసి లాగిన్ అవ్వండి' : 'Create Account & Sign In'}`}
+                    </span>
+                  </button>
+                </form>
 
                 {/* Footer Switcher */}
-                <div className="auth-switch-box">
-                  <span>{isTe ? 'ఇప్పటికే ఖాతా ఉందా? ' : 'Already have an account? '}</span>
+                <div className="auth-switch-box" style={{ marginTop: '20px' }}>
+                  <span>{isTe ? 'ఇప్పటికే ఖాతా ఉందా? ' : 'Already registered? '}</span>
                   <button
                     type="button"
                     className="auth-switch-link"
                     onClick={() => handleSwitchToLogin(regMobile)}
                   >
-                    {isTe ? 'లాగిన్ అవ్వండి →' : 'Sign in here →'}
+                    {isTe ? 'లాగిన్ అవ్వండి →' : 'Sign in to your account →'}
                   </button>
                 </div>
               </div>
@@ -790,7 +928,7 @@ export default function FarmerLogin({
             {/* Guest Browsing Link */}
             <div className="signin-guest-link-box" style={{ marginTop: '18px' }}>
               <span className="signin-guest-prompt">
-                {isTe ? 'కేవలం చూడాలనుకుంటున్నారా? ' : 'Just browsing? '}
+                {isTe ? 'కేవలం చూడాలనుకుంటున్నారా? ' : 'Just exploring? '}
               </span>
               <button
                 type="button"
@@ -802,13 +940,13 @@ export default function FarmerLogin({
             </div>
           </div>
 
-          {/* Footer Norms Disclaimer */}
+          {/* Safety & Compliance Footer */}
           <footer className="signin-safety-footer">
             <span className="signin-shield-icon">🛡️</span>
             <span>
               {isTe
                 ? 'తెలంగాణ రవాణా మరియు వ్యవసాయ భద్రతా సమాచార నిబంధనలకు అగ్రిరెంట్ కట్టుబడి ఉంటుంది.'
-                : 'Agrirent adheres to Telangana transport & agriculture safety data norms.'}
+                : 'AgriRent adheres to Telangana transport & agriculture safety data norms.'}
             </span>
           </footer>
         </main>

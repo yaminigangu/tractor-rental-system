@@ -1,4 +1,6 @@
+import { useState, useEffect, useRef } from 'react';
 import { translations } from '../translations';
+import { apiGetNotifications, apiMarkNotificationRead, apiMarkAllNotificationsRead } from '../api/apiClient';
 
 export default function Header({
   activePage,
@@ -25,6 +27,54 @@ export default function Header({
 }) {
   const t = translations[language] || translations.en;
   const isTe = language === 'te';
+
+  // In-App Notification System
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef(null);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await apiGetNotifications(20);
+      if (res && res.success) {
+        setNotifications(res.notifications || []);
+        setUnreadCount(res.unreadCount || 0);
+      }
+    } catch {
+      // offline / quiet fallback
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000);
+    return () => clearInterval(interval);
+  }, [currentFarmer, currentOwner]);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setIsNotifOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleMarkOneRead = async (notif) => {
+    if (!notif.isRead) {
+      await apiMarkNotificationRead(notif.id);
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    await apiMarkAllNotificationsRead();
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+  };
 
   const getPageTitle = (page) => {
     switch (page) {
@@ -136,6 +186,172 @@ export default function Header({
       </div>
 
       <div className="header-right header-right-minimal">
+        {/* In-App Notification Bell & Dropdown */}
+        <div ref={notifRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setIsNotifOpen(prev => !prev)}
+            title={isTe ? 'నోటిఫికేషన్‌లు' : 'In-App Notifications'}
+            aria-label="Notifications"
+            style={{
+              position: 'relative',
+              background: '#ffffff',
+              border: '1.5px solid #c8e6c9',
+              borderRadius: '50%',
+              width: '38px',
+              height: '38px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '18px',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
+            }}
+          >
+            🔔
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: '#d32f2f',
+                color: '#ffffff',
+                borderRadius: '12px',
+                padding: '1px 6px',
+                fontSize: '10px',
+                fontWeight: '800',
+                lineHeight: '14px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.25)'
+              }}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notifications Dropdown Drawer */}
+          {isNotifOpen && (
+            <div style={{
+              position: 'absolute',
+              top: '46px',
+              right: 0,
+              width: '330px',
+              maxHeight: '440px',
+              background: '#ffffff',
+              borderRadius: '12px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+              border: '1px solid #e0e0e0',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              zIndex: 1200
+            }}>
+              {/* Dropdown Header */}
+              <div style={{
+                padding: '12px 16px',
+                background: '#f8fafc',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>
+                    🔔 {isTe ? 'నోటిఫికేషన్‌లు' : 'Notifications'}
+                  </strong>
+                  {unreadCount > 0 && (
+                    <span style={{
+                      background: '#fee2e2',
+                      color: '#b91c1c',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      padding: '2px 6px',
+                      borderRadius: '8px'
+                    }}>
+                      {unreadCount} {isTe ? 'కొత్తవి' : 'new'}
+                    </span>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllRead}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2e7d32',
+                      fontSize: '11.5px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    ✓ {isTe ? 'అన్నీ చదివినట్లు మార్క్ చేయండి' : 'Mark all read'}
+                  </button>
+                )}
+              </div>
+
+              {/* Notification List */}
+              <div style={{ overflowY: 'auto', maxHeight: '380px' }}>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: '40px 16px', textAlign: 'center', color: '#64748b' }}>
+                    <span style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}>📭</span>
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: '600' }}>
+                      {isTe ? 'ప్రస్తుతం కొత్త నోటిఫికేషన్‌లు లేవు' : 'No notifications yet'}
+                    </p>
+                  </div>
+                ) : (
+                  notifications.map((notif) => {
+                    const isNew = !notif.isRead;
+                    const notifIcon = notif.type === 'new_booking' ? '🚜' :
+                                      notif.type === 'booking_confirmed' ? '✅' :
+                                      notif.type === 'booking_rejected' ? '❌' :
+                                      notif.type === 'booking_cancelled' ? '⚠️' : '🔔';
+
+                    return (
+                      <div
+                        key={notif.id}
+                        onClick={() => handleMarkOneRead(notif)}
+                        style={{
+                          padding: '12px 14px',
+                          borderBottom: '1px solid #f1f5f9',
+                          background: isNew ? '#f0fdf4' : '#ffffff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          gap: '10px',
+                          alignItems: 'flex-start',
+                          transition: 'background 0.15s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '20px', lineHeight: 1 }}>{notifIcon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <strong style={{ fontSize: '13px', color: '#1e293b' }}>{notif.title}</strong>
+                            {isNew && (
+                              <span style={{
+                                width: '7px',
+                                height: '7px',
+                                borderRadius: '50%',
+                                background: '#22c55e',
+                                display: 'inline-block'
+                              }} />
+                            )}
+                          </div>
+                          <p style={{ margin: '3px 0 4px 0', fontSize: '12px', color: '#475569', lineHeight: 1.35 }}>
+                            {notif.message}
+                          </p>
+                          <small style={{ fontSize: '10.5px', color: '#94a3b8' }}>
+                            {notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                          </small>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Language Switcher */}
         <button
           className="lang-toggle-btn"

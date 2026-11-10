@@ -16,10 +16,10 @@ export default function BookingStepper({ status = '', language = 'en' }) {
     );
   }
 
-  if (status.includes('Declined')) {
+  if (status.includes('Declined') || status.includes('Reject') || status === 'Rejected') {
     return (
       <div className="stepper-cancelled-pill" style={{ background: '#ffebee', color: '#c62828', borderColor: '#ef9a9a' }}>
-        <span>❌ {isTe ? 'యజమాని స్లాట్ బిజీగా ఉందని తెలిపారు • దయచేసి వేరే తేదీని ఎంచుకోండి' : 'Tractor is busy on this date • Please pick another date or tractor'}</span>
+        <span>❌ {isTe ? 'యజమాని ఈ స్లాట్‌ను తిరస్కరించారు • దయచేసి వేరే తేదీ లేదా ట్రాక్టర్‌ను ఎంచుకోండి' : 'Booking rejected by tractor owner • Please pick another slot or unit'}</span>
       </div>
     );
   }

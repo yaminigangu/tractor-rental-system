@@ -233,19 +233,89 @@ export async function apiDeleteOwner(mobile) {
 // =====================================================================
 export function getStoredAuthToken() {
   try {
-    return localStorage.getItem('agri_jwt_token') || null;
+    return localStorage.getItem('agri_jwt_token') || sessionStorage.getItem('agri_jwt_token') || null;
   } catch {
     return null;
   }
 }
 
-export function setStoredAuthToken(token) {
+export function setStoredAuthToken(token, rememberMe = true) {
   try {
     if (token) {
-      localStorage.setItem('agri_jwt_token', token);
+      if (rememberMe) {
+        localStorage.setItem('agri_jwt_token', token);
+        sessionStorage.removeItem('agri_jwt_token');
+      } else {
+        sessionStorage.setItem('agri_jwt_token', token);
+        localStorage.removeItem('agri_jwt_token');
+      }
     } else {
       localStorage.removeItem('agri_jwt_token');
+      sessionStorage.removeItem('agri_jwt_token');
     }
+  } catch {}
+}
+
+export async function apiRegisterUser(userData) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+      signal: AbortSignal.timeout(6000),
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      setStoredAuthToken(data.token, true);
+    }
+    return data;
+  } catch (err) {
+    console.warn('apiRegisterUser error:', err);
+    return { success: false, error: 'Network error connecting to registration service' };
+  }
+}
+
+export async function apiLoginUser({ identifier, password, role = 'farmer', rememberMe = true }) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password, role, rememberMe }),
+      signal: AbortSignal.timeout(6000),
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      setStoredAuthToken(data.token, rememberMe);
+    }
+    return data;
+  } catch (err) {
+    console.warn('apiLoginUser error:', err);
+    return { success: false, error: 'Network error connecting to login service' };
+  }
+}
+
+export async function apiGetCurrentUser() {
+  try {
+    const token = getStoredAuthToken();
+    if (!token) return null;
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      signal: AbortSignal.timeout(3000)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.user || null;
+    }
+  } catch {}
+  return null;
+}
+
+export function apiLogoutUser() {
+  setStoredAuthToken(null);
+  try {
+    localStorage.removeItem('agri_current_farmer');
+    localStorage.removeItem('agri_current_owner');
+    sessionStorage.removeItem('agri_admin_logged_in');
   } catch {}
 }
 
@@ -383,6 +453,24 @@ export async function apiGetBookingById(id) {
   return null;
 }
 
+export async function apiCheckAvailability(tractorId, date, timeSlot) {
+  try {
+    const params = new URLSearchParams({
+      tractorId: String(tractorId),
+      date: String(date),
+      timeSlot: String(timeSlot || '')
+    });
+    const res = await fetch(`${API_BASE}/bookings/check-availability?${params.toString()}`, {
+      signal: AbortSignal.timeout(4000)
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn('apiCheckAvailability fallback:', err);
+    return { success: true, available: true, error: err.message };
+  }
+}
+
 export async function apiSaveBooking(booking) {
   try {
     const token = getStoredAuthToken();
@@ -393,11 +481,17 @@ export async function apiSaveBooking(booking) {
       method: 'POST',
       headers,
       body: JSON.stringify(booking),
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(6000),
     });
-    if (res.ok) return await res.json();
-  } catch {}
-  return null;
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, ...data, error: data.error || `HTTP ${res.status}` };
+    }
+    return data;
+  } catch (err) {
+    console.warn('apiSaveBooking network error:', err);
+    return { success: false, error: err.message || 'Network error saving booking' };
+  }
 }
 
 export async function apiUpdateBooking(id, updates) {
@@ -410,6 +504,65 @@ export async function apiUpdateBooking(id, updates) {
       method: 'PUT',
       headers,
       body: JSON.stringify(updates),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) return await res.json();
+  } catch {}
+  return null;
+}
+
+export async function apiUpdateBookingStatus(id, status, reason = null, paymentStatus = null) {
+  try {
+    const token = getStoredAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const bodyPayload = { status };
+    if (paymentStatus) bodyPayload.paymentStatus = paymentStatus;
+    if (status === 'Rejected' && reason) bodyPayload.rejectionReason = reason;
+    if (status === 'Cancelled' && reason) bodyPayload.cancellationReason = reason;
+
+    const res = await fetch(`${API_BASE}/bookings/${id}/status`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(bodyPayload),
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn('apiUpdateBookingStatus error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// =====================================================================
+// NOTIFICATIONS
+// =====================================================================
+export async function apiGetNotifications(limit = 20) {
+  try {
+    const token = getStoredAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/notifications?limit=${limit}`, {
+      headers,
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) return await res.json();
+  } catch {}
+  return { success: false, notifications: [], unreadCount: 0 };
+}
+
+export async function apiMarkNotificationRead(id) {
+  try {
+    const token = getStoredAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/notifications/${id}/read`, {
+      method: 'PATCH',
+      headers,
       signal: AbortSignal.timeout(3000),
     });
     if (res.ok) return await res.json();
@@ -417,16 +570,15 @@ export async function apiUpdateBooking(id, updates) {
   return null;
 }
 
-export async function apiUpdateBookingStatus(id, status, paymentStatus = null) {
+export async function apiMarkAllNotificationsRead() {
   try {
     const token = getStoredAuthToken();
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${API_BASE}/bookings/${id}/status`, {
-      method: 'PATCH',
+    const res = await fetch(`${API_BASE}/notifications/read-all`, {
+      method: 'POST',
       headers,
-      body: JSON.stringify({ status, paymentStatus }),
       signal: AbortSignal.timeout(3000),
     });
     if (res.ok) return await res.json();

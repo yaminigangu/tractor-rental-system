@@ -6,7 +6,8 @@ import {
   createBooking,
   updateBooking,
   updateBookingStatus,
-  deleteBooking
+  deleteBooking,
+  checkAvailability
 } from '../controllers/bookingController.js';
 import { authenticateUser, requireAuth } from '../middleware/auth.js';
 
@@ -17,6 +18,9 @@ router.use(authenticateUser);
 
 // Strict authenticated user booking history (MUST be before /:id)
 router.get('/my', requireAuth, getMyBookings);
+
+// Live slot availability check (MUST be before /:id)
+router.get('/check-availability', checkAvailability);
 
 // General listings with optional filters
 router.get('/', getBookings);

@@ -17,6 +17,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import otpRoutes from './routes/otpRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -119,6 +120,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Production single-port serving: serve static dist assets and index.html
 const distDir = path.join(__dirname, '../dist');
@@ -165,15 +167,52 @@ app.use(errorHandler);
 async function ensureBookingsSchema() {
   try {
     await query(`
+      -- Farmers Authentication Columns
+      ALTER TABLE farmers ADD COLUMN IF NOT EXISTS email VARCHAR(150);
+      ALTER TABLE farmers ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+      CREATE INDEX IF NOT EXISTS idx_farmers_email ON farmers(email);
+
+      -- Vehicle Owners Authentication Columns
+      ALTER TABLE vehicle_owners ADD COLUMN IF NOT EXISTS email VARCHAR(150);
+      ALTER TABLE vehicle_owners ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+      CREATE INDEX IF NOT EXISTS idx_owners_email ON vehicle_owners(email);
+
+      -- Bookings Workflow & Slotted Columns
       ALTER TABLE bookings ADD COLUMN IF NOT EXISTS farmer_id INTEGER;
       ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'Pending Cash on Service';
       ALTER TABLE bookings ADD COLUMN IF NOT EXISTS registration_no VARCHAR(50) DEFAULT 'TS 03 AB 4589';
       ALTER TABLE bookings ADD COLUMN IF NOT EXISTS owner_mobile VARCHAR(50) DEFAULT '9876543210';
       ALTER TABLE bookings ADD COLUMN IF NOT EXISTS tractor_photo TEXT;
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booking_code VARCHAR(50);
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS time_slot VARCHAR(50) DEFAULT '09:00 AM – 01:00 PM';
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS start_time VARCHAR(20);
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS end_time VARCHAR(20);
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS advance_payment INTEGER DEFAULT 0;
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS activity_log JSONB DEFAULT '[]'::jsonb;
       CREATE INDEX IF NOT EXISTS idx_bookings_farmer_id ON bookings(farmer_id);
       CREATE INDEX IF NOT EXISTS idx_bookings_farmer_mobile ON bookings(farmer_mobile);
+      CREATE INDEX IF NOT EXISTS idx_bookings_code ON bookings(booking_code);
+      CREATE INDEX IF NOT EXISTS idx_bookings_tractor_date ON bookings(tractor_id, booking_date);
+
+      -- In-App Notifications Table
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        user_mobile VARCHAR(20) NOT NULL,
+        user_role VARCHAR(20) NOT NULL DEFAULT 'farmer',
+        title VARCHAR(200) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'booking',
+        booking_id BIGINT,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_notifications_mobile ON notifications(user_mobile);
+      CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
     `);
-    console.log('✅ PostgreSQL bookings schema verified & migrated.');
+    console.log('✅ PostgreSQL full schema verified & migrated.');
   } catch (err) {
     console.warn('PostgreSQL schema migration check warning:', err.message);
   }
@@ -206,3 +245,5 @@ setInterval(() => {}, 1000 * 60 * 60);
 server.on('error', (err) => {
   console.error('Server error:', err);
 });
+
+export { app, server };
