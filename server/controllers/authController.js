@@ -191,21 +191,22 @@ export async function login(req, res, next) {
 
     // Verify Password
     if (!userRecord.password_hash) {
-      const saltRounds = 10;
-      const newHash = await bcrypt.hash(password, saltRounds);
-      if (userRole === 'VEHICLE_OWNER') {
-        await query('UPDATE vehicle_owners SET password_hash = $1 WHERE id = $2', [newHash, userRecord.id]);
-      } else {
-        await query('UPDATE farmers SET password_hash = $1 WHERE id = $2', [newHash, userRecord.id]);
-      }
-    } else {
-      const isMatch = await bcrypt.compare(password, userRecord.password_hash);
-      if (!isMatch) {
-        return res.status(401).json({
-          success: false,
-          error: 'Incorrect password. Please verify your credentials and try again.'
-        });
-      }
+      return res.status(401).json({
+        success: false,
+        error: 'Password not set. Please complete the verified password setup process.'
+      });
+    }
+
+    const isMatch = await bcrypt.compare(
+      password,
+      userRecord.password_hash
+    );
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        error: 'Incorrect password. Please verify your credentials and try again.'
+      });
     }
 
     // Canonical uppercase role

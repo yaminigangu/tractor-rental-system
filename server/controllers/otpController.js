@@ -34,99 +34,180 @@ export async function sendOtpHandler(req, res, next) {
  * POST /api/otp/verify
  * Body: { verificationId, code, countryCode, mobileNumber, role }
  */
+
 export async function verifyOtpHandler(req, res, next) {
   try {
-    const { verificationId, code, countryCode, mobileNumber, role = 'farmer' } = req.body;
-    if (!verificationId) {
-      return res.status(400).json({ error: 'verificationId is required' });
-    }
-    if (!code) {
-      return res.status(400).json({ error: 'OTP code is required' });
-    }
-
-    const result = await validateOtp({
+    const {
       verificationId,
       code,
-      countryCode
-    });
+      countryCode,
+      mobileNumber,
+      role = 'farmer'
+    } = req.body;
 
-    if (result.success && result.verified) {
-      let token = null;
-      let farmer = null;
-      let owner = null;
-
-      if (mobileNumber) {
-        const cleanMobile = String(mobileNumber).replace(/\D/g, '');
-
-        if (role === 'owner') {
-          // Look up vehicle owner in PostgreSQL
-          try {
-            const ownerRes = await query(
-              'SELECT id, full_name as "fullName", mobile, village, district, rc_number as "rcNumber", vehicle_number as "vehicleNumber", tractor_model as "tractorModel" FROM vehicle_owners WHERE mobile = $1 OR mobile LIKE $2',
-              [cleanMobile, `%${cleanMobile.slice(-10)}`]
-            );
-            if (ownerRes.rows.length > 0) {
-              owner = ownerRes.rows[0];
-            }
-          } catch (dbErr) {
-            console.warn('Vehicle owner DB query error:', dbErr.message);
-          }
-
-          token = generateToken({
-            id: owner ? owner.id : null,
-            mobile: cleanMobile,
-            name: owner ? owner.fullName : 'Vehicle Owner',
-            role: 'owner'
-          });
-        } else {
-          // Look up farmer in PostgreSQL
-          try {
-            const dbRes = await query(
-              'SELECT id, name, mobile, village, district, land_area as "landArea" FROM farmers WHERE mobile = $1 OR mobile LIKE $2',
-              [cleanMobile, `%${cleanMobile.slice(-10)}`]
-            );
-            if (dbRes.rows.length > 0) {
-              farmer = dbRes.rows[0];
-            } else {
-              // Ensure farmer has a persistent database ID for booking associations
-              try {
-                const insRes = await query(
-                  'INSERT INTO farmers (name, mobile, village, district, land_area, is_verified) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, mobile, village, district, land_area as "landArea"',
-                  ['Farmer', cleanMobile, 'Hasanparthy', 'Hanumakonda', 3.0, true]
-                );
-                if (insRes.rows.length > 0) {
-                  farmer = insRes.rows[0];
-                }
-              } catch (insErr) {
-                console.warn('Auto-provision farmer record notice:', insErr.message);
-              }
-            }
-          } catch (dbErr) {
-            console.warn('Farmer DB query error:', dbErr.message);
-          }
-
-          token = generateToken({
-            id: farmer ? farmer.id : null,
-            mobile: cleanMobile,
-            name: farmer ? farmer.name : 'Farmer',
-            role: 'farmer'
-          });
-        }
-      }
-
-      return res.status(200).json({
-        ...result,
-        token,
-        farmer,
-        owner
+    // 1. Validate required fields
+    if (!verificationId || !code || !mobileNumber) {
+      return res.status(400).json({
+        success: false,
+        error: 'verificationId, code and mobileNumber are required'
       });
     }
 
-    return res.status(400).json(result);
+    // 2. Normalize and validate mobile number
+    const cleanMobile = String(mobileNumber)
+      .replace(/\D/g, '')
+      .slice(-10);
+
+    if (cleanMobile.length !== 10) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid 10-digit mobile number is required'
+      });
+    }
+
+    // 3. Normalize role
+    const normalizedRole = String(role).trim().toUpperCase();
+
+    let userRole;
+
+    if (['OWNER', 'VEHICLE_OWNER'].includes(normalizedRole)) {
+      userRole = 'VEHICLE_OWNER';
+    } else if (normalizedRole === 'FARMER') {
+      userRole = 'FARMER';
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid role. Use FARMER or VEHICLE_OWNER.'
+      });
+    }
+
+    // 4. Verify OTP
+    const otpResult = await validateOtp({
+      verificationId,
+      code,
+      mobileNumber,
+      countryCode
+    });
+
+    if (!otpResult.success || !otpResult.verified) {
+      return res.status(400).json({
+        success: false,
+        error: otpResult.error || otpResult.message || 'Invalid or expired OTP'
+      });
+    }
+
+    const last10 = cleanMobile.slice(-10);
+
+    let user = null;
+
+    // 5. Find the correct account in PostgreSQL
+    if (userRole === 'VEHICLE_OWNER') {
+      const ownerRes = await query(
+        `SELECT
+           id,
+           full_name AS name,
+           mobile,
+           email,
+           village,
+           district,
+           COALESCE(is_active, TRUE) AS "isActive"
+         FROM vehicle_owners
+         WHERE mobile = $1 OR mobile LIKE $2
+         LIMIT 1`,
+        [cleanMobile, `%${last10}`]
+      );
+
+      if (ownerRes.rowCount === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Vehicle owner account not found. Please register first.'
+        });
+      }
+
+      user = ownerRes.rows[0];
+
+    } else {
+      const farmerRes = await query(
+        `SELECT
+           id,
+           name,
+           mobile,
+           email,
+           village,
+           district,
+           land_area AS "landArea",
+           COALESCE(is_active, TRUE) AS "isActive"
+         FROM farmers
+         WHERE mobile = $1 OR mobile LIKE $2
+         LIMIT 1`,
+        [cleanMobile, `%${last10}`]
+      );
+
+      if (farmerRes.rowCount === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Farmer account not found. Please register first.'
+        });
+      }
+
+      user = farmerRes.rows[0];
+    }
+
+    // 6. Reject deactivated accounts
+    if (user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        error: 'Your account has been deactivated by the administrator.'
+      });
+    }
+
+    // 7. Mark the account as verified after successful OTP
+    const table =
+      userRole === 'VEHICLE_OWNER'
+        ? 'vehicle_owners'
+        : 'farmers';
+
+    const verifiedRes = await query(
+      `UPDATE ${table}
+       SET is_verified = TRUE
+       WHERE id = $1
+       RETURNING id`,
+      [user.id]
+    );
+
+    if (verifiedRes.rowCount === 0) {
+      return res.status(500).json({
+        success: false,
+        error: 'Could not update account verification status'
+      });
+    }
+
+    // 8. Generate JWT only for an existing, active account
+    const token = generateToken({
+      id: user.id,
+      name: user.name,
+      mobile: user.mobile,
+      email: user.email,
+      role: userRole
+    });
+
+    // 9. Return successful response
+    return res.status(200).json({
+      success: true,
+      verified: true,
+      message: 'OTP verified and login successful',
+      token,
+      role: userRole,
+      user,
+      farmer: userRole === 'FARMER' ? user : null,
+      owner: userRole === 'VEHICLE_OWNER' ? user : null
+    });
+
   } catch (err) {
     next(err);
   }
 }
+
 
 /**
  * GET /api/otp/status

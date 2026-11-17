@@ -94,9 +94,11 @@ export async function checkAvailability(req, res, next) {
  * GET /api/bookings/my
  * Securely retrieves bookings ONLY for the authenticated farmer or owner.
  */
+
 export async function getMyBookings(req, res, next) {
   try {
     const user = req.user;
+
     if (!user || !user.mobile) {
       return res.status(401).json({
         error: 'Unauthorized: Valid authentication token is required to view your booking records.',
@@ -107,23 +109,42 @@ export async function getMyBookings(req, res, next) {
     const cleanMobile = String(user.mobile).replace(/\D/g, '');
     const userId = user.id ? parseInt(user.id, 10) : null;
     const userRole = normalizeRole(user.role);
+
     const isOwnerRole = userRole === 'VEHICLE_OWNER';
     const isAdminRole = userRole === 'ADMIN';
-    const params = [userId, cleanMobile, `%${cleanMobile.slice(-10)}`];
 
     let whereClause = '';
+    let params = [];
+
     if (isAdminRole) {
+      // Admin can view all bookings. No SQL parameters needed.
       whereClause = '';
+      params = [];
+
     } else if (isOwnerRole) {
+      // Vehicle owner sees only their bookings.
+      params = [
+        cleanMobile,
+        `%${cleanMobile.slice(-10)}`
+      ];
+
       whereClause = `
         WHERE (
-          b.owner_mobile = $2
-          OR b.owner_mobile LIKE $3
-          OR t.default_mobile = $2
-          OR t.default_mobile LIKE $3
+          b.owner_mobile = $1
+          OR b.owner_mobile LIKE $2
+          OR t.default_mobile = $1
+          OR t.default_mobile LIKE $2
         )
       `;
+
     } else {
+      // Farmer sees only their own bookings.
+      params = [
+        userId,
+        cleanMobile,
+        `%${cleanMobile.slice(-10)}`
+      ];
+
       whereClause = `
         WHERE (
           (b.farmer_id IS NOT NULL AND b.farmer_id = $1)
@@ -140,11 +161,14 @@ export async function getMyBookings(req, res, next) {
     `;
 
     const result = await query(sql, params);
+
     res.json(result.rows);
+
   } catch (err) {
     next(err);
   }
 }
+
 
 /**
  * GET /api/bookings
@@ -228,7 +252,7 @@ export async function getBookingById(req, res, next) {
     const { id } = req.params;
     const result = await query(
       `${BOOKINGS_SELECT} WHERE b.id = $1`,
-      [parseInt(id, 10)]
+       [String(id)]          
     );
 
     if (result.rowCount === 0) {
@@ -458,7 +482,7 @@ export async function updateBooking(req, res, next) {
 
     const checkRes = await query(
       'SELECT id, farmer_id as "farmerId", farmer_mobile as "farmerMobile", activity_log as "activityLog" FROM bookings WHERE id = $1',
-      [parseInt(id, 10)]
+       [String(id)]
     );
     if (checkRes.rowCount === 0) {
       return res.status(404).json({ error: 'Booking not found' });
@@ -511,7 +535,7 @@ export async function updateBooking(req, res, next) {
       b.remarks || null,
       b.paymentStatus || null,
       JSON.stringify(activity),
-      parseInt(id, 10)
+      [String(id)]
     ];
 
     const result = await query(text, values);
@@ -536,7 +560,7 @@ export async function updateBookingStatus(req, res, next) {
 
     const checkRes = await query(
       `${BOOKINGS_SELECT} WHERE b.id = $1`,
-      [parseInt(id, 10)]
+       [String(id)]
     );
     if (checkRes.rowCount === 0) {
       return res.status(404).json({ error: 'Booking not found' });

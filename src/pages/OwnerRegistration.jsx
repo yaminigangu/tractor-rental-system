@@ -535,7 +535,7 @@ export default function OwnerRegistration({
       saveRegisteredOwner(newOwnerRecord);
 
       const newTractorEntry = {
-        id: submittedCustomTractor ? submittedCustomTractor.id : Date.now(),
+        id: submittedCustomTractor ? submittedCustomTractor.id : undefined,
         owner: formData.fullName.trim(),
         mobile: formData.mobile,
         location: formData.mandalBase,

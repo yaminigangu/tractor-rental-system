@@ -10,6 +10,9 @@ let tokenExpiresAt = 0;
 // In-memory mock store for development when API keys are not yet configured in .env or for test numbers
 const mockOtpStore = new Map();
 
+// Track live OTP verification IDs against their requested mobile numbers
+const liveOtpStore = new Map();
+
 // Whitelisted Test/Dummy numbers that will NEVER consume Message Central credits
 export const TEST_NUMBERS = [
   '9876543210', // Ramesh Kumar (Registered Owner - TS 04 AB 7890)
@@ -39,14 +42,24 @@ export const TEST_OTPS = ['354498', '123456', '874885', '999999'];
 /**
  * Check if a number is designated as a test/dummy number to save Message Central SMS credits
  */
+
 export function isTestNumber(mobileNumber) {
-  if (process.env.MESSAGE_CENTRAL_TEST_MODE === 'true') return true;
-  const clean = String(mobileNumber || '').replace(/\D/g, '').slice(-10);
-  if (TEST_NUMBERS.includes(clean)) return true;
-  // Also any 10-digit number matching test patterns
-  if (/^(99999|90000|00000|12345|11111|22222|33333)/.test(clean)) return true;
-  return false;
+  // Never allow mock OTP numbers in production
+  if (process.env.NODE_ENV === 'production') {
+    return false;
+  }
+
+  if (process.env.MESSAGE_CENTRAL_TEST_MODE === 'true') {
+    return true;
+  }
+
+  const cleanMobile = String(mobileNumber || '')
+    .replace(/\D/g, '')
+    .slice(-10);
+
+  return TEST_NUMBERS.includes(cleanMobile);
 }
+
 
 /**
  * Checks whether Message Central credentials are configured in .env
@@ -187,7 +200,21 @@ export async function sendOtp({
   }
 
   // DEV / TEST MODE FALLBACK or DUMMY NUMBERS to save Message Central credits
-  if (isTestNumber(cleanMobile) || !isMessageCentralConfigured()) {
+  // Prevent mock OTP authentication in production
+if (
+  process.env.NODE_ENV === 'production' &&
+  !isMessageCentralConfigured()
+) {
+  throw new Error(
+    'Message Central credentials must be configured for production OTP authentication.'
+  );
+}
+
+// DEV / TEST MODE FALLBACK
+if (
+  process.env.NODE_ENV !== 'production' &&
+  (isTestNumber(cleanMobile) || !isMessageCentralConfigured())
+) {
     const mockVerificationId = `demo_v_${Date.now()}_${Math.floor(Math.random() * 9000 + 1000)}`;
     const mockOtp = '354498'; // Default universal test OTP (also accepts 123456 & 874885)
     
@@ -258,17 +285,29 @@ export async function sendOtp({
   }
 
   if (json.responseCode === 200 || json.message === 'SUCCESS') {
-    const verificationId = json.data?.verificationId || json.data?.transactionId;
-    return {
-      success: true,
-      verificationId,
-      mobileNumber: cleanMobile,
-      timeout: json.data?.timeout || '60',
-      transactionId: json.data?.transactionId,
-      isLive: true,
-      message: 'OTP sent successfully via Message Central SMS',
-    };
+  const verificationId = json.data?.verificationId || json.data?.transactionId;
+
+  if (!verificationId) {
+    throw new Error('Message Central did not return a verification ID.');
   }
+
+  // Associate this live verification ID with the requested mobile number
+  liveOtpStore.set(String(verificationId), {
+  mobile: cleanMobile,
+  expiresAt: Date.now() + 10 * 60 * 1000,
+  attempts: 0,
+});
+
+  return {
+    success: true,
+    verificationId,
+    mobileNumber: cleanMobile,
+    timeout: json.data?.timeout || '60',
+    transactionId: json.data?.transactionId,
+    isLive: true,
+    message: 'OTP sent successfully via Message Central SMS',
+  };
+}
 
   throw new Error(
     json.data?.errorMessage || json.message || `Message Central failed with code ${json.responseCode}`
@@ -282,6 +321,7 @@ export async function sendOtp({
 export async function validateOtp({
   verificationId,
   code,
+  mobileNumber,
   countryCode = '91',
 }) {
   const cleanCode = String(code || '').trim();
@@ -290,37 +330,119 @@ export async function validateOtp({
   }
 
   // DEV / TEST MODE VALIDATION OR TEST VERIFICATION ID
-  if (!isMessageCentralConfigured() || String(verificationId).startsWith('demo_') || String(verificationId).startsWith('test_')) {
-    const record = mockOtpStore.get(verificationId);
-    
-    // Accept matching generated OTP, standard demo OTPs (354498, 123456, 874885, 999999)
-    const validCodes = [...TEST_OTPS];
-    if (record) {
-      validCodes.push(record.otp);
-    }
+  // DEV / TEST MODE VALIDATION
 
-    if (validCodes.includes(cleanCode)) {
-      if (record) mockOtpStore.delete(verificationId);
+  // DEV / TEST MODE VALIDATION
+  if (
+    !isMessageCentralConfigured() ||
+    String(verificationId).startsWith('demo_') ||
+    String(verificationId).startsWith('test_')
+  ) {
+    const record = mockOtpStore.get(verificationId);
+
+    if (!record) {
       return {
-        success: true,
-        verified: true,
-        verificationId,
-        verificationStatus: 'VERIFICATION_COMPLETED',
-        isLive: false,
-        isTestNumber: true,
-        message: 'Test OTP verified successfully (0 Message Central credits consumed)',
+        success: false,
+        verified: false,
+        error: 'Invalid or expired verification session. Please request a new OTP.',
       };
     }
 
+    const cleanMobile = String(mobileNumber || '')
+      .replace(/\D/g, '')
+      .slice(-10);
+
+    if (!cleanMobile || record.mobile !== cleanMobile) {
+      return {
+        success: false,
+        verified: false,
+        error: 'Mobile number does not match the OTP request.',
+      };
+    }
+
+    if (Date.now() > record.expiresAt) {
+      mockOtpStore.delete(verificationId);
+
+      return {
+        success: false,
+        verified: false,
+        error: 'OTP has expired. Please request a new OTP.',
+      };
+    }
+
+    // Verify the OTP issued for this particular session
+    if (record.otp !== cleanCode) {
+      return {
+        success: false,
+        verified: false,
+        error: 'Invalid OTP. Please try again.',
+      };
+    }
+
+    mockOtpStore.delete(verificationId);
+
     return {
-      success: false,
-      verified: false,
-      responseCode: 702,
-      error: 'Invalid test OTP code. Use 354498 or 123456.',
+      success: true,
+      verified: true,
+      verificationId,
+      verificationStatus: 'VERIFICATION_COMPLETED',
+      isLive: false,
+      isTestNumber: true,
+      message: 'Test OTP verified successfully.',
     };
   }
 
   // LIVE MODE: Validate via Message Central VerifyNow API
+
+  // LIVE MODE: Check verification ID and mobile number association
+const liveRecord = liveOtpStore.get(String(verificationId));
+
+const cleanMobile = String(mobileNumber || '')
+  .replace(/\D/g, '')
+  .slice(-10);
+
+if (!liveRecord) {
+  return {
+    success: false,
+    verified: false,
+    error: 'Invalid or expired verification session. Please request a new OTP.',
+  };
+}
+
+if (!cleanMobile || liveRecord.mobile !== cleanMobile) {
+  return {
+    success: false,
+    verified: false,
+    error: 'Mobile number does not match the OTP request.',
+  };
+}
+
+if (Date.now() > liveRecord.expiresAt) {
+  liveOtpStore.delete(String(verificationId));
+
+  return {
+    success: false,
+    verified: false,
+    error: 'OTP verification session has expired. Please request a new OTP.',
+  };
+}
+
+  // Maximum 5 OTP verification attempts
+const MAX_OTP_ATTEMPTS = 5;
+
+if (liveRecord.attempts >= MAX_OTP_ATTEMPTS) {
+  liveOtpStore.delete(String(verificationId));
+
+  return {
+    success: false,
+    verified: false,
+    error: 'Maximum OTP attempts exceeded. Please request a new OTP.',
+  };
+}
+
+// Count this verification attempt
+liveRecord.attempts += 1;
+
   const token = await getAuthToken();
   const configuredCountry = process.env.MESSAGE_CENTRAL_COUNTRY_CODE || countryCode;
 
@@ -362,18 +484,21 @@ export async function validateOtp({
   }
 
   if (
-    json.responseCode === 200 &&
-    (json.data?.verificationStatus === 'VERIFICATION_COMPLETED' || json.message === 'SUCCESS')
-  ) {
-    return {
-      success: true,
-      verified: true,
-      verificationId,
-      verificationStatus: 'VERIFICATION_COMPLETED',
-      isLive: true,
-      message: 'Mobile number verified successfully via Message Central',
-    };
-  }
+  json.responseCode === 200 &&
+  (json.data?.verificationStatus === 'VERIFICATION_COMPLETED' || json.message === 'SUCCESS')
+) {
+  // Delete verification session after successful verification
+  liveOtpStore.delete(String(verificationId));
+
+  return {
+    success: true,
+    verified: true,
+    verificationId,
+    verificationStatus: 'VERIFICATION_COMPLETED',
+    isLive: true,
+    message: 'Mobile number verified successfully via Message Central',
+  };
+}
 
   if (json.responseCode === 702 || json.message === 'WRONG_OTP_PROVIDED') {
     return {

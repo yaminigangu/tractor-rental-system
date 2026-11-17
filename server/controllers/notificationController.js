@@ -99,7 +99,9 @@ export async function markNotificationRead(req, res, next) {
 export async function markAllNotificationsRead(req, res, next) {
   try {
     const user = req.user;
-    const queryMobile = req.body.mobile ? String(req.body.mobile).replace(/\D/g, '') : '';
+    const queryMobile = req.body?.mobile
+  ? String(req.body.mobile).replace(/\D/g, '')
+  : '';
     const mobile = (user?.mobile ? String(user.mobile).replace(/\D/g, '') : queryMobile).slice(-10);
 
     if (mobile) {

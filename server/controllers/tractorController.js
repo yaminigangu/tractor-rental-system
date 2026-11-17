@@ -501,11 +501,11 @@ export async function createTractor(req, res, next) {
       return res.status(400).json({ error: 'Brand and Model are required' });
     }
 
-    let id = b.id ? parseInt(b.id, 10) : null;
+    let id = b.id && parseInt(b.id, 10) < 2147483647 ? parseInt(b.id, 10) : null;
     if (!id) {
       const maxIdRes = await query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM tractors');
       id = maxIdRes.rows[0].next_id;
-    }
+}
 
     const text = `
       INSERT INTO tractors (

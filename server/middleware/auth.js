@@ -7,8 +7,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'agri-rent-telangana-jwt-secret-key-2026-production';
+const JWT_SECRET = process.env.JWT_SECRET;
 
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is missing from environment variables');
+}
 /**
  * Base64URL encoding helper
  */

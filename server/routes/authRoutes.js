@@ -21,10 +21,10 @@ router.post('/admin-login', adminLogin);
 router.get('/me', authenticateUser, requireAuth, getCurrentUser);
 
 // Profile and Account Settings
-router.get('/profile', authenticateUser, getUserProfile);
-router.put('/profile', authenticateUser, updateUserProfile);
-router.post('/change-password', authenticateUser, changePassword);
-router.delete('/delete-account', authenticateUser, deleteAccount);
+router.get('/profile', authenticateUser, requireAuth, getUserProfile);
+router.put('/profile', authenticateUser, requireAuth, updateUserProfile);
+router.post('/change-password', authenticateUser, requireAuth, changePassword);
+router.delete('/delete-account', authenticateUser, requireAuth, deleteAccount);
 
 export default router;
 
