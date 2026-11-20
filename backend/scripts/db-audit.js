@@ -1,4 +1,4 @@
-import { query } from '../server/db.js';
+import { query } from '../db.js';
 
 async function auditDatabase() {
   console.log('=== DATABASE DEEP AUDIT ===\n');

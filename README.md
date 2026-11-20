@@ -56,33 +56,67 @@ In rural agricultural clusters (such as Hasanparthy, Bheemaram, Velair, Dharmasa
 
 ---
 
-## 💻 Local Setup & Development
+## 📁 Project Structure (Separated Frontend & Backend)
 
-1. **Clone or navigate to repository**:
-   ```bash
-   cd c:\tractor-rental-system
-   ```
+```
+tractor-rental-system/
+├── frontend/             # React + Vite Frontend SPA (Port 5173)
+│   ├── src/              # Pages, components, api client, translations
+│   ├── public/           # Static assets, images, icons, manifest
+│   ├── index.html        # HTML entry point
+│   ├── vite.config.js    # Vite configuration
+│   └── package.json      # Frontend dependencies & scripts
+│
+├── backend/              # Node.js + Express REST API (Port 5000)
+│   ├── controllers/      # Route controllers (auth, bookings, tractors, etc.)
+│   ├── routes/           # Express API route modules
+│   ├── middleware/       # RBAC auth, verifyToken & error middlewares
+│   ├── services/         # Message Central SMS OTP, WhatsApp services
+│   ├── scripts/          # Database migrations, DB audit & RBAC test suites
+│   ├── uploads/          # Uploaded machinery and profile photos
+│   ├── db.js             # PostgreSQL connection pool
+│   ├── initDb.js         # DB initialization & seeding script
+│   ├── schema.sql        # Database schema definitions
+│   ├── server.js         # Express app entry point
+│   └── package.json      # Backend dependencies & scripts
+│
+├── package.json          # Root orchestration scripts (dev, server, dev:all)
+└── .env                  # Environment variables (DB credentials, JWT, keys)
+```
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+## 💻 Local Setup & Development Commands
 
-3. **Start local development server**:
-   ```bash
-   npm run dev
-   ```
-   Open `http://localhost:5174/` in your browser.
+### From Root Directory (Recommended):
+- **Run Both Frontend & Backend Simultaneously:**
+  ```bash
+  npm run dev:all
+  ```
+- **Run Frontend Only (Port 5173):**
+  ```bash
+  npm run dev
+  ```
+- **Run Backend Only (Port 5000):**
+  ```bash
+  npm run server
+  ```
+- **Build Frontend:**
+  ```bash
+  npm run build
+  ```
 
-4. **Run build check**:
-   ```bash
-   npm run build
-   ```
+---
 
-5. **Run linter**:
-   ```bash
-   npm run lint
-   ```
+### Running Directly From Subfolders:
+- **Frontend Only:**
+  ```bash
+  cd frontend
+  npm run dev
+  ```
+- **Backend Only:**
+  ```bash
+  cd backend
+  npm run dev
+  ```
 
 ---
 

@@ -1,0 +1,23 @@
+{
+  "name": "agrirent-backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "db:init": "node initDb.js",
+    "test:rbac": "node scripts/test-rbac.js",
+    "test:profile": "node scripts/test-profile-settings.js",
+    "db:audit": "node scripts/db-audit.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "multer": "^2.5.0",
+    "pg": "^8.23.1"
+  }
+}

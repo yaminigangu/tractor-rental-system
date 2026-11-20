@@ -1,4 +1,4 @@
-import { query } from '../server/db.js';
+import { query } from '../db.js';
 
 async function run() {
   const f = await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'farmers'");

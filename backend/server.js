@@ -23,7 +23,8 @@ import notificationRoutes from './routes/notificationRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env
+// Load .env (supports backend/.env or root .env)
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
@@ -65,7 +66,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Ensure static uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
+const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -124,7 +125,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Production single-port serving: serve static dist assets and index.html
-const distDir = path.join(__dirname, '../dist');
+const distDir = path.join(__dirname, '../frontend/dist');
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
   app.use((req, res, next) => {
