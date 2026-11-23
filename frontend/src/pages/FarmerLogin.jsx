@@ -362,6 +362,7 @@ export default function FarmerLogin({
         verificationId: loginVerificationId,
         code: loginOtp.trim(),
         mobileNumber: loginMatchedFarmer.mobile,
+        flowType: 'login'
       });
 
       if (!res.success || !res.verified) {

@@ -1,5 +1,5 @@
 // Client-side API connector linking React frontend with Node.js Express REST API Server
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 
 let isBackendOnline = null;
 let lastCheckTime = 0;
@@ -770,12 +770,12 @@ export async function apiSendOtp({ mobileNumber, flowType = 'SMS', countryCode =
 /**
  * Verify OTP entered by user via Message Central VerifyNow API
  */
-export async function apiVerifyOtp({ verificationId, code, countryCode = '91', mobileNumber, role = 'farmer' }) {
+export async function apiVerifyOtp({ verificationId, code, countryCode = '91', mobileNumber, role = 'farmer', flowType = 'registration' }) {
   try {
     const res = await fetch(`${API_BASE}/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ verificationId, code, countryCode, mobileNumber, role }),
+      body: JSON.stringify({ verificationId, code, countryCode, mobileNumber, role, flowType }),
       signal: AbortSignal.timeout(8000),
     });
     const data = await res.json();

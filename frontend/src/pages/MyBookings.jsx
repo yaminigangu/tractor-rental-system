@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { translations } from '../translations';
 import { apiGetMyBookings, apiUpdateBookingStatus } from '../api/apiClient';
 
-export default function MyBookings({ 
-  bookings = [], 
-  setBookings, 
+export default function MyBookings({
+  bookings = [],
+  setBookings,
   setActivePage,
   onGoBack,
   onViewSlip,
@@ -55,7 +55,7 @@ export default function MyBookings({
               const bMobile = normalizePhone(b.farmerMobile);
               const bId = b.farmerId ? parseInt(b.farmerId, 10) : null;
               return (farmerPhone && bMobile && farmerPhone === bMobile) ||
-                     (farmerId && bId && farmerId === bId);
+                (farmerId && bId && farmerId === bId);
             });
             setIsolatedBookings(filtered);
           }
@@ -69,7 +69,7 @@ export default function MyBookings({
             const bMobile = normalizePhone(b.farmerMobile);
             const bId = b.farmerId ? parseInt(b.farmerId, 10) : null;
             return (farmerPhone && bMobile && farmerPhone === bMobile) ||
-                   (farmerId && bId && farmerId === bId);
+              (farmerId && bId && farmerId === bId);
           });
           setIsolatedBookings(filtered);
           setIsLoading(false);
@@ -168,15 +168,7 @@ export default function MyBookings({
       {/* Page Header */}
       <div className="section-header my-bookings-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn btn-outline-white back-nav-btn"
-            onClick={onGoBack || (() => setActivePage(currentFarmer ? 'find-tractor' : 'home'))}
-            title={isTe ? 'వెనుకకు వెళ్ళండి' : 'Go Back'}
-            style={{ padding: '6px 12px', fontSize: '13px', fontWeight: '700' }}
-          >
-            ← {isTe ? 'వెనుకకు' : 'Back'}
-          </button>
+
           <div>
             <h2 className="my-bookings-main-title">{t.myBookingsTitle}</h2>
             <p className="my-bookings-subtitle">{t.myBookingsSubtitle}</p>
@@ -268,9 +260,9 @@ export default function MyBookings({
                 ? 'మీ గ్రామంలో అందుబాటులో ఉన్న ఆధునిక ట్రాక్టర్లు, రొటవేటర్లు మరియు హార్వెస్టర్లను ఎంచుకోండి. పారదర్శక ధరలతో నేరుగా బుక్ చేయండి.'
                 : 'Browse verified tractors, rotavators, and harvesters stationed in your village with transparent hourly rates and instant booking.'}
             </p>
-            <button 
+            <button
               type="button"
-              className="btn btn-primary" 
+              className="btn btn-primary"
               onClick={() => setActivePage('find-tractor')}
               style={{ padding: '10px 24px', fontSize: '14px', fontWeight: '700' }}
             >
@@ -387,9 +379,9 @@ export default function MyBookings({
                       <td className="actions-cell">
                         <div className="booking-actions-row">
                           {/* Official Digital Work Slip */}
-                          <button 
+                          <button
                             type="button"
-                            className="btn btn-outline-white action-slip-btn" 
+                            className="btn btn-outline-white action-slip-btn"
                             onClick={() => onViewSlip && onViewSlip(b)}
                             title="View Official Digital Work Slip"
                           >
@@ -398,9 +390,9 @@ export default function MyBookings({
 
                           {/* Call Owner */}
                           {b.ownerMobile && (
-                            <a 
-                              href={`tel:${b.ownerMobile}`} 
-                              className="btn btn-call" 
+                            <a
+                              href={`tel:${b.ownerMobile}`}
+                              className="btn btn-call"
                               title={t.callOwner}
                             >
                               📞
@@ -410,9 +402,9 @@ export default function MyBookings({
                           {/* Quick Approve or Cancel Option for Pending Approval */}
                           {b.status === 'Pending Approval' && (
                             <>
-                              <button 
+                              <button
                                 type="button"
-                                className="btn" 
+                                className="btn"
                                 style={{
                                   background: '#e8f5e9',
                                   color: '#2e7d32',
@@ -428,9 +420,9 @@ export default function MyBookings({
                               >
                                 ✓ {isTe ? 'ఆమోదించు' : 'Approve'}
                               </button>
-                              <button 
+                              <button
                                 type="button"
-                                className="btn btn-call cancel-booking-btn" 
+                                className="btn btn-call cancel-booking-btn"
                                 onClick={() => handleCancelBooking(b.id)}
                                 title={isTe ? 'అభ్యర్థనను రద్దు చేయండి' : 'Cancel Request'}
                               >

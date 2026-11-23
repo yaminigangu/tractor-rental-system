@@ -291,7 +291,8 @@ export default function OwnerRegistration({
         code: enteredOtp.trim(),
         countryCode: '91',
         mobileNumber: cleanPhone,
-        role: 'owner'
+        role: 'owner',
+        flowType: 'registration'
       });
 
       if (!res.success || !res.verified) {
@@ -394,7 +395,8 @@ export default function OwnerRegistration({
         code: loginOtp.trim(),
         countryCode: '91',
         mobileNumber: phone,
-        role: 'owner'
+        role: 'owner',
+        flowType: 'login'
       });
 
       if (!res.success || !res.verified) {

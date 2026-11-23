@@ -42,7 +42,8 @@ export async function verifyOtpHandler(req, res, next) {
       code,
       countryCode,
       mobileNumber,
-      role = 'farmer'
+      role = 'farmer',
+      flowType = 'registration'
     } = req.body;
 
     // 1. Validate required fields
@@ -100,7 +101,7 @@ export async function verifyOtpHandler(req, res, next) {
 
     let user = null;
 
-    // 5. Find the correct account in PostgreSQL
+    // 5. Check if account already exists in PostgreSQL
     if (userRole === 'VEHICLE_OWNER') {
       const ownerRes = await query(
         `SELECT
@@ -117,14 +118,9 @@ export async function verifyOtpHandler(req, res, next) {
         [cleanMobile, `%${last10}`]
       );
 
-      if (ownerRes.rowCount === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Vehicle owner account not found. Please register first.'
-        });
+      if (ownerRes.rowCount > 0) {
+        user = ownerRes.rows[0];
       }
-
-      user = ownerRes.rows[0];
 
     } else {
       const farmerRes = await query(
@@ -143,14 +139,34 @@ export async function verifyOtpHandler(req, res, next) {
         [cleanMobile, `%${last10}`]
       );
 
-      if (farmerRes.rowCount === 0) {
+      if (farmerRes.rowCount > 0) {
+        user = farmerRes.rows[0];
+      }
+    }
+
+    const isLogin = String(flowType).trim().toLowerCase() === 'login';
+
+    // If account does NOT exist in database:
+    if (!user) {
+      // If user is trying to LOG IN, existing account is required
+      if (isLogin) {
         return res.status(404).json({
           success: false,
-          error: 'Farmer account not found. Please register first.'
+          error: userRole === 'VEHICLE_OWNER'
+            ? 'Vehicle owner account not found. Please register first.'
+            : 'Farmer account not found. Please register first.'
         });
       }
 
-      user = farmerRes.rows[0];
+      // If user is REGISTERING: mobile number is successfully verified!
+      return res.status(200).json({
+        success: true,
+        verified: true,
+        isNewUser: true,
+        message: 'OTP verified successfully. Please proceed with registration.',
+        role: userRole,
+        mobile: cleanMobile
+      });
     }
 
     // 6. Reject deactivated accounts
@@ -195,6 +211,7 @@ export async function verifyOtpHandler(req, res, next) {
     return res.status(200).json({
       success: true,
       verified: true,
+      isNewUser: false,
       message: 'OTP verified and login successful',
       token,
       role: userRole,
